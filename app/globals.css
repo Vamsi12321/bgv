@@ -5,13 +5,16 @@
   --foreground: #171717;
 }
 
+/* 🎨 Theme setup for Tailwind variables */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Replace Geist with Segoe */
+  --font-sans: "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Consolas", "Courier New", monospace;
 }
 
+/* 🌙 Dark mode colors */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,8 +22,46 @@
   }
 }
 
+/* ✨ Apply Microsoft universal font everywhere */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 🎞️ Slide-in animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.3;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slideInLeft {
+  animation: slideInLeft 0.3s ease-out;
+}
+/* Completely hide scrollbar while keeping scroll functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
