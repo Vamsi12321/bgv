@@ -7,10 +7,10 @@ import {
   Download,
   Loader2,
   FileText,
-  Building2,
   CheckCircle2,
   XCircle,
   Clock,
+  Building2,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { safeHtml2Canvas } from "@/utils/safeHtml2Canvas";
@@ -18,44 +18,43 @@ import { safeHtml2Canvas } from "@/utils/safeHtml2Canvas";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
-export default function SuperAdminReportsPage() {
-  const [organizations, setOrganizations] = useState([]);
-  const [selectedOrg, setSelectedOrg] = useState("");
+export default function OrgReportsPage() {
+  const [userOrgId, setUserOrgId] = useState("");
+  const [orgName, setOrgName] = useState("");
   const [candidates, setCandidates] = useState([]);
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(false);
 
-  /* Fetch Orgs */
+  /* ------------------- Detect Logged-in Org ------------------- */
   useEffect(() => {
-    (async () => {
+    const stored = localStorage.getItem("bgvUser");
+    if (stored) {
       try {
-        setLoading(true);
-        const res = await fetch(`${API_BASE}/secure/getOrganizations`, {
-          credentials: "include",
-        });
-        const data = await res.json();
-        if (res.ok) setOrganizations(data.organizations || []);
-      } catch (e) {
-        console.error("Error loading orgs", e);
-      } finally {
-        setLoading(false);
+        const user = JSON.parse(stored);
+        setUserOrgId(user.organizationId);
+        setOrgName(user.organizationName || "Organization");
+        fetchCandidates(user.organizationId);
+      } catch {
+        console.error("Failed to parse bgvUser");
       }
-    })();
+    }
   }, []);
 
-  /* Fetch Candidates */
+  /* ------------------- Fetch Candidates & Verifications ------------------- */
   const fetchCandidates = async (orgId) => {
     try {
       setLoading(true);
       const res = await fetch(
         `${API_BASE}/secure/getCandidates?orgId=${orgId}`,
-        { credentials: "include" }
+        {
+          credentials: "include",
+        }
       );
       const data = await res.json();
       if (!res.ok) throw new Error("Failed to fetch candidates");
       const list = data.candidates || [];
 
-      // Fetch verification data for each candidate
+      // For each candidate, fetch their verification details
       const enriched = await Promise.all(
         list.map(async (c) => {
           const verRes = await fetch(
@@ -65,7 +64,6 @@ export default function SuperAdminReportsPage() {
           const verData = await verRes.json();
           const verification = verData.verifications?.[0] || null;
           const overallStatus = verification?.overallStatus || "NOT_INITIATED";
-
           return {
             ...c,
             verification,
@@ -75,21 +73,25 @@ export default function SuperAdminReportsPage() {
         })
       );
 
-      setCandidates(enriched);
+      // Only completed verifications
+      const completedCandidates = enriched.filter((c) => c.completed);
+      setCandidates(completedCandidates);
     } catch (err) {
-      console.error("Failed to fetch candidates", err);
+      console.error("Error fetching reports:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  /* ------------------- Expand Toggle ------------------- */
   const toggleExpand = (id) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  /* Download Certificate */
+  /* ------------------- Download Certificate ------------------- */
   const downloadCertificate = async (candidate) => {
     const element = document.getElementById(`cert-${candidate._id}`);
     if (!element) return;
+
     try {
       const canvas = await safeHtml2Canvas(element, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
@@ -101,6 +103,7 @@ export default function SuperAdminReportsPage() {
       const imgWidth = 595.28;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.setFontSize(10);
       pdf.text(`Generated on ${new Date().toLocaleString()}`, 40, 820);
       pdf.save(`${candidate.firstName}_${candidate.lastName}_BGV_Report.pdf`);
     } catch (e) {
@@ -108,52 +111,36 @@ export default function SuperAdminReportsPage() {
     }
   };
 
+  /* ------------------- Render ------------------- */
   return (
     <div className="p-4 sm:p-8 bg-gray-50 min-h-screen text-gray-900">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <h1 className="text-3xl font-bold flex items-center gap-2 text-[#ff004f]">
-          <FileText /> Background Verification Reports
+          <FileText /> BGV Reports
         </h1>
-      </div>
 
-      {/* Org Filter */}
-      <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Building2 size={18} className="text-gray-600" />
-          <select
-            value={selectedOrg}
-            onChange={(e) => {
-              setSelectedOrg(e.target.value);
-              setCandidates([]);
-              if (e.target.value) fetchCandidates(e.target.value);
-            }}
-            className="border rounded-lg px-3 py-2 bg-gray-50 text-sm focus:ring-2 focus:ring-[#ff004f] w-full sm:w-64"
-          >
-            <option value="">Select Organization</option>
-            {organizations.map((org) => (
-              <option key={org._id} value={org._id}>
-                {org.organizationName}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center gap-2 text-gray-700">
+          <Building2 size={18} />
+          <span className="font-medium">{orgName}</span>
         </div>
       </div>
 
-      {/* Candidates List */}
+      {/* Reports Table */}
       {loading ? (
         <div className="flex justify-center py-20 text-gray-500">
-          <Loader2 className="animate-spin text-[#ff004f] mr-2" /> Loading
-          data...
+          <Loader2 className="animate-spin text-[#ff004f] mr-2" /> Fetching
+          reports...
         </div>
       ) : candidates.length === 0 ? (
         <p className="text-center text-gray-500 mt-20 italic">
-          Select an organization to view candidates.
+          No completed verifications found for this organization.
         </p>
       ) : (
         <div className="bg-white rounded-xl shadow border border-gray-200 divide-y">
           {candidates.map((c) => (
             <div key={c._id} className="p-4">
-              {/* Header */}
+              {/* Candidate Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                 <div
                   onClick={() => toggleExpand(c._id)}
@@ -171,8 +158,12 @@ export default function SuperAdminReportsPage() {
                     <p className="text-sm text-gray-500">
                       Candidate ID: {c._id}
                     </p>
+                    <p className="text-xs text-gray-500">
+                      Status: {c.overallStatus}
+                    </p>
                   </div>
                 </div>
+
                 <button
                   onClick={() => downloadCertificate(c)}
                   disabled={!c.completed}
@@ -186,7 +177,7 @@ export default function SuperAdminReportsPage() {
                 </button>
               </div>
 
-              {/* Expanded Certificate */}
+              {/* Expanded Report */}
               {expanded[c._id] && c.verification && (
                 <div className="mt-4 overflow-x-auto">
                   <div
@@ -196,16 +187,17 @@ export default function SuperAdminReportsPage() {
                     <div className="bg-[#007bff] text-white text-center py-3 font-bold text-lg md:text-xl">
                       Candidate Verification Report
                     </div>
+
                     <div className="p-4 text-center text-sm text-gray-600">
                       <p>
                         <strong>
                           {c.firstName} {c.lastName}
                         </strong>
                       </p>
-                      <p>Status: {c.verification?.overallStatus}</p>
+                      <p>Candidate ID: {c._id}</p>
                     </div>
 
-                    {/* Checks Table */}
+                    {/* Table Header */}
                     <div className="bg-[#007bff] text-white grid grid-cols-3 font-semibold text-center text-sm md:text-base">
                       <div className="py-2 col-span-2 border-r border-white">
                         Verification Check
@@ -213,6 +205,7 @@ export default function SuperAdminReportsPage() {
                       <div className="py-2">Status</div>
                     </div>
 
+                    {/* Verification Stages */}
                     {Object.entries(c.verification.stages || {}).map(
                       ([stage, checks]) =>
                         checks.map((v, idx) => (
@@ -254,8 +247,9 @@ export default function SuperAdminReportsPage() {
                         ))
                     )}
 
+                    {/* Footer */}
                     <div className="text-center text-xs text-gray-500 py-4">
-                      Generated by <strong>Super Admin</strong> on{" "}
+                      Generated by <strong>{orgName}</strong> on{" "}
                       {new Date().toLocaleString()}
                     </div>
                   </div>

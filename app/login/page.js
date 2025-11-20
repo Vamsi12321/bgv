@@ -10,19 +10,46 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [orgName, setOrgName] = useState("Maihoo");
-  const [logoSrc, setLogoSrc] = useState("/logos/maihooLogo.png");
+  const [logoSrc, setLogoSrc] = useState("/logos/maihoo.png");
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
   // 🧠 Detect subdomain (client-only)
+  // inside useEffect (just after setLoaded(true))
   useEffect(() => {
     const host = window.location.hostname;
     const parts = host.split(".");
     if (parts.length > 2 && parts[0] !== "www") {
       setOrgName(parts[0].toUpperCase());
-      setLogoSrc(`/logos/${parts[0].toLowerCase()}.png`);
+      // setLogoSrc(`/logos/${parts[0].toLowerCase()}.png`); for dynamic
     }
+
+    // ✅ check for existing session
+    const existingUser = localStorage.getItem("bgvUser");
+    if (existingUser) {
+      try {
+        const user = JSON.parse(existingUser);
+        const tokenCookie = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("bgvTemp="));
+
+        // if token missing → clear stale localStorage
+        if (!tokenCookie) {
+          localStorage.removeItem("bgvUser");
+        } else {
+          // optional: auto redirect valid user
+          const role = user.role?.toUpperCase();
+          if (["SUPER_ADMIN", "SUPER_ADMIN_HELPER"].includes(role))
+            router.replace("/superadmin/dashboard");
+          else if (["ORG_HR", "HELPER"].includes(role))
+            router.replace("/org/dashboard");
+        }
+      } catch {
+        localStorage.removeItem("bgvUser");
+      }
+    }
+
     setLoaded(true);
   }, []);
 
@@ -62,15 +89,19 @@ export default function LoginPage() {
 
       setRedirecting(true);
 
+      // Determine redirect path based on role
+      const role = data.role?.toUpperCase();
+      let redirectPath = "/";
+
+      if (["SUPER_ADMIN", "SUPER_ADMIN_HELPER", "SPOC"].includes(role)) {
+        redirectPath = "/superadmin/dashboard";
+      } else if (["ORG_HR", "HELPER"].includes(role)) {
+        redirectPath = "/org/dashboard";
+      }
+
       // Small delay → ensure cookie persisted
       setTimeout(() => {
-        router.replace(
-          data.role === "SUPER_ADMIN"
-            ? "/superadmin/dashboard"
-            : data.role === "ORG_HR"
-            ? "/admin"
-            : "/"
-        );
+        router.replace(redirectPath);
       }, 800);
     } catch (err) {
       alert(err.message);
@@ -82,7 +113,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white overflow-hidden relative">
       {/* Header */}
-      <header className="w-full p-4 flex justify-start items-center">
+      <header className="w-full p-2 flex justify-start items-center">
         <Image
           src={logoSrc}
           alt={`${orgName} Logo`}

@@ -2,22 +2,24 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Filter, X, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
-export default function SuperAdminVerificationsPage() {
+export default function OrgVerificationsPage() {
   const [loading, setLoading] = useState(false);
   const [verifications, setVerifications] = useState([]);
   const [summary, setSummary] = useState([]);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [filters, setFilters] = useState({
-    org: "",
     status: "",
     name: "",
     fromDate: "",
     toDate: "",
   });
+
+  const router = useRouter();
 
   /* ---------------------- Fetch Verifications ---------------------- */
   useEffect(() => {
@@ -36,42 +38,35 @@ export default function SuperAdminVerificationsPage() {
       setSummary(data.candidatesSummary || []);
       setVerifications(data.verifications || []);
     } catch (err) {
-      alert(err.message || "Unknown error");
+      alert(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  /* ---------------------- Derived Filters ---------------------- */
+  /* ---------------------- Filters ---------------------- */
   const filteredCandidates = useMemo(() => {
     return summary.filter((c) => {
-      const matchOrg = filters.org
-        ? c.organizationName?.toLowerCase().includes(filters.org.toLowerCase())
-        : true;
       const matchStatus = filters.status
-        ? (c.overallStatus || "").toLowerCase() === filters.status.toLowerCase()
+        ? c.overallStatus?.toLowerCase() === filters.status.toLowerCase()
         : true;
       const matchName = filters.name
         ? c.candidateName?.toLowerCase().includes(filters.name.toLowerCase())
         : true;
       const matchFromDate = filters.fromDate
-        ? new Date(c.createdAt || c.date || c.initiatedAt || 0) >=
-          new Date(filters.fromDate)
+        ? new Date(c.createdAt || c.date) >= new Date(filters.fromDate)
         : true;
       const matchToDate = filters.toDate
-        ? new Date(c.createdAt || c.date || c.initiatedAt || 0) <=
-          new Date(filters.toDate)
+        ? new Date(c.createdAt || c.date) <= new Date(filters.toDate)
         : true;
-      return (
-        matchOrg && matchStatus && matchName && matchFromDate && matchToDate
-      );
+      return matchStatus && matchName && matchFromDate && matchToDate;
     });
   }, [filters, summary]);
 
   const getStatusBadge = (status) => {
     const base =
       "px-2 py-1 rounded-full text-xs font-semibold text-white whitespace-nowrap";
-    switch ((status || "").toUpperCase()) {
+    switch (status?.toUpperCase()) {
       case "COMPLETED":
         return <span className={`${base} bg-green-600`}>Completed</span>;
       case "FAILED":
@@ -87,36 +82,24 @@ export default function SuperAdminVerificationsPage() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    try {
-      const d = new Date(dateString);
-      return d.toLocaleString();
-    } catch {
-      return dateString;
-    }
-  };
-
   const openCandidateDetails = (candidate) => {
-    // candidate may be from summary (summary items) or from verifications (full object)
     const details = verifications.find(
       (v) => v.candidateId === candidate.candidateId
     );
     setSelectedCandidate(details || candidate);
   };
 
-  /* ---------------------- Main UI ---------------------- */
+  /* ---------------------- UI ---------------------- */
   return (
     <div className="min-h-screen bg-gray-50 p-6 text-gray-900 transition-all">
       {/* Header */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-red-600">
-            Verification Management
+            Organization Verifications
           </h1>
           <p className="text-gray-600 text-sm">
-            Review and track candidate verification statuses across
-            organizations.
+            Manage and track your candidates’ background verifications.
           </p>
         </div>
         <button
@@ -127,20 +110,9 @@ export default function SuperAdminVerificationsPage() {
         </button>
       </div>
 
-      {/* Filters Row */}
+      {/* Filters */}
       <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm mb-6">
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Organization Filter */}
-          <div className="relative flex-1 min-w-[180px] max-w-[200px]">
-            <input
-              type="text"
-              placeholder="Filter by Organization"
-              value={filters.org}
-              onChange={(e) => setFilters({ ...filters, org: e.target.value })}
-              className="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-red-500 focus:outline-none"
-            />
-          </div>
-
           {/* Status Filter */}
           <div className="min-w-[140px]">
             <select
@@ -158,7 +130,7 @@ export default function SuperAdminVerificationsPage() {
             </select>
           </div>
 
-          {/* Candidate Filter */}
+          {/* Candidate Name */}
           <div className="flex-1 min-w-[160px] max-w-[200px]">
             <input
               type="text"
@@ -207,9 +179,6 @@ export default function SuperAdminVerificationsPage() {
                   <th className="px-4 py-3 text-left font-semibold">
                     Candidate
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold">
-                    Organization
-                  </th>
                   <th className="px-4 py-3 text-left font-semibold">Stage</th>
                   <th className="px-4 py-3 text-left font-semibold">Status</th>
                   <th className="px-4 py-3 text-left font-semibold">
@@ -229,7 +198,6 @@ export default function SuperAdminVerificationsPage() {
                       <td className="px-4 py-3 font-medium">
                         {c.candidateName}
                       </td>
-                      <td className="px-4 py-3">{c.organizationName}</td>
                       <td className="px-4 py-3 capitalize">
                         {c.currentStage || "-"}
                       </td>
@@ -246,16 +214,22 @@ export default function SuperAdminVerificationsPage() {
                                 ? "bg-red-500"
                                 : "bg-yellow-500"
                             }`}
-                            style={{ width: `${c.completionPercentage || 0}%` }}
+                            style={{ width: `${c.completionPercentage}%` }}
                           ></div>
                         </div>
                         <span className="text-xs text-gray-600">
-                          {c.completionPercentage || 0}%
+                          {c.completionPercentage}%
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button className="text-red-600 hover:text-red-700 text-sm font-semibold">
-                          View
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/org/verifications/${c.candidateId}`);
+                          }}
+                          className="text-red-600 hover:text-red-700 text-sm font-semibold"
+                        >
+                          View Verification
                         </button>
                       </td>
                     </tr>
@@ -263,7 +237,7 @@ export default function SuperAdminVerificationsPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       className="text-center py-6 text-gray-500 font-medium"
                     >
                       No matching records found.
@@ -296,10 +270,6 @@ export default function SuperAdminVerificationsPage() {
                 {getStatusBadge(c.overallStatus)}
               </div>
               <p className="text-sm text-gray-600">
-                <span className="font-semibold">Organization:</span>{" "}
-                {c.organizationName}
-              </p>
-              <p className="text-sm text-gray-600">
                 <span className="font-semibold">Stage:</span>{" "}
                 {c.currentStage || "-"}
               </p>
@@ -313,11 +283,11 @@ export default function SuperAdminVerificationsPage() {
                         ? "bg-red-500"
                         : "bg-yellow-500"
                     }`}
-                    style={{ width: `${c.completionPercentage || 0}%` }}
+                    style={{ width: `${c.completionPercentage}%` }}
                   ></div>
                 </div>
                 <span className="text-xs text-gray-500">
-                  {c.completionPercentage || 0}% Complete
+                  {c.completionPercentage}% Complete
                 </span>
               </div>
             </div>
@@ -353,60 +323,23 @@ export default function SuperAdminVerificationsPage() {
 
             <div className="space-y-2 text-sm text-gray-700">
               <p>
-                <span className="font-semibold">Organization:</span>{" "}
-                {selectedCandidate.organizationName ||
-                  selectedCandidate.organization ||
-                  "-"}
-              </p>
-
-              <p>
                 <span className="font-semibold">Stage:</span>{" "}
-                {selectedCandidate.currentStage || "-"}
+                {selectedCandidate.currentStage}
               </p>
-
               <p>
                 <span className="font-semibold">Status:</span>{" "}
                 {getStatusBadge(selectedCandidate.overallStatus)}
               </p>
-
               <p>
                 <span className="font-semibold">Completion:</span>{" "}
-                {selectedCandidate.completionPercentage ||
-                  selectedCandidate.progress?.completionPercentage ||
-                  0}
-                %
+                {selectedCandidate.completionPercentage || 0}%
               </p>
-
-              {/* New: show initiatedBy and initiatedAt if present */}
-              {selectedCandidate.initiatedBy && (
-                <p>
-                  <span className="font-semibold">Initiated By:</span>{" "}
-                  {selectedCandidate.initiatedBy}
-                </p>
-              )}
-              {selectedCandidate.initiatedAt && (
-                <p>
-                  <span className="font-semibold">Initiated At:</span>{" "}
-                  {formatDate(selectedCandidate.initiatedAt)}
-                </p>
-              )}
-
-              {/* sometimes summary objects use different keys (progress / initiatedAt in root) */}
-              {selectedCandidate.progress?.totalChecks !== undefined && (
-                <p>
-                  <span className="font-semibold">Total Checks:</span>{" "}
-                  {selectedCandidate.progress.totalChecks}
-                </p>
-              )}
             </div>
 
-            {/* stages block: SAFE rendering only for array-type stage entries */}
             {selectedCandidate.stages && (
               <div className="mt-5 space-y-4">
-                {Object.entries(selectedCandidate.stages)
-                  // filter only those entries where value is an array of checks
-                  .filter(([stageKey, checks]) => Array.isArray(checks))
-                  .map(([stage, checks]) => (
+                {Object.entries(selectedCandidate.stages).map(
+                  ([stage, checks]) => (
                     <div
                       key={stage}
                       className="bg-red-50 border border-red-100 rounded-lg p-4"
@@ -414,67 +347,22 @@ export default function SuperAdminVerificationsPage() {
                       <h3 className="font-semibold text-red-700 mb-2 capitalize">
                         {stage} Stage
                       </h3>
-
                       <ul className="space-y-1 text-sm">
-                        {Array.isArray(checks) && checks.length > 0 ? (
-                          checks.map((chk, i) => (
-                            <li
-                              key={i}
-                              className="flex justify-between text-gray-700"
-                            >
-                              <span>
-                                {chk?.check || chk?.name || `check-${i + 1}`}
-                              </span>
-                              {getStatusBadge(
-                                chk?.status || chk?.state || "Unknown"
-                              )}
-                            </li>
-                          ))
-                        ) : (
-                          <li className="text-gray-500 italic">
-                            No checks present
+                        {checks.map((chk, i) => (
+                          <li
+                            key={i}
+                            className="flex justify-between text-gray-700"
+                          >
+                            <span>{chk.check}</span>
+                            {getStatusBadge(chk.status)}
                           </li>
-                        )}
+                        ))}
                       </ul>
                     </div>
-                  ))}
+                  )
+                )}
               </div>
             )}
-
-            {/* If selectedCandidate is from summary (not full verifications) and has no stages but verifications list contains it, show initiator/time from verifications */}
-            {!selectedCandidate.stages &&
-              (() => {
-                const full = verifications.find(
-                  (v) => v.candidateId === selectedCandidate.candidateId
-                );
-                if (!full) return null;
-                return (
-                  <div className="mt-5 space-y-4">
-                    <div className="bg-red-50 border border-red-100 rounded-lg p-4">
-                      <h3 className="font-semibold text-red-700 mb-2">
-                        Details
-                      </h3>
-                      <div className="text-sm text-gray-700 space-y-1">
-                        <p>
-                          <span className="font-semibold">Initiated By:</span>{" "}
-                          {full.initiatedBy || "-"}
-                        </p>
-                        <p>
-                          <span className="font-semibold">Initiated At:</span>{" "}
-                          {formatDate(full.initiatedAt || full.createdAt)}
-                        </p>
-                        {full.progress && (
-                          <p>
-                            <span className="font-semibold">Progress:</span>{" "}
-                            {full.progress.completedChecks || 0} /{" "}
-                            {full.progress.totalChecks || "-"}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
 
             <div className="mt-6 flex justify-end">
               <button

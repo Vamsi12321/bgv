@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Building2,
   Users,
   FileText,
   Receipt,
@@ -14,17 +13,29 @@ import {
   UserCircle2,
   Menu,
   X,
-  HelpCircle,
-  CheckCheck,
-  Headset,
+  FileBarChart,
+  Building,
+  Brain,
+  UserSearch,
 } from "lucide-react";
 
-export default function AdminLayout({ children }) {
+export default function OrgAdminLayout({ children }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [user, setUser] = useState(null); // <-- load user from localStorage
   const profileRef = useRef(null);
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("bgvUser");
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
+  const displayName =
+    user?.userName || user?.name || user?.userName || "Org Admin";
+
+  /* ----------------------- Close profile menu outside ----------------------- */
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -35,32 +46,54 @@ export default function AdminLayout({ children }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  /* ----------------------- Org Admin Sidebar Links ----------------------- */
   const links = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "User&roles", href: "/admin/users", icon: Users },
+    { name: "Dashboard", href: "/org/dashboard", icon: LayoutDashboard },
+    { name: "organization", href: "/org/organization", icon: Building },
+    { name: "Users & Roles", href: "/org/users", icon: Users },
+    { name: "Verifications", href: "/org/verifications", icon: ClipboardList },
     {
-      name: "Verifications",
-      href: "/admin/verifications",
-      icon: ClipboardList,
+      name: "Manage Candidates",
+      href: "/org/manage-candidates",
+      icon: UserSearch,
     },
     {
       name: "Background Verification Services",
-      href: "/admin/bgv-requests",
+      href: "/org/bgv-requests",
       icon: ClipboardList,
     },
-
     {
       name: "Candidate Self-verification",
-      href: "/admin/self-verification",
+      href: "/org/self-verification",
       icon: UserCheck,
     },
-    { name: "Reports", href: "/admin/reports", icon: FileText },
-    { name: "Invoices", href: "/admin/invoices", icon: Receipt },
+    {
+      name: "AI-Screening",
+      href: "/org/AI-screening",
+      icon: Brain,
+    },
+    { name: "Reports", href: "/org/reports", icon: FileText },
+    { name: "Invoices", href: "/org/invoices", icon: Receipt },
+    { name: "Logs", href: "/org/logs", icon: FileBarChart },
   ];
 
+  /* ----------------------- Logout Handler ----------------------- */
   const handleLogout = () => {
-    if (confirm("Are you sure you want to logout?")) {
-      window.location.href = "/";
+    if (!confirm("Are you sure you want to logout?")) return;
+    try {
+      setLoggingOut(true);
+      localStorage.removeItem("bgvUser");
+      document.cookie =
+        "bgvTemp=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure";
+      sessionStorage.clear();
+      setIsSidebarOpen(false);
+
+      setTimeout(() => {
+        window.location.replace("/");
+      }, 300);
+    } catch (err) {
+      console.error("Logout error:", err);
+      window.location.replace("/");
     }
   };
 
@@ -74,17 +107,15 @@ export default function AdminLayout({ children }) {
         } md:translate-x-0`}
       >
         <div className="flex flex-col justify-between h-full overflow-y-auto">
-          {/* Header */}
-          {/* <div className="p-6 flex items-center justify-center mt-4 mb-4">
-            <div className="bg-white border border-[#ff004f] rounded-lg px-4 py-2 w-full text-center shadow">
-              <h1 className="text-xl font-bold text-[#ff004f]">
-                HR Admin Panel
-              </h1>
-            </div>
-          </div> */}
+          {/* Sidebar Header */}
+          <div className="p-4 flex items-center justify-center border-b border-gray-100">
+            <h1 className="text-2xl font-bold text-[#ff004f] font-[cursive] tracking-wide">
+              {user?.organizationName || "Org Panel"}
+            </h1>
+          </div>
 
           {/* Navigation */}
-          <nav className="flex flex-col space-y-2 py-16 px-2">
+          <nav className="flex flex-col space-y-1 py-6 px-3">
             {links.map((link) => {
               const isActive = pathname === link.href;
               const Icon = link.icon;
@@ -107,10 +138,10 @@ export default function AdminLayout({ children }) {
           </nav>
 
           {/* Logout */}
-          <div className="mt-8 border-t border-gray-200 pt-4 px-2">
+          <div className="border-t border-gray-200 p-4">
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-[#ff004f] rounded-md transition"
+              className="flex items-center gap-3 w-full text-left text-gray-700 hover:bg-gray-100 hover:text-[#ff004f] rounded-md px-3 py-2 transition"
             >
               <LogOut size={18} />
               Logout
@@ -119,7 +150,7 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 z-30 md:hidden"
@@ -138,12 +169,13 @@ export default function AdminLayout({ children }) {
             >
               {isSidebarOpen ? <X size={26} /> : <Menu size={26} />}
             </button>
+
             <h1 className="text-lg sm:text-xl font-semibold tracking-wide">
-              Welcome, Admin
+              Welcome, <span className="text-[#ff004f]">{displayName}</span>
             </h1>
           </div>
 
-          {/* Right section */}
+          {/* Profile Menu */}
           <div className="flex items-center gap-4 sm:gap-6">
             <div className="relative" ref={profileRef}>
               <UserCircle2
@@ -153,6 +185,10 @@ export default function AdminLayout({ children }) {
               />
               {profileMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                  <div className="px-4 py-2 border-b text-sm text-gray-700">
+                    <p className="font-semibold">{displayName}</p>
+                    <p className="text-gray-500 text-xs">{user?.email}</p>
+                  </div>
                   <button
                     onClick={() => {
                       alert("Opening Profile Settings...");
@@ -168,8 +204,20 @@ export default function AdminLayout({ children }) {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-8 mt-[80px]">{children}</main>
+        {/* Logging Out Overlay */}
+        {loggingOut && (
+          <div className="fixed inset-0 bg-gradient-to-br from-pink-50 via-white to-gray-100 backdrop-blur-sm flex flex-col items-center justify-center z-[9999] transition-opacity">
+            <div className="animate-spin h-16 w-16 rounded-full border-4 border-[#ff004f] border-t-transparent mb-6"></div>
+            <h3 className="text-xl font-semibold text-gray-700 animate-pulse">
+              Logging out…
+            </h3>
+          </div>
+        )}
+
+        {/* Main Page Content */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 mt-16">
+          {children}
+        </main>
       </div>
     </div>
   );
