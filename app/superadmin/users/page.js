@@ -6,7 +6,7 @@ import { PlusCircle, Edit, X, Loader2, User } from "lucide-react";
 
 /* 🔹 Base API */
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://maihoo.render.com";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
 /* 🔹 All Permissions */
 const allPermissions = [
