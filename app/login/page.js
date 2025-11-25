@@ -52,7 +52,7 @@ export default function LoginPage() {
         const user = JSON.parse(existingUser);
         const role = user.role?.toUpperCase();
 
-        if (["SUPER_ADMIN", "SUPER_ADMIN_HELPER"].includes(role))
+        if (["SUPER_ADMIN", "SUPER_ADMIN_HELPER","SUPER_SPOC"].includes(role))
           router.replace("/superadmin/dashboard");
         else if (["ORG_HR", "HELPER", "SPOC"].includes(role))
           router.replace("/org/dashboard");
