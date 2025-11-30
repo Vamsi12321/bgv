@@ -6,22 +6,33 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
 export default function ConsentClient({ searchParams }) {
-  const token = searchParams.token;
+  const token = searchParams?.token;
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
+  // 🚨 EARLY CHECK: No token → return immediately
+  if (!token) {
+    return (
+      <div className="p-10 text-center text-red-600 text-xl font-semibold">
+        ❌ Unauthorized – Invalid or Missing Consent Token
+      </div>
+    );
+  }
+
   useEffect(() => {
-    if (!token) return;
     (async () => {
-      const res = await fetch(
-        `${API_BASE}/public/verification-consent/${token}`
-      );
-      const json = await res.json();
-      setData(json);
-      setLoading(false);
+      try {
+        const res = await fetch(
+          `${API_BASE}/public/verification-consent/${token}`
+        );
+        const json = await res.json();
+        setData(json);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [token]);
 
@@ -54,8 +65,8 @@ export default function ConsentClient({ searchParams }) {
 
   if (!data || data.detail)
     return (
-      <div className="p-10 text-center text-red-600">
-        Invalid or expired consent link.
+      <div className="p-10 text-center text-red-600 text-xl font-semibold">
+        ❌ Invalid or Expired Consent Link
       </div>
     );
 
