@@ -445,17 +445,26 @@ export default function OrgHelpDeskPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTickets.map((ticket) => (
               <div
-                key={ticket._id}
+                key={ticket.ticketId}
                 className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 cursor-pointer group"
                 onClick={() => handleViewTicket(ticket)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 group-hover:text-[#ff004f] transition-colors line-clamp-1">
-                      {ticket.title}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">{ticket.ticketId}</span>
+                      <Badge variant={getStatusBadge(ticket.status)}>
+                        {ticket.status}
+                      </Badge>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 group-hover:text-[#ff004f] transition-colors line-clamp-2">
+                      {ticket.subject}
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">
-                      {new Date(ticket.createdAt).toLocaleDateString()}
+                      Created: {new Date(ticket.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Category: {ticket.category} | Assigned to: {ticket.assignedToName || 'Unassigned'}
                     </p>
                   </div>
                   <Badge variant={getPriorityBadge(ticket.priority)}>
@@ -596,14 +605,14 @@ export default function OrgHelpDeskPage() {
           <Modal
             isOpen={showDetailModal}
             onClose={() => setShowDetailModal(false)}
-            title={`Ticket #${selectedTicket._id.slice(-6)}`}
+            title={selectedTicket.ticketId}
             size="lg"
           >
             <div className="space-y-6">
               {/* Header */}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {selectedTicket.title}
+                  {selectedTicket.subject}
                 </h2>
                 <div className="flex items-center gap-3 flex-wrap">
                   <Badge variant={getStatusBadge(selectedTicket.status)}>
