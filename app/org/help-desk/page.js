@@ -196,7 +196,7 @@ export default function OrgHelpDeskPage() {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: comment }),
+          body: JSON.stringify({ comment: comment }),
         }
       );
 
