@@ -38,7 +38,7 @@ export default function SuperAdminLayout({ children }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const [logoSrc] = useState("/logos/maihoo.png");
+  const [logoSrc] = useState("/logos/maihooMain.png");
   const profileRef = useRef(null);
 
   /* Load user from localStorage */
@@ -67,16 +67,44 @@ export default function SuperAdminLayout({ children }) {
   /* Navigation Links */
   const links = [
     { name: "Dashboard", href: "/superadmin/dashboard", icon: LayoutDashboard },
-    { name: "Organizations", href: "/superadmin/organizations", icon: Building2 },
+    {
+      name: "Organizations",
+      href: "/superadmin/organizations",
+      icon: Building2,
+    },
     { name: "Users & Roles", href: "/superadmin/users", icon: Users },
-    { name: "Manage Candidates", href: "/superadmin/manage-candidates", icon: UserSearch },
-    { name: "Verifications", href: "/superadmin/verifications", icon: CheckCheck },
-    { name: "Background Verification Services", href: "/superadmin/bgv-requests", icon: ClipboardList },
-    { name: "Candidate Self-verification", href: "/superadmin/self-verification", icon: UserCheck },
+    {
+      name: "Manage Candidates",
+      href: "/superadmin/manage-candidates",
+      icon: UserSearch,
+    },
+    {
+      name: "Verifications",
+      href: "/superadmin/verifications",
+      icon: CheckCheck,
+    },
+    {
+      name: "Background Verification Services",
+      href: "/superadmin/bgv-requests",
+      icon: ClipboardList,
+    },
+    {
+      name: "Candidate Self-verification",
+      href: "/superadmin/self-verification",
+      icon: UserCheck,
+    },
     { name: "AI Screening", href: "/superadmin/AI-screening", icon: Brain },
-    { name: "AI-CV-Verification", href: "/superadmin/AI-CV-Verification", icon: ScanSearch },
+    {
+      name: "AI-CV-Verification",
+      href: "/superadmin/AI-CV-Verification",
+      icon: ScanSearch,
+    },
     { name: "Invoices", href: "/superadmin/invoices", icon: Receipt },
-    { name: "Support & Help Desk", href: "/superadmin/help-desk", icon: Headset },
+    {
+      name: "Support & Help Desk",
+      href: "/superadmin/help-desk",
+      icon: Headset,
+    },
     { name: "Logs", href: "/superadmin/logs", icon: FileBarChart },
     { name: "Reports", href: "/superadmin/reports", icon: FileText },
   ];
@@ -121,21 +149,21 @@ export default function SuperAdminLayout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      
       {/* ---------------- Sidebar ---------------- */}
       <aside
         className={`fixed top-0 left-0 z-40 h-full w-72 bg-white border-r border-gray-200 shadow-sm transform transition-transform duration-300 ease-in-out
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+          ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0`}
       >
         <div className="p-2 h-full flex flex-col">
-          
           {/* Logo */}
-          <header className="w-full p-2 flex justify-start items-center">
+          <header className="w-full flex justify-center items-center  bg-transparent">
             <Image
               src={logoSrc}
               alt="Logo"
-              width={160}
-              height={40}
+              width={120} // smaller width
+              height={30} // smaller height
               priority
               className="hover:scale-105 transition-transform duration-300"
             />
@@ -192,7 +220,6 @@ export default function SuperAdminLayout({ children }) {
 
       {/* ---------------- Main Section ---------------- */}
       <div className="flex-1 flex flex-col min-h-screen md:ml-64 transition-all duration-300 relative">
-
         {/* Header */}
         <header className="fixed top-0 left-0 md:left-64 right-0 bg-white px-4 sm:px-8 py-4 flex justify-between items-center shadow-md border-b border-gray-100 z-20">
           <div className="flex items-center gap-4">
@@ -204,7 +231,10 @@ export default function SuperAdminLayout({ children }) {
             </button>
 
             <h1 className="text-lg sm:text-xl font-semibold text-gray-800 p-4">
-              Welcome, <span className="text-[#ff004f]">{displayName.split(" ")[0]}</span>
+              Welcome,{" "}
+              <span className="text-[#ff004f]">
+                {displayName.split(" ")[0]}
+              </span>
             </h1>
           </div>
 

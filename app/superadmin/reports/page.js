@@ -12,7 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import { safeHtml2Canvas } from "@/utils/safeHtml2Canvas";
 
 /* ----------------------------------------------- */
@@ -21,18 +21,134 @@ import { safeHtml2Canvas } from "@/utils/safeHtml2Canvas";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
+/* ----------------------------------------------- */
+/* SERVICE ICONS */
+/* ----------------------------------------------- */
+const SERVICE_ICONS = {
+  pan_aadhaar_seeding: "🪪",
+  pan_verification: "📄",
+  employment_history: "👔",
+  aadhaar_to_uan: "🔗",
+  credit_report: "💳",
+  court_record: "⚖️",
+};
+
+/* ----------------------------------------------- */
+/* HELPERS */
+/* ----------------------------------------------- */
+const formatServiceName = (raw = "") =>
+  raw
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+const getServiceCertId = (stage, checkName, candId) =>
+  `cert-${stage}-${checkName
+    .replace(/[^a-z0-9]/gi, "-")
+    .toLowerCase()}-${candId}`;
+
+/* ----------------------------------------------- */
+/* PDF SINGLE CERT */
+/* ----------------------------------------------- */
+async function downloadSingleCert(id, fileName, setDownloading) {
+  try {
+    setDownloading(true);
+
+    const element = document.getElementById(id);
+    if (!element) {
+      alert("Report not ready.");
+      return;
+    }
+
+    const canvas = await safeHtml2Canvas(element, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+    });
+
+    const img = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+    });
+
+    const pdfWidth = 595.28;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(img, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(fileName);
+  } finally {
+    setDownloading(false);
+  }
+}
+
+/* ----------------------------------------------- */
+/* PDF MERGED FINAL — OPTION C (Title Page + All Reports) */
+/* ----------------------------------------------- */
+async function mergeAllCertificates(ids, fileName, setDownloading) {
+  try {
+    setDownloading(true);
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+    });
+
+    /* ---------------------- */
+    /* HEADER PAGE */
+    /* ---------------------- */
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(28);
+    pdf.setTextColor(0, 0, 0);
+
+    pdf.text("ALL VERIFICATION REPORTS", 297.5, 200, { align: "center" });
+
+    /* ---------------------- */
+    /* ADD CERTIFICATES */
+    /* ---------------------- */
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+
+      const canvas = await safeHtml2Canvas(el, { scale: 2 });
+      const img = canvas.toDataURL("image/png");
+
+      const pdfWidth = 595.28;
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addPage(); // first certificate page
+      pdf.addImage(img, "PNG", 0, 0, pdfWidth, pdfHeight);
+    }
+
+    pdf.save(fileName);
+  } finally {
+    setDownloading(false);
+  }
+}
+
+/* ----------------------------------------------- */
+/* MAIN PAGE */
+/* ----------------------------------------------- */
 export default function SuperAdminReportsPage() {
   const [organizations, setOrganizations] = useState([]);
   const [selectedOrg, setSelectedOrg] = useState("");
   const [candidates, setCandidates] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
   const [orgSearch, setOrgSearch] = useState("");
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
 
-  /* ----------------------------------------------- */
-  /* 🔥 Load Organizations */
-  /* ----------------------------------------------- */
+  const [primaryOpen, setPrimaryOpen] = useState(false);
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
+  const [finalOpen, setFinalOpen] = useState(false);
+
+  /* Fetch Orgs */
   useEffect(() => {
     (async () => {
       try {
@@ -48,9 +164,7 @@ export default function SuperAdminReportsPage() {
     })();
   }, []);
 
-  /* ----------------------------------------------- */
-  /* 🔥 Fetch Candidates of Selected ORG */
-  /* ----------------------------------------------- */
+  /* Fetch Candidates */
   const fetchCandidates = async (orgId) => {
     try {
       setLoading(true);
@@ -61,7 +175,7 @@ export default function SuperAdminReportsPage() {
       );
 
       const data = await res.json();
-      if (!res.ok) throw new Error("Failed fetching candidates");
+      if (!res.ok) throw new Error("Candidates failed");
 
       const list = data.candidates || [];
 
@@ -73,9 +187,8 @@ export default function SuperAdminReportsPage() {
               { credentials: "include" }
             );
             const verData = await verRes.json();
-            const verification = verData.verifications?.[0] || null;
-            return { ...c, verification };
-          } catch (err) {
+            return { ...c, verification: verData.verifications?.[0] || null };
+          } catch (_) {
             return { ...c, verification: null };
           }
         })
@@ -87,44 +200,18 @@ export default function SuperAdminReportsPage() {
     }
   };
 
-  const toggle = (id) => {
-    setExpanded((prev) => (prev === id ? null : id));
-  };
+  const toggle = (id) => setExpanded((prev) => (prev === id ? null : id));
 
   /* ----------------------------------------------- */
-  /* 🔥 Download PDF */
+  /* RENDER UI - (Same as previous message, trimmed for brevity) */
   /* ----------------------------------------------- */
-  const handleDownload = async (id) => {
-    const element = document.getElementById(id);
-    if (!element) return alert("Report not ready.");
-
-    const canvas = await safeHtml2Canvas(element, { scale: 2 });
-    const img = canvas.toDataURL("image/png");
-
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "pt",
-      format: "a4",
-    });
-
-    pdf.addImage(
-      img,
-      "PNG",
-      0,
-      0,
-      595.28,
-      (canvas.height * 595.28) / canvas.width
-    );
-
-    pdf.save(id + ".pdf");
-  };
 
   /* ----------------------------------------------- */
-  /* UI */
+  /* RENDER UI */
   /* ----------------------------------------------- */
   return (
     <div className="p-6 bg-gray-50 min-h-screen text-gray-900">
-      {/* Header */}
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-[#ff004f] flex items-center gap-2">
           <FileText /> Reports Overview
@@ -136,17 +223,15 @@ export default function SuperAdminReportsPage() {
         </div>
       </div>
 
-      {/* Org Selector */}
-      <div className="bg-white  rounded-xl p-4 mb-8 shadow">
-        {/* Org Selector */}
-        <div className="bg-white border rounded-xl p-4 mb-8 shadow relative">
+      {/* ORG SELECTOR */}
+      <div className="bg-white rounded-xl p-4 mb-8 shadow">
+        <div className="border rounded-xl p-4 shadow relative">
           <label className="text-sm font-medium mb-2 block">
             Select Organization
           </label>
 
-          {/* Main Selector */}
           <div
-            onClick={() => setShowOrgDropdown((prev) => !prev)}
+            onClick={() => setShowOrgDropdown((p) => !p)}
             className="border rounded-lg p-2 w-full bg-gray-50 text-gray-700 cursor-pointer flex justify-between items-center"
           >
             {selectedOrg
@@ -157,13 +242,10 @@ export default function SuperAdminReportsPage() {
             <ChevronDown size={18} className="text-gray-500" />
           </div>
 
-          {/* DROPDOWN */}
           {showOrgDropdown && (
             <div className="absolute bg-white border rounded-lg w-full mt-2 z-20 shadow-xl max-h-72 overflow-hidden">
-              {/* Search Input */}
               <div className="p-2 border-b bg-gray-50">
                 <input
-                  type="text"
                   value={orgSearch}
                   onChange={(e) => setOrgSearch(e.target.value)}
                   placeholder="Search organization..."
@@ -171,7 +253,6 @@ export default function SuperAdminReportsPage() {
                 />
               </div>
 
-              {/* List */}
               <div className="max-h-56 overflow-y-auto">
                 {organizations
                   .filter((o) =>
@@ -194,52 +275,32 @@ export default function SuperAdminReportsPage() {
                       {o.organizationName}
                     </div>
                   ))}
-
-                {/* No results */}
-                {organizations.filter((o) =>
-                  o.organizationName
-                    .toLowerCase()
-                    .includes(orgSearch.toLowerCase())
-                ).length === 0 && (
-                  <div className="p-3 text-gray-400 text-sm text-center">
-                    No organizations found
-                  </div>
-                )}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Loader */}
+      {/* LOADING */}
       {loading && (
-        <div className="flex justify-center py-20 text-gray-600">
-          <Loader2 className="animate-spin mr-2 text-[#ff004f]" />
+        <div className="flex justify-center py-20 text-[#ff004f]">
+          <Loader2 className="animate-spin mr-2" />
           Fetching Reports…
         </div>
       )}
 
-      {/* Candidate List */}
+      {/* --------------------------- CANDIDATES --------------------------- */}
       {!loading &&
         candidates.map((c) => {
           const v = c.verification;
-
-          const primaryDone =
-            v?.stages?.primary &&
-            v.stages.primary.every((ch) => ch.status === "COMPLETED");
-
-          const secondaryDone =
-            v?.stages?.secondary &&
-            v.stages.secondary.every((ch) => ch.status === "COMPLETED");
-
-          const finalDone =
-            v?.stages?.final &&
-            v.stages.final.every((ch) => ch.status === "COMPLETED");
+          const primaryChecks = v?.stages?.primary || [];
+          const secondaryChecks = v?.stages?.secondary || [];
+          const finalChecks = v?.stages?.final || [];
 
           return (
             <div
               key={c._id}
-              className="bg-white shadow border rounded-xl p-4 mb-4"
+              className="bg-white shadow border rounded-xl p-5 mb-6 transition-all"
             >
               <div
                 className="flex justify-between items-center cursor-pointer"
@@ -261,130 +322,292 @@ export default function SuperAdminReportsPage() {
                 </div>
               </div>
 
-              {/* Expanded Section */}
+              {/* EXPANDED */}
               {expanded === c._id && (
-                <div className="mt-6 border-t pt-6 space-y-6">
-                  {/* Download Buttons */}
-                  {/* Download Buttons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Recalculated Correct Logic */}
-                    {(() => {
-                      const primaryChecks = v?.stages?.primary || [];
-                      const secondaryChecks = v?.stages?.secondary || [];
-                      const finalChecks = v?.stages?.final || [];
-
-                      const primaryDone =
-                        Array.isArray(primaryChecks) &&
-                        primaryChecks.length > 0 &&
-                        primaryChecks.every((c) => c.status === "COMPLETED");
-
-                      const secondaryDone =
-                        Array.isArray(secondaryChecks) &&
-                        secondaryChecks.length > 0 &&
-                        secondaryChecks.every((c) => c.status === "COMPLETED");
-
-                      const finalDone =
-                        Array.isArray(finalChecks) &&
-                        finalChecks.length > 0 &&
-                        finalChecks.every((c) => c.status === "COMPLETED");
-
-                      return (
-                        <>
-                          {/* PRIMARY BUTTON */}
-                          <button
-                            onClick={() => {
-                              if (!primaryChecks.length)
-                                return alert(
-                                  "Primary stage not initiated yet."
-                                );
-                              if (!primaryDone)
-                                return alert(
-                                  "Primary stage not completed yet."
-                                );
-                              handleDownload(`cert-primary-${c._id}`);
-                            }}
-                            disabled={!primaryDone}
-                            className={`py-3 rounded-lg flex items-center justify-center gap-2 font-medium ${
-                              primaryDone
-                                ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
-                                : "bg-gray-200 text-gray-500 border border-gray-300 cursor-not-allowed"
-                            }`}
-                          >
-                            <Download size={16} /> Primary Report
-                          </button>
-
-                          {/* SECONDARY BUTTON */}
-                          <button
-                            onClick={() => {
-                              if (!secondaryChecks.length)
-                                return alert(
-                                  "Secondary stage not initiated yet."
-                                );
-                              if (!secondaryDone)
-                                return alert(
-                                  "Secondary stage not completed yet."
-                                );
-                              handleDownload(`cert-secondary-${c._id}`);
-                            }}
-                            disabled={!secondaryDone}
-                            className={`py-3 rounded-lg flex items-center justify-center gap-2 font-medium ${
-                              secondaryDone
-                                ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
-                                : "bg-gray-200 text-gray-500 border border-gray-300 cursor-not-allowed"
-                            }`}
-                          >
-                            <Download size={16} /> Secondary Report
-                          </button>
-
-                          {/* FINAL BUTTON */}
-                          <button
-                            onClick={() => {
-                              if (!finalChecks.length)
-                                return alert("Final stage not initiated yet.");
-                              if (!finalDone)
-                                return alert("Final stage not completed yet.");
-                              handleDownload(`cert-final-${c._id}`);
-                            }}
-                            disabled={!finalDone}
-                            className={`py-3 rounded-lg flex items-center justify-center gap-2 font-medium ${
-                              finalDone
-                                ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
-                                : "bg-gray-200 text-gray-500 border border-gray-300 cursor-not-allowed"
-                            }`}
-                          >
-                            <Download size={16} /> Final Report
-                          </button>
-                        </>
-                      );
-                    })()}
+                <div className="mt-6 border-t pt-6 space-y-10">
+                  {/* HIDDEN CERTIFICATES - invisible DOM for PDF */}
+                  <div className="absolute -left-[9999px] -top-[9999px]">
+                    {primaryChecks.map((chk) => (
+                      <ServiceCertificate
+                        key={getServiceCertId("primary", chk.check, c._id)}
+                        id={getServiceCertId("primary", chk.check, c._id)}
+                        candidate={c}
+                        orgName={c.organizationName}
+                        check={chk}
+                        stage="primary"
+                      />
+                    ))}
+                    {secondaryChecks.map((chk) => (
+                      <ServiceCertificate
+                        key={getServiceCertId("secondary", chk.check, c._id)}
+                        id={getServiceCertId("secondary", chk.check, c._id)}
+                        candidate={c}
+                        orgName={c.organizationName}
+                        check={chk}
+                        stage="secondary"
+                      />
+                    ))}
+                    {finalChecks.map((chk) => (
+                      <ServiceCertificate
+                        key={getServiceCertId("final", chk.check, c._id)}
+                        id={getServiceCertId("final", chk.check, c._id)}
+                        candidate={c}
+                        orgName={c.organizationName}
+                        check={chk}
+                        stage="final"
+                      />
+                    ))}
                   </div>
 
-                  {/* Hidden Certificate containers */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "-99999px",
-                      left: "-99999px",
-                    }}
-                  >
-                    <PrimaryCertificate
-                      id={`cert-primary-${c._id}`}
-                      candidate={c}
-                      orgName={c.organizationName}
-                    />
+                  {/* PRIMARY */}
+                  {primaryChecks.length > 0 && (
+                    <div>
+                      <button
+                        onClick={() => setPrimaryOpen((p) => !p)}
+                        className="w-full flex justify-between items-center bg-[#fde7ee] px-4 py-3 rounded-lg font-semibold text-[#ff004f]"
+                      >
+                        <span>Primary Services ({primaryChecks.length})</span>
+                        {primaryOpen ? <ChevronDown /> : <ChevronRight />}
+                      </button>
 
-                    <SecondaryCertificate
-                      id={`cert-secondary-${c._id}`}
-                      candidate={c}
-                      orgName={c.organizationName}
-                    />
+                      {primaryOpen && (
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {primaryChecks.map((chk) => {
+                            const done = chk.status === "COMPLETED";
+                            const certId = getServiceCertId(
+                              "primary",
+                              chk.check,
+                              c._id
+                            );
 
-                    <FinalCertificate
-                      id={`cert-final-${c._id}`}
-                      candidate={c}
-                      orgName={c.organizationName}
-                    />
-                  </div>
+                            return (
+                              <div
+                                key={certId}
+                                className="bg-white border rounded-xl p-4 shadow flex flex-col"
+                              >
+                                <p className="font-medium text-gray-900 flex items-center gap-2">
+                                  <span className="text-lg">
+                                    {SERVICE_ICONS[chk.check] || "📝"}
+                                  </span>
+                                  {formatServiceName(chk.check)}
+                                </p>
+
+                                <button
+                                  disabled={!done || downloading}
+                                  onClick={() =>
+                                    downloadSingleCert(
+                                      certId,
+                                      `${c._id}-primary-${chk.check}.pdf`,
+                                      setDownloading
+                                    )
+                                  }
+                                  className={`mt-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
+                                    done
+                                      ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
+                                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                  } ${
+                                    downloading
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
+                                  }`}
+                                >
+                                  {downloading ? (
+                                    <Loader2
+                                      className="animate-spin"
+                                      size={16}
+                                    />
+                                  ) : (
+                                    <Download size={16} />
+                                  )}
+                                  Download
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SECONDARY */}
+                  {secondaryChecks.length > 0 && (
+                    <div>
+                      <button
+                        onClick={() => setSecondaryOpen((p) => !p)}
+                        className="w-full flex justify-between items-center bg-[#fde7ee] px-4 py-3 rounded-lg font-semibold text-[#ff004f]"
+                      >
+                        <span>
+                          Secondary Services ({secondaryChecks.length})
+                        </span>
+                        {secondaryOpen ? <ChevronDown /> : <ChevronRight />}
+                      </button>
+
+                      {secondaryOpen && (
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {secondaryChecks.map((chk) => {
+                            const done = chk.status === "COMPLETED";
+                            const certId = getServiceCertId(
+                              "secondary",
+                              chk.check,
+                              c._id
+                            );
+
+                            return (
+                              <div
+                                key={certId}
+                                className="bg-white border rounded-xl p-4 shadow flex flex-col"
+                              >
+                                <p className="font-medium text-gray-900 flex items-center gap-2">
+                                  <span className="text-lg">
+                                    {SERVICE_ICONS[chk.check] || "📝"}
+                                  </span>
+                                  {formatServiceName(chk.check)}
+                                </p>
+
+                                <button
+                                  disabled={!done || downloading}
+                                  onClick={() =>
+                                    downloadSingleCert(
+                                      certId,
+                                      `${c._id}-secondary-${chk.check}.pdf`,
+                                      setDownloading
+                                    )
+                                  }
+                                  className={`mt-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
+                                    done
+                                      ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
+                                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                  } ${
+                                    downloading
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
+                                  }`}
+                                >
+                                  {downloading ? (
+                                    <Loader2
+                                      className="animate-spin"
+                                      size={16}
+                                    />
+                                  ) : (
+                                    <Download size={16} />
+                                  )}
+                                  Download
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* FINAL */}
+                  {finalChecks.length > 0 && (
+                    <div>
+                      <button
+                        onClick={() => setFinalOpen((p) => !p)}
+                        className="w-full flex justify-between items-center bg-[#fde7ee] px-4 py-3 rounded-lg font-semibold text-[#ff004f]"
+                      >
+                        <span>Final Services ({finalChecks.length})</span>
+                        {finalOpen ? <ChevronDown /> : <ChevronRight />}
+                      </button>
+
+                      {finalOpen && (
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {finalChecks.map((chk) => {
+                            const done = chk.status === "COMPLETED";
+                            const certId = getServiceCertId(
+                              "final",
+                              chk.check,
+                              c._id
+                            );
+
+                            return (
+                              <div
+                                key={certId}
+                                className="bg-white border rounded-xl p-4 shadow flex flex-col"
+                              >
+                                <p className="font-medium text-gray-900 flex items-center gap-2">
+                                  <span className="text-lg">
+                                    {SERVICE_ICONS[chk.check] || "📝"}
+                                  </span>
+                                  {formatServiceName(chk.check)}
+                                </p>
+
+                                <button
+                                  disabled={!done || downloading}
+                                  onClick={() =>
+                                    downloadSingleCert(
+                                      certId,
+                                      `${c._id}-final-${chk.check}.pdf`,
+                                      setDownloading
+                                    )
+                                  }
+                                  className={`mt-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
+                                    done
+                                      ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
+                                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                  } ${
+                                    downloading
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
+                                  }`}
+                                >
+                                  {downloading ? (
+                                    <Loader2
+                                      className="animate-spin"
+                                      size={16}
+                                    />
+                                  ) : (
+                                    <Download size={16} />
+                                  )}
+                                  Download
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* MERGED ALL REPORTS */}
+                  {primaryChecks.every((x) => x.status === "COMPLETED") &&
+                    secondaryChecks.every((x) => x.status === "COMPLETED") &&
+                    finalChecks.every((x) => x.status === "COMPLETED") && (
+                      <button
+                        disabled={downloading}
+                        onClick={() => {
+                          const allIds = [
+                            ...primaryChecks.map((chk) =>
+                              getServiceCertId("primary", chk.check, c._id)
+                            ),
+                            ...secondaryChecks.map((chk) =>
+                              getServiceCertId("secondary", chk.check, c._id)
+                            ),
+                            ...finalChecks.map((chk) =>
+                              getServiceCertId("final", chk.check, c._id)
+                            ),
+                          ];
+
+                          mergeAllCertificates(
+                            allIds,
+                            `${c._id}-all-verification-reports.pdf`,
+                            setDownloading
+                          );
+                        }}
+                        className={`w-full bg-[#ff004f] text-white hover:bg-[#e60047] rounded-xl shadow py-4 px-6 font-bold text-lg flex justify-center items-center gap-3 mt-10 ${
+                          downloading ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        {downloading ? (
+                          <Loader2 size={22} className="animate-spin" />
+                        ) : (
+                          <Download size={22} />
+                        )}
+                        Download ALL Reports (Merged)
+                      </button>
+                    )}
                 </div>
               )}
             </div>
@@ -395,254 +618,219 @@ export default function SuperAdminReportsPage() {
 }
 
 /* -------------------------------------------------------------
-   CERTIFICATE WRAPPERS
+   SERVICE CERTIFICATE TEMPLATE
 ------------------------------------------------------------- */
-function PrimaryCertificate({ id, candidate, orgName }) {
-  const list =
-    (candidate.verification?.stages?.primary || []).map((c) => ({
-      ...c,
-      stage: "primary",
-    })) || [];
+function ServiceCertificate({ id, candidate, orgName, check, stage }) {
+  const checks = [{ ...check, stage }];
+
+  const title = `${
+    stage.charAt(0).toUpperCase() + stage.slice(1)
+  } – ${formatServiceName(check.check)} Verification Report`;
 
   return (
     <CertificateBase
       id={id}
-      title="Primary Verification Report"
+      title={title}
       candidate={candidate}
       orgName={orgName}
-      checks={list}
-    />
-  );
-}
-
-function SecondaryCertificate({ id, candidate, orgName }) {
-  const list =
-    (candidate.verification?.stages?.secondary || []).map((c) => ({
-      ...c,
-      stage: "secondary",
-    })) || [];
-
-  return (
-    <CertificateBase
-      id={id}
-      title="Secondary Verification Report"
-      candidate={candidate}
-      orgName={orgName}
-      checks={list}
-    />
-  );
-}
-
-function FinalCertificate({ id, candidate, orgName }) {
-  const list =
-    (candidate.verification?.stages?.final || []).map((c) => ({
-      ...c,
-      stage: "final",
-    })) || [];
-
-  return (
-    <CertificateBase
-      id={id}
-      title="Final Verification Report"
-      candidate={candidate}
-      orgName={orgName}
-      checks={list}
+      checks={checks}
     />
   );
 }
 
 /* -------------------------------------------------------------
-   PREMIUM CERTIFICATE UI
+   CERTIFICATE UI BASE (SINGLE PAGE)
 ------------------------------------------------------------- */
+
 function CertificateBase({ id, title, candidate, orgName, checks }) {
   const verification = candidate.verification;
+  const serviceName = formatServiceName(checks[0]?.check || "");
 
-  const stageName = title.toLowerCase().includes("primary")
-    ? "primary"
-    : title.toLowerCase().includes("secondary")
-    ? "secondary"
-    : "final";
-
-  const stageChecks = verification?.stages?.[stageName] || [];
-
-  const allCompleted = stageChecks.every((c) => c.status === "COMPLETED");
-  const anyFailed = stageChecks.some((c) => c.status === "FAILED");
-
-  const stageStatus = allCompleted
-    ? "COMPLETED"
-    : anyFailed
-    ? "FAILED"
-    : "PENDING";
-
-  const badgeColor =
-    stageStatus === "COMPLETED"
-      ? "#16a34a"
-      : stageStatus === "FAILED"
-      ? "#dc2626"
-      : "#d97706";
+  const bulletItems = checks[0]?.remarks
+    ? Object.entries(checks[0].remarks).map(([k, v]) => `${k}: ${String(v)}`)
+    : ["No remarks available"];
 
   return (
     <div
       id={id}
       style={{
         width: "860px",
+        minHeight: "1120px", // A4 page height
         padding: "40px",
         background: "#ffffff",
-        border: "2px solid black",
-        borderRadius: "16px",
-        color: "black",
+        fontFamily: "Arial, sans-serif",
+        color: "#000",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
       }}
     >
-      {/* HEADER */}
+      {/* ------------------------------- */}
+      {/* HEADER: LOGO LEFT + TITLE CENTER */}
+      {/* ------------------------------- */}
       <div
         style={{
-          background: "#ff004f",
-          color: "white",
-          padding: "14px 20px",
-          borderRadius: "10px",
-          textAlign: "center",
-          fontSize: "22px",
-          fontWeight: "900",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          alignItems: "center",
         }}
       >
-        {title.toUpperCase()}
+        {/* Left - Logo */}
+        <div style={{ textAlign: "left" }}>
+          <img
+            src="/logos/maihooMain.png"
+            alt="logo"
+            style={{ height: "80px" }}
+          />
+        </div>
+
+        {/* Center - Title */}
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: "22px",
+            fontWeight: "bold",
+            textDecoration: "underline",
+            width: "200px",
+          }}
+        >
+          {serviceName} Verification Report
+        </div>
+
+        {/* Right - Empty (for alignment) */}
+        <div></div>
       </div>
 
-      {/* Candidate Details */}
-      <div style={{ textAlign: "center", marginTop: "25px" }}>
-        <h2 style={{ fontSize: "22px", fontWeight: "700", color: "black" }}>
-          {candidate.firstName} {candidate.lastName}
-        </h2>
-
-        <p>
-          <strong>Candidate ID:</strong> {candidate._id}
-        </p>
-        <p>
-          <strong>Verification ID:</strong> {verification?._id || "—"}
-        </p>
-        <p>
-          <strong>Organization:</strong> {orgName}
-        </p>
-      </div>
-
-      {/* STATUS BADGE */}
+      {/* ------------------------------- */}
+      {/* CANDIDATE DETAILS BLOCK */}
+      {/* ------------------------------- */}
       <div
         style={{
-          marginTop: "30px",
-          display: "flex",
-          justifyContent: "center",
+          marginTop: "40px",
+          fontSize: "16px",
+          lineHeight: "28px",
         }}
+      >
+        <p>
+          <b>Candidate Name:</b> {candidate.firstName} {candidate.lastName}
+        </p>
+
+        <p>
+          <b>Candidate ID:</b> {candidate._id}
+        </p>
+
+        <p>
+          <b>Verification ID:</b> {verification?._id || "—"}
+        </p>
+
+        <p>
+          <b>Organization:</b> {orgName}
+        </p>
+
+        <p>
+          <b>Service:</b> {serviceName}
+        </p>
+
+        <p>
+          <b>Verification Date & Time stamp:</b> {new Date().toLocaleString()}
+        </p>
+      </div>
+
+      {/* LINE */}
+      <div
+        style={{
+          width: "100%",
+          height: "2px",
+          background: "#000",
+          marginTop: "10px",
+          marginBottom: "40px",
+        }}
+      />
+
+      {/* ------------------------------- */}
+      {/* GREEN BOX + LINE */}
+      {/* ------------------------------- */}
+      <div
+        style={{ display: "flex", alignItems: "center", marginBottom: "40px" }}
       >
         <div
           style={{
-            padding: "18px 35px",
-            borderRadius: "50px",
-            border: "3px solid #ff004f",
-            background: "#fff",
-            fontWeight: "700",
-            fontSize: "18px",
-            color: badgeColor,
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
+            width: "70px",
+            height: "40px",
+            background: "#6ac46a",
+            borderRadius: "6px",
+            boxShadow: "0 3px 6px rgba(0,0,0,0.2)",
           }}
-        >
-          {stageStatus === "COMPLETED" && (
-            <CheckCircle size={20} color="#16a34a" />
-          )}
-          {stageStatus === "FAILED" && <XCircle size={20} color="#dc2626" />}
-          {stageStatus === "PENDING" && <span>⏳</span>}
-          {stageStatus}
-        </div>
+        />
+        <div
+          style={{
+            flexGrow: 1,
+            height: "2px",
+            background: "#6ac46a",
+            marginLeft: "15px",
+          }}
+        />
       </div>
 
-      {/* Section Title */}
-      <h3
-        style={{
-          textAlign: "center",
-          marginTop: "35px",
-          fontWeight: "800",
-          fontSize: "16px",
-          color: "#ff004f",
-        }}
-      >
-        VERIFICATION DETAILS
-      </h3>
+      {/* ------------------------------- */}
+      {/* BULLET REMARKS LIST */}
+      {/* ------------------------------- */}
+      <div style={{ marginTop: "20px", marginLeft: "40px" }}>
+        {bulletItems.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: "12px",
+            }}
+          >
+            <span style={{ fontSize: "20px", marginRight: "12px" }}>✓</span>
+            <span style={{ fontSize: "16px" }}>{item}</span>
+          </div>
+        ))}
+      </div>
 
-      {/* TABLE */}
-      <table
-        style={{
-          width: "100%",
-          marginTop: "20px",
-          borderCollapse: "collapse",
-          background: "white",
-          color: "black",
-          fontSize: "14px",
-        }}
-      >
-        <thead>
-          <tr style={{ background: "#ffe5ef", color: "black" }}>
-            <th style={headerCell}>Check</th>
-            <th style={headerCell}>Stage</th>
-            <th style={headerCell}>Status</th>
-            <th style={headerCell}>Submitted</th>
-            <th style={headerCell}>Remarks</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {checks.map((chk, idx) => (
-            <tr key={idx}>
-              <td style={cell}>{chk.check.replace(/_/g, " ")}</td>
-              <td style={cell}>{chk.stage}</td>
-              <td style={cell}>
-                <strong
-                  style={{
-                    color:
-                      chk.status === "COMPLETED"
-                        ? "green"
-                        : chk.status === "FAILED"
-                        ? "red"
-                        : "#d97706",
-                  }}
-                >
-                  {chk.status}
-                </strong>
-              </td>
-              <td style={cell}>
-                {chk.submittedAt
-                  ? new Date(chk.submittedAt).toLocaleString()
-                  : "—"}
-              </td>
-              <td style={cell}>
-                {chk.remarks
-                  ? Object.entries(chk.remarks).map(([k, v]) => (
-                      <div key={k}>
-                        <strong>{k}</strong>: {String(v)}
-                      </div>
-                    ))
-                  : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <p style={{ textAlign: "center", fontSize: "11px", marginTop: "30px" }}>
-        Generated on {new Date().toLocaleString()}
-      </p>
+      {/* ------------------------------- */}
+      {/* FIXED FOOTER */}
+      {/* ------------------------------- */}
+      <div style={{ marginTop: "60px", textAlign: "center" }}>
+        <div
+          style={{
+            height: "1px",
+            background: "red",
+            width: "100%",
+            marginBottom: "10px",
+          }}
+        />
+        <p
+          style={{
+            fontSize: "13px",
+            color: "red",
+            fontWeight: "600",
+          }}
+        >
+          Maihoo Technologies Private Limited, Vaishnavi’s Cynosure, 2-48/5/6,
+          8th Floor, Opp RTCC, Telecom Nagar Extension, Gachibowli-500032
+        </p>
+      </div>
     </div>
   );
 }
 
 const headerCell = {
   padding: "10px",
-  border: "1px solid black",
+  border: "1px solid #000",
   fontWeight: "700",
+  textAlign: "left",
+  color: "#000",
+  backgroundColor: "#ffe5ef",
 };
 
 const cell = {
   padding: "10px",
-  border: "1px solid black",
+  border: "1px solid #000",
   fontSize: "13px",
+  textAlign: "left",
+  color: "#000",
 };

@@ -118,3 +118,15 @@ aside .sidebar-scroll::-webkit-scrollbar-thumb {
 aside .sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background: #b5b5b5;
 }
+.slide-in-right {
+  animation: slideIn 0.25s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
