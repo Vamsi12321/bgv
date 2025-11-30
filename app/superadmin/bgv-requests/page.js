@@ -255,7 +255,10 @@ const sendConsentEmail = async () => {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ verificationChecks: [] }) // backend ignores anyway
+        body: JSON.stringify({ verificationChecks: [ {
+      "name": "Employment Verification",
+      "description": "Verify employment history, job titles, and employment dates"
+    },] }) // backend ignores anyway
       }
     );
 
