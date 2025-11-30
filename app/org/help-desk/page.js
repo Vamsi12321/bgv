@@ -223,6 +223,26 @@ export default function OrgHelpDeskPage() {
       console.error("Reopen error:", err);
     }
   };
+    // -------------------------------------------------
+  // FILTERED TICKETS
+  // -------------------------------------------------
+  const filteredTickets = tickets.filter((ticket) => {
+    const matchesSearch =
+      ticket.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      filters.status === "All" || ticket.status === filters.status;
+
+    const matchesPriority =
+      filters.priority === "All" || ticket.priority === filters.priority;
+
+    const matchesCategory =
+      filters.category === "All" || ticket.category === filters.category;
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+  });
+
 
   // BADGES
   const getStatusBadge = (status) => {
