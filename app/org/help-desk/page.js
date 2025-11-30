@@ -76,8 +76,10 @@ export default function OrgHelpDeskPage() {
       const params = new URLSearchParams();
 
       if (filters.status !== "All") params.append("status", filters.status);
-      if (filters.priority !== "All") params.append("priority", filters.priority);
-      if (filters.category !== "All") params.append("category", filters.category);
+      if (filters.priority !== "All")
+        params.append("priority", filters.priority);
+      if (filters.category !== "All")
+        params.append("category", filters.category);
 
       const res = await fetch(`${API_BASE}/secure/ticket/list?${params}`, {
         credentials: "include",
@@ -97,11 +99,11 @@ export default function OrgHelpDeskPage() {
   // -------------------------------------------------
   const ticketStats = {
     total: tickets.length,
-    open: tickets.filter(t => t.status === "OPEN").length,
-    inProgress: tickets.filter(t => t.status === "IN_PROGRESS").length,
-    resolved: tickets.filter(t => t.status === "RESOLVED").length,
-    reopened: tickets.filter(t => t.status === "REOPENED").length,
-    closed: tickets.filter(t => t.status === "CLOSED").length,
+    open: tickets.filter((t) => t.status === "OPEN").length,
+    inProgress: tickets.filter((t) => t.status === "IN_PROGRESS").length,
+    resolved: tickets.filter((t) => t.status === "RESOLVED").length,
+    reopened: tickets.filter((t) => t.status === "REOPENED").length,
+    closed: tickets.filter((t) => t.status === "CLOSED").length,
   };
 
   // -------------------------------------------------
@@ -162,7 +164,12 @@ export default function OrgHelpDeskPage() {
       if (res.ok) {
         alert(`Ticket ${data.ticketId} created successfully`);
         setShowCreateModal(false);
-        setNewTicket({ subject: "", description: "", category: "", priority: "MEDIUM" });
+        setNewTicket({
+          subject: "",
+          description: "",
+          category: "",
+          priority: "MEDIUM",
+        });
         fetchTickets();
       } else {
         alert(data.detail || "Failed to create ticket");
@@ -223,7 +230,7 @@ export default function OrgHelpDeskPage() {
       console.error("Reopen error:", err);
     }
   };
-    // -------------------------------------------------
+  // -------------------------------------------------
   // FILTERED TICKETS
   // -------------------------------------------------
   const filteredTickets = tickets.filter((ticket) => {
@@ -242,7 +249,6 @@ export default function OrgHelpDeskPage() {
 
     return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
   });
-
 
   // BADGES
   const getStatusBadge = (status) => {
@@ -286,7 +292,6 @@ export default function OrgHelpDeskPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 text-black tickets-page">
       <div className="p-4 sm:p-8">
-
         {/* PAGE HEADER */}
         <PageHeader
           title="Support Tickets"
@@ -308,45 +313,53 @@ export default function OrgHelpDeskPage() {
             </div>
           }
         />
-
         {/* ---------------------- SUMMARY CARDS ---------------------- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6 mt-4">
-
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
             <p className="text-sm text-gray-500">Total Tickets</p>
-            <h2 className="text-2xl font-bold text-gray-900">{ticketStats.total}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {ticketStats.total}
+            </h2>
           </div>
 
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
             <p className="text-sm text-gray-500">Open</p>
-            <h2 className="text-2xl font-bold text-blue-600">{ticketStats.open}</h2>
+            <h2 className="text-2xl font-bold text-blue-600">
+              {ticketStats.open}
+            </h2>
           </div>
 
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
             <p className="text-sm text-gray-500">In Progress</p>
-            <h2 className="text-2xl font-bold text-yellow-600">{ticketStats.inProgress}</h2>
+            <h2 className="text-2xl font-bold text-yellow-600">
+              {ticketStats.inProgress}
+            </h2>
           </div>
 
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
             <p className="text-sm text-gray-500">Resolved</p>
-            <h2 className="text-2xl font-bold text-green-600">{ticketStats.resolved}</h2>
+            <h2 className="text-2xl font-bold text-green-600">
+              {ticketStats.resolved}
+            </h2>
           </div>
 
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
             <p className="text-sm text-gray-500">Reopened</p>
-            <h2 className="text-2xl font-bold text-rose-600">{ticketStats.reopened}</h2>
+            <h2 className="text-2xl font-bold text-rose-600">
+              {ticketStats.reopened}
+            </h2>
           </div>
 
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
             <p className="text-sm text-gray-500">Closed</p>
-            <h2 className="text-2xl font-bold text-gray-600">{ticketStats.closed}</h2>
+            <h2 className="text-2xl font-bold text-gray-600">
+              {ticketStats.closed}
+            </h2>
           </div>
         </div>
-
         {/* ---------------------- FILTERS ---------------------- */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
             {/* SEARCH */}
             <div className="relative">
               <Search
@@ -366,7 +379,9 @@ export default function OrgHelpDeskPage() {
             {/* STATUS FILTER */}
             <select
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, status: e.target.value })
+              }
               className="px-4 py-2 border border-gray-300 rounded-lg 
                 focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none"
             >
@@ -412,7 +427,6 @@ export default function OrgHelpDeskPage() {
             </select>
           </div>
         </div>
-
         {/* ---------------------- TICKETS GRID ---------------------- */}
         {filteredTickets.length === 0 ? (
           <EmptyState
@@ -433,8 +447,10 @@ export default function OrgHelpDeskPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-gray-500 bg-gray-100 
-                        px-2 py-1 rounded">
+                      <span
+                        className="text-xs font-mono text-gray-500 bg-gray-100 
+                        px-2 py-1 rounded"
+                      >
                         {ticket.ticketId}
                       </span>
 
@@ -443,8 +459,10 @@ export default function OrgHelpDeskPage() {
                       </Badge>
                     </div>
 
-                    <h3 className="font-semibold text-gray-900 
-                      group-hover:text-[#ff004f] transition-colors line-clamp-2">
+                    <h3
+                      className="font-semibold text-gray-900 
+                      group-hover:text-[#ff004f] transition-colors line-clamp-2"
+                    >
                       {ticket.subject}
                     </h3>
 
@@ -455,8 +473,7 @@ export default function OrgHelpDeskPage() {
                     <p className="text-xs text-gray-500 mt-1">
                       Category: {ticket.category}
                       <br />
-                      Assigned to:{" "}
-                      {ticket.assignedToName || "Unassigned"}
+                      Assigned to: {ticket.assignedToName || "Unassigned"}
                     </p>
                   </div>
 
@@ -476,8 +493,10 @@ export default function OrgHelpDeskPage() {
                     {ticket.status.replace("_", " ")}
                   </Badge>
 
-                  <button className="text-[#ff004f] hover:text-[#e60047] 
-                    transition-colors flex items-center gap-1 text-sm font-medium">
+                  <button
+                    className="text-[#ff004f] hover:text-[#e60047] 
+                    transition-colors flex items-center gap-1 text-sm font-medium"
+                  >
                     <Eye size={16} />
                     View
                   </button>
@@ -485,7 +504,8 @@ export default function OrgHelpDeskPage() {
               </div>
             ))}
           </div>
-        )}        {/* ---------------------- CREATE TICKET MODAL ---------------------- */}
+        )}{" "}
+        {/* ---------------------- CREATE TICKET MODAL ---------------------- */}
         {showCreateModal && (
           <Modal
             isOpen={showCreateModal}
@@ -494,7 +514,6 @@ export default function OrgHelpDeskPage() {
             size="lg"
           >
             <div className="space-y-4">
-
               {/* SUBJECT */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -573,7 +592,10 @@ export default function OrgHelpDeskPage() {
 
               {/* ACTIONS */}
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateModal(false)}
+                >
                   Cancel
                 </Button>
 
@@ -589,7 +611,6 @@ export default function OrgHelpDeskPage() {
             </div>
           </Modal>
         )}
-
         {/* ---------------------- TICKET DETAIL MODAL ---------------------- */}
         {selectedTicket && (
           <Modal
@@ -599,7 +620,6 @@ export default function OrgHelpDeskPage() {
             size="lg"
           >
             <div className="space-y-6">
-
               {/* HEADER */}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -652,7 +672,9 @@ export default function OrgHelpDeskPage() {
 
               {/* ---------------------- DESCRIPTION ---------------------- */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Description
+                </h3>
                 <p className="text-gray-700 whitespace-pre-wrap">
                   {selectedTicket.description}
                 </p>
@@ -661,7 +683,9 @@ export default function OrgHelpDeskPage() {
               {/* ---------------------- ATTACHMENTS ---------------------- */}
               {selectedTicket.attachments?.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Attachments</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Attachments
+                  </h3>
 
                   <div className="space-y-2">
                     {selectedTicket.attachments.map((att, idx) => (
@@ -694,7 +718,9 @@ export default function OrgHelpDeskPage() {
                             {c.commentedBy || c.commentBy}
                           </span>
                           <span className="text-xs text-gray-500">
-                            {new Date(c.timestamp || c.commentedAt).toLocaleString()}
+                            {new Date(
+                              c.timestamp || c.commentedAt
+                            ).toLocaleString()}
                           </span>
                         </div>
                         <p className="text-sm text-gray-700">{c.message}</p>
@@ -732,9 +758,7 @@ export default function OrgHelpDeskPage() {
             </div>
           </Modal>
         )}
-
       </div>
     </div>
   );
 }
-

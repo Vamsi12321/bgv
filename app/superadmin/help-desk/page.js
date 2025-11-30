@@ -76,8 +76,10 @@ export default function SuperAdminTicketsPage() {
 
       const params = new URLSearchParams();
       if (filters.status !== "All") params.append("status", filters.status);
-      if (filters.priority !== "All") params.append("priority", filters.priority);
-      if (filters.category !== "All") params.append("category", filters.category);
+      if (filters.priority !== "All")
+        params.append("priority", filters.priority);
+      if (filters.category !== "All")
+        params.append("category", filters.category);
 
       const res = await fetch(`${API_BASE}/secure/ticket/list?${params}`, {
         credentials: "include",
@@ -93,11 +95,11 @@ export default function SuperAdminTicketsPage() {
       setLoading(false);
     }
   };
-const normalizeStatus = (s) => s?.toUpperCase().trim();
-const isClosed = (status) => {
-  const s = normalizeStatus(status);
-  return s === "CLOSED" || s === "CLOSE" || s.includes("CLOSED");
-};
+  const normalizeStatus = (s) => s?.toUpperCase().trim();
+  const isClosed = (status) => {
+    const s = normalizeStatus(status);
+    return s === "CLOSED" || s === "CLOSE" || s.includes("CLOSED");
+  };
 
   // ===========================
   // LOAD TICKET DETAILS
@@ -329,17 +331,17 @@ const isClosed = (status) => {
     };
     return variants[status] || "default";
   };
-// ===========================
-// SUMMARY COUNTERS
-// ===========================
-const ticketStats = {
-  total: tickets.length,
-  open: tickets.filter(t => t.status === "OPEN").length,
-  inProgress: tickets.filter(t => t.status === "IN_PROGRESS").length,
-  resolved: tickets.filter(t => t.status === "RESOLVED").length,
-  reopened: tickets.filter(t => t.status === "REOPENED").length,
-  closed: tickets.filter(t => t.status === "CLOSED").length,
-};
+  // ===========================
+  // SUMMARY COUNTERS
+  // ===========================
+  const ticketStats = {
+    total: tickets.length,
+    open: tickets.filter((t) => t.status === "OPEN").length,
+    inProgress: tickets.filter((t) => t.status === "IN_PROGRESS").length,
+    resolved: tickets.filter((t) => t.status === "RESOLVED").length,
+    reopened: tickets.filter((t) => t.status === "REOPENED").length,
+    closed: tickets.filter((t) => t.status === "CLOSED").length,
+  };
 
   const getPriorityBadge = (priority) => {
     const variants = {
@@ -349,7 +351,7 @@ const ticketStats = {
       LOW: "success",
     };
     return variants[priority] || "default";
-  };  // ===========================
+  }; // ===========================
   // MAIN PAGE RENDER
   // ===========================
 
@@ -368,7 +370,6 @@ const ticketStats = {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 text-black tickets-page">
       <div className="p-4 sm:p-8">
-
         {/* PAGE HEADER */}
         <PageHeader
           title="All Support Tickets"
@@ -380,45 +381,54 @@ const ticketStats = {
             </Button>
           }
         />
-{/* SUMMARY CARDS */}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6 mt-4">
+        {/* SUMMARY CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6 mt-4">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Total Tickets</p>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {ticketStats.total}
+            </h2>
+          </div>
 
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-    <p className="text-sm text-gray-500">Total Tickets</p>
-    <h2 className="text-2xl font-bold text-gray-900">{ticketStats.total}</h2>
-  </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Open</p>
+            <h2 className="text-2xl font-bold text-blue-600">
+              {ticketStats.open}
+            </h2>
+          </div>
 
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-    <p className="text-sm text-gray-500">Open</p>
-    <h2 className="text-2xl font-bold text-blue-600">{ticketStats.open}</h2>
-  </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">In Progress</p>
+            <h2 className="text-2xl font-bold text-yellow-600">
+              {ticketStats.inProgress}
+            </h2>
+          </div>
 
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-    <p className="text-sm text-gray-500">In Progress</p>
-    <h2 className="text-2xl font-bold text-yellow-600">{ticketStats.inProgress}</h2>
-  </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Resolved</p>
+            <h2 className="text-2xl font-bold text-green-600">
+              {ticketStats.resolved}
+            </h2>
+          </div>
 
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-    <p className="text-sm text-gray-500">Resolved</p>
-    <h2 className="text-2xl font-bold text-green-600">{ticketStats.resolved}</h2>
-  </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Reopened</p>
+            <h2 className="text-2xl font-bold text-rose-600">
+              {ticketStats.reopened}
+            </h2>
+          </div>
 
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-    <p className="text-sm text-gray-500">Reopened</p>
-    <h2 className="text-2xl font-bold text-rose-600">{ticketStats.reopened}</h2>
-  </div>
-
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-    <p className="text-sm text-gray-500">Closed</p>
-    <h2 className="text-2xl font-bold text-gray-600">{ticketStats.closed}</h2>
-  </div>
-
-</div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Closed</p>
+            <h2 className="text-2xl font-bold text-gray-600">
+              {ticketStats.closed}
+            </h2>
+          </div>
+        </div>
 
         {/* FILTERS */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
             {/* SEARCH */}
             <div className="relative">
               <Search
@@ -438,7 +448,9 @@ const ticketStats = {
             {/* STATUS FILTER */}
             <select
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, status: e.target.value })
+              }
               className="px-4 py-2 border border-gray-300 rounded-lg 
                 focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none"
             >
@@ -509,8 +521,10 @@ const ticketStats = {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-gray-500 bg-gray-100 
-                        px-2 py-1 rounded">
+                      <span
+                        className="text-xs font-mono text-gray-500 bg-gray-100 
+                        px-2 py-1 rounded"
+                      >
                         {ticket.ticketId}
                       </span>
 
@@ -520,22 +534,23 @@ const ticketStats = {
                     </div>
 
                     {/* SUBJECT */}
-                    <h3 className="font-semibold text-gray-900 
-                      group-hover:text-[#ff004f] transition-colors line-clamp-2">
+                    <h3
+                      className="font-semibold text-gray-900 
+                      group-hover:text-[#ff004f] transition-colors line-clamp-2"
+                    >
                       {ticket.subject}
                     </h3>
 
                     {/* META */}
                     <p className="text-sm text-gray-500 mt-1">
-                      Created: {new Date(ticket.createdAt).toLocaleDateString()} | 
-                      Org: {ticket.organizationName}
+                      Created: {new Date(ticket.createdAt).toLocaleDateString()}{" "}
+                      | Org: {ticket.organizationName}
                     </p>
 
                     <p className="text-xs text-gray-500 mt-1">
                       Category: {ticket.category}
                       <br />
-                      Assigned to:{" "}
-                      {ticket.assignedToName || "Unassigned"}
+                      Assigned to: {ticket.assignedToName || "Unassigned"}
                     </p>
 
                     {/* SLA */}
@@ -564,8 +579,10 @@ const ticketStats = {
                     {ticket.status.replace("_", " ")}
                   </Badge>
 
-                  <button className="text-[#ff004f] hover:text-[#e60047] 
-                    transition-colors flex items-center gap-1 text-sm font-medium">
+                  <button
+                    className="text-[#ff004f] hover:text-[#e60047] 
+                    transition-colors flex items-center gap-1 text-sm font-medium"
+                  >
                     <Eye size={16} />
                     View
                   </button>
@@ -588,7 +605,6 @@ const ticketStats = {
                 TICKET DETAIL MODAL CONTENT
             ============================ */}
             <div className="space-y-6">
-
               {/* HEADER */}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -662,8 +678,7 @@ const ticketStats = {
                         size="sm"
                         onClick={() => handleChangeStatus("RESOLVED")}
                         disabled={
-                          changingStatus ||
-                          selectedTicket.status === "RESOLVED"
+                          changingStatus || selectedTicket.status === "RESOLVED"
                         }
                       >
                         Mark Resolved
@@ -688,24 +703,24 @@ const ticketStats = {
                     variant="outline"
                     size="sm"
                     onClick={handleCloseTicket}
-                    disabled={changingStatus || selectedTicket.status === "CLOSED"}
+                    disabled={
+                      changingStatus || selectedTicket.status === "CLOSED"
+                    }
                   >
                     Close Ticket
                   </Button>
 
                   {/* REOPEN */}
-                 {isClosed(selectedTicket.status) && (
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={handleReopenTicket}
-    disabled={changingStatus}
-  >
-    Reopen Ticket
-  </Button>
-)}
-
-                
+                  {isClosed(selectedTicket.status) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReopenTicket}
+                      disabled={changingStatus}
+                    >
+                      Reopen Ticket
+                    </Button>
+                  )}
                 </div>
 
                 {/* ===========================
@@ -757,7 +772,9 @@ const ticketStats = {
                   DESCRIPTION
               ============================ */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Description
+                </h3>
                 <p className="text-gray-700 whitespace-pre-wrap">
                   {selectedTicket.description}
                 </p>
@@ -813,9 +830,7 @@ const ticketStats = {
                             {new Date(c.timestamp).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          {c.message}
-                        </p>
+                        <p className="text-sm text-gray-700">{c.message}</p>
                       </div>
                     ))
                   ) : (
@@ -854,4 +869,3 @@ const ticketStats = {
     </div>
   );
 }
-
