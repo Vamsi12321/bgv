@@ -57,7 +57,12 @@ export default function SuperAdminTicketsPage() {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/secure/tickets/all`, {
+      const params = new URLSearchParams();
+      if (filters.status && filters.status !== "All") params.append("status", filters.status);
+      if (filters.priority && filters.priority !== "All") params.append("priority", filters.priority);
+      if (filters.category && filters.category !== "All") params.append("category", filters.category);
+      
+      const res = await fetch(`${API_BASE}/secure/ticket/list?${params}`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -77,7 +82,7 @@ export default function SuperAdminTicketsPage() {
     try {
       setCommenting(true);
       const res = await fetch(
-        `${API_BASE}/secure/tickets/${selectedTicket._id}/comment`,
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/comment`,
         {
           method: "POST",
           credentials: "include",
@@ -103,9 +108,9 @@ export default function SuperAdminTicketsPage() {
     try {
       setChangingStatus(true);
       const res = await fetch(
-        `${API_BASE}/secure/tickets/${selectedTicket._id}/status`,
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/status`,
         {
-          method: "POST",
+          method: "PUT",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
@@ -129,9 +134,9 @@ export default function SuperAdminTicketsPage() {
     try {
       setAssigning(true);
       const res = await fetch(
-        `${API_BASE}/secure/tickets/${selectedTicket._id}/assign`,
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/reassign`,
         {
-          method: "POST",
+          method: "PUT",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ assignee }),
@@ -155,7 +160,7 @@ export default function SuperAdminTicketsPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/secure/tickets/${selectedTicket._id}/close`,
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/close`,
         {
           method: "POST",
           credentials: "include",
@@ -178,7 +183,7 @@ export default function SuperAdminTicketsPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/secure/tickets/${selectedTicket._id}/reopen`,
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/reopen`,
         {
           method: "POST",
           credentials: "include",
@@ -201,7 +206,7 @@ export default function SuperAdminTicketsPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/secure/tickets/${selectedTicket._id}`,
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}`,
         {
           credentials: "include",
         }
@@ -217,7 +222,7 @@ export default function SuperAdminTicketsPage() {
 
   const handleViewTicket = async (ticket) => {
     try {
-      const res = await fetch(`${API_BASE}/secure/tickets/${ticket._id}`, {
+      const res = await fetch(`${API_BASE}/secure/ticket/${ticket.ticketId}`, {
         credentials: "include",
       });
       const data = await res.json();

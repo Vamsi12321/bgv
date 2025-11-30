@@ -20,15 +20,16 @@ import {
   Loader2,
   Upload,
   X,
+  UserCheck,
+  RefreshCw,
 } from "lucide-react";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
-export default function OrgTicketsPage() {
+export default function SuperAdminTicketsPage() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,19 +39,16 @@ export default function OrgTicketsPage() {
     category: "All",
   });
 
-  // Create Ticket Form
-  const [newTicket, setNewTicket] = useState({
-    title: "",
-    description: "",
-    category: "General",
-    priority: "MEDIUM",
-  });
-  const [attachments, setAttachments] = useState([]);
-  const [creating, setCreating] = useState(false);
-
   // Comment
   const [comment, setComment] = useState("");
   const [commenting, setCommenting] = useState(false);
+
+  // Status Change
+  const [changingStatus, setChangingStatus] = useState(false);
+
+  // Assign
+  const [assignee, setAssignee] = useState("");
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     fetchTickets();
@@ -59,7 +57,12 @@ export default function OrgTicketsPage() {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/secure/tickets/org`, {
+      const params = new URLSearchParams();
+      if (filters.status && filters.status !== "All") params.append("status", filters.status);
+      if (filters.priority && filters.priority !== "All") params.append("priority", filters.priority);
+      if (filters.category && filters.category !== "All") params.append("category", filters.category);
+      
+      const res = await fetch(`${API_BASE}/secure/ticket/list?${params}`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -73,64 +76,13 @@ export default function OrgTicketsPage() {
     }
   };
 
-  const handleCreateTicket = async () => {
-    if (!newTicket.title || !newTicket.description) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    try {
-      setCreating(true);
-      const formData = new FormData();
-      formData.append(
-        "body",
-        JSON.stringify({
-          title: newTicket.title,
-          description: newTicket.description,
-          category: newTicket.category,
-          priority: newTicket.priority,
-        })
-      );
-
-      attachments.forEach((file) => {
-        formData.append("attachments", file);
-      });
-
-      const res = await fetch(`${API_BASE}/secure/createticket`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setShowCreateModal(false);
-        setNewTicket({
-          title: "",
-          description: "",
-          category: "General",
-          priority: "MEDIUM",
-        });
-        setAttachments([]);
-        fetchTickets();
-      } else {
-        alert(data.message || "Failed to create ticket");
-      }
-    } catch (err) {
-      console.error("Error creating ticket:", err);
-      alert("Failed to create ticket");
-    } finally {
-      setCreating(false);
-    }
-  };
-
   const handleAddComment = async () => {
     if (!comment.trim() || !selectedTicket) return;
 
     try {
       setCommenting(true);
       const res = await fetch(
-        `${API_BASE}/secure/tickets/${selectedTicket._id}/comment`,
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/comment`,
         {
           method: "POST",
           credentials: "include",
@@ -141,17 +93,7 @@ export default function OrgTicketsPage() {
 
       if (res.ok) {
         setComment("");
-        // Refresh ticket details
-        const detailRes = await fetch(
-          `${API_BASE}/secure/tickets/${selectedTicket._id}`,
-          {
-            credentials: "include",
-          }
-        );
-        const detailData = await detailRes.json();
-        if (detailRes.ok) {
-          setSelectedTicket(detailData);
-        }
+        refreshTicketDetails();
       }
     } catch (err) {
       console.error("Error adding comment:", err);
@@ -160,9 +102,127 @@ export default function OrgTicketsPage() {
     }
   };
 
+  const handleChangeStatus = async (newStatus) => {
+    if (!selectedTicket) return;
+
+    try {
+      setChangingStatus(true);
+      const res = await fetch(
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/status`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (res.ok) {
+        refreshTicketDetails();
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error("Error changing status:", err);
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
+  const handleAssignTicket = async () => {
+    if (!assignee.trim() || !selectedTicket) return;
+
+    try {
+      setAssigning(true);
+      const res = await fetch(
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/reassign`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assignee }),
+        }
+      );
+
+      if (res.ok) {
+        setAssignee("");
+        refreshTicketDetails();
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error("Error assigning ticket:", err);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleCloseTicket = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/close`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: "Resolved by admin" }),
+        }
+      );
+
+      if (res.ok) {
+        refreshTicketDetails();
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error("Error closing ticket:", err);
+    }
+  };
+
+  const handleReopenTicket = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/reopen`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: "Reopened by admin" }),
+        }
+      );
+
+      if (res.ok) {
+        refreshTicketDetails();
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error("Error reopening ticket:", err);
+    }
+  };
+
+  const refreshTicketDetails = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}`,
+        {
+          credentials: "include",
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedTicket(data);
+      }
+    } catch (err) {
+      console.error("Error refreshing ticket:", err);
+    }
+  };
+
   const handleViewTicket = async (ticket) => {
     try {
-      const res = await fetch(`${API_BASE}/secure/tickets/${ticket._id}`, {
+      const res = await fetch(`${API_BASE}/secure/ticket/${ticket.ticketId}`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -228,16 +288,12 @@ export default function OrgTicketsPage() {
     >
       <div className="p-4 sm:p-8">
         <PageHeader
-          title="Support Tickets"
-          subtitle="Create and manage your support tickets"
-          breadcrumbs={["Support", "Tickets"]}
+          title="All Support Tickets"
+          subtitle="Manage and respond to support tickets from all organizations"
+          breadcrumbs={["Support", "All Tickets"]}
           action={
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setShowCreateModal(true)}
-            >
-              Create Ticket
+            <Button variant="outline" icon={RefreshCw} onClick={fetchTickets}>
+              Refresh
             </Button>
           }
         />
@@ -271,6 +327,7 @@ export default function OrgTicketsPage() {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="RESOLVED">Resolved</option>
               <option value="CLOSED">Closed</option>
+              <option value="REOPENED">Reopened</option>
             </select>
 
             <select
@@ -307,16 +364,7 @@ export default function OrgTicketsPage() {
           <EmptyState
             icon={Ticket}
             title="No tickets found"
-            description="Create your first support ticket to get help from our team"
-            action={
-              <Button
-                variant="primary"
-                icon={Plus}
-                onClick={() => setShowCreateModal(true)}
-              >
-                Create Ticket
-              </Button>
-            }
+            description="No support tickets match your current filters"
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -353,150 +401,21 @@ export default function OrgTicketsPage() {
                     View
                   </button>
                 </div>
+
+                {ticket.assignedTo && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500">
+                      Assigned to:{" "}
+                      <span className="font-medium text-gray-700">
+                        {ticket.assignedTo}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
-
-        {/* Create Ticket Modal */}
-        <Modal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          title="Create Support Ticket"
-          size="md"
-        >
-          <div className="space-y-4">
-            <Input
-              label="Title"
-              placeholder="Brief description of your issue"
-              value={newTicket.title}
-              onChange={(e) =>
-                setNewTicket({ ...newTicket, title: e.target.value })
-              }
-              required
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Description <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                placeholder="Provide detailed information about your issue"
-                value={newTicket.description}
-                onChange={(e) =>
-                  setNewTicket({ ...newTicket, description: e.target.value })
-                }
-                rows={4}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Category
-                </label>
-                <select
-                  value={newTicket.category}
-                  onChange={(e) =>
-                    setNewTicket({ ...newTicket, category: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none"
-                >
-                  <option value="General">General</option>
-                  <option value="API Failure">API Failure</option>
-                  <option value="Bug Report">Bug Report</option>
-                  <option value="Feature Request">Feature Request</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Priority
-                </label>
-                <select
-                  value={newTicket.priority}
-                  onChange={(e) =>
-                    setNewTicket({ ...newTicket, priority: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none"
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Attachments (Optional)
-              </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#ff004f] transition-colors">
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => setAttachments(Array.from(e.target.files))}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <Upload className="mx-auto text-gray-400 mb-2" size={32} />
-                  <p className="text-sm text-gray-600">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    PNG, JPG, PDF up to 10MB
-                  </p>
-                </label>
-              </div>
-              {attachments.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {attachments.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Paperclip size={14} />
-                        {file.name}
-                      </span>
-                      <button
-                        onClick={() =>
-                          setAttachments(
-                            attachments.filter((_, i) => i !== idx)
-                          )
-                        }
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateModal(false)}
-                disabled={creating}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleCreateTicket}
-                loading={creating}
-                icon={Send}
-              >
-                Create Ticket
-              </Button>
-            </div>
-          </div>
-        </Modal>
 
         {/* Ticket Detail Modal */}
         {selectedTicket && (
@@ -512,7 +431,7 @@ export default function OrgTicketsPage() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {selectedTicket.title}
                 </h2>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <Badge variant={getStatusBadge(selectedTicket.status)}>
                     {selectedTicket.status.replace("_", " ")}
                   </Badge>
@@ -522,6 +441,82 @@ export default function OrgTicketsPage() {
                   <span className="text-sm text-gray-500">
                     {selectedTicket.category}
                   </span>
+                  {selectedTicket.assignedTo && (
+                    <span className="text-sm text-gray-500">
+                      Assigned: {selectedTicket.assignedTo}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Admin Actions */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-gray-900 text-sm">
+                  Admin Actions
+                </h3>
+
+                {/* Status Change */}
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleChangeStatus("IN_PROGRESS")}
+                    disabled={
+                      changingStatus || selectedTicket.status === "IN_PROGRESS"
+                    }
+                  >
+                    Mark In Progress
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleChangeStatus("RESOLVED")}
+                    disabled={
+                      changingStatus || selectedTicket.status === "RESOLVED"
+                    }
+                  >
+                    Mark Resolved
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCloseTicket}
+                    disabled={
+                      changingStatus || selectedTicket.status === "CLOSED"
+                    }
+                  >
+                    Close Ticket
+                  </Button>
+                  {selectedTicket.status === "CLOSED" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReopenTicket}
+                      disabled={changingStatus}
+                    >
+                      Reopen
+                    </Button>
+                  )}
+                </div>
+
+                {/* Assign */}
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="Assign to email..."
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none"
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleAssignTicket}
+                    loading={assigning}
+                    icon={UserCheck}
+                  >
+                    Assign
+                  </Button>
                 </div>
               </div>
 
