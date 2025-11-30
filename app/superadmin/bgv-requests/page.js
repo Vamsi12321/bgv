@@ -39,6 +39,14 @@ export default function BGVInitiationPage() {
   const stepNames = ["Primary", "Secondary", "Final"];
   const [showConfirmClose, setShowConfirmClose] = useState(false);
 
+  const [consentStatus, setConsentStatus] = useState(null);
+  const [sendingConsent, setSendingConsent] = useState(false);
+  const [checkingConsent, setCheckingConsent] = useState(false);
+  const [showConsentWarning, setShowConsentWarning] = useState({
+    open: false,
+    stage: null,
+  });
+
   // FULL candidate schema
   const emptyCandidate = {
     firstName: "",
@@ -170,6 +178,9 @@ export default function BGVInitiationPage() {
     return arr.some((c) => c.status !== "FAILED");
   };
 
+  const candidateHasConsented =
+    candidateVerification?.consentStatus === "CONSENT_GIVEN";
+
   useEffect(() => {
     (async () => {
       try {
@@ -211,6 +222,73 @@ export default function BGVInitiationPage() {
       setLoading(false);
     }
   };
+  const fetchConsentStatus = async (candidateId) => {
+    try {
+      setCheckingConsent(true);
+      const res = await fetch(
+        `${API_BASE}/secure/verification/${candidateId}/consent-status`,
+        {
+          credentials: "include",
+        }
+      );
+
+      const data = await res.json();
+      if (res.ok) {
+        setConsentStatus(data);
+      } else {
+        setConsentStatus(null);
+      }
+    } catch {
+      setConsentStatus(null);
+    } finally {
+      setCheckingConsent(false);
+    }
+  };
+  const sendConsentEmail = async () => {
+    if (!selectedCandidate) return;
+
+    try {
+      setSendingConsent(true);
+
+      const res = await fetch(
+        `${API_BASE}/secure/verification/${selectedCandidate}/send-consent`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            verificationChecks: [
+              {
+                name: "Employment Verification",
+                description:
+                  "Verify employment history, job titles, and employment dates",
+              },
+            ],
+          }), // backend ignores anyway
+        }
+      );
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showModal({
+          title: "Consent Email Sent",
+          message: `Consent email has been sent to the candidate.\n\nToken expires: ${data.expiresAt}`,
+          type: "success",
+        });
+
+        fetchConsentStatus(selectedCandidate);
+      } else {
+        showModal({
+          title: "Error",
+          message: data.detail || "Failed to send consent",
+          type: "error",
+        });
+      }
+    } finally {
+      setSendingConsent(false);
+    }
+  };
 
   const fetchCandidateVerification = async (candidateId) => {
     try {
@@ -250,16 +328,15 @@ export default function BGVInitiationPage() {
   const handleCandidateSelect = (id) => {
     setSelectedCandidate(id);
     setCandidateVerification(null);
-    setStages({
-      primary: [],
-      secondary: [],
-      final: [],
-    });
-
+    setStages({ primary: [], secondary: [], final: [] });
     setCurrentStep(0);
-    setLastRunStage(null);
     setVisibleStage("primary");
-    if (id) fetchCandidateVerification(id);
+    setLastRunStage(null);
+
+    if (id) {
+      fetchCandidateVerification(id);
+      fetchConsentStatus(id);
+    }
   };
 
   const validateAadhaar = (aadhaar) => {
@@ -918,6 +995,80 @@ export default function BGVInitiationPage() {
             </div>
           </div>
         </div>
+        {/* CONSENT STATUS BOX */}
+        <div className="bg-white border p-6 rounded-xl shadow mt-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            Candidate Consent
+          </h3>
+
+          {checkingConsent ? (
+            <p className="text-gray-600">Checking consent status...</p>
+          ) : consentStatus ? (
+            <>
+              <p className="text-sm">
+                Status:{" "}
+                <span className="font-semibold">
+                  {consentStatus.consentStatus || "Unknown"}
+                </span>
+              </p>
+
+              {consentStatus.consentStatus === "CONSENT_GIVEN" ? (
+                <p className="mt-2 text-green-600 font-medium">
+                  ✔ Candidate has provided consent. You can initiate
+                  verification.
+                </p>
+              ) : consentStatus.consentStatus === "CONSENT_DENIED" ? (
+                <p className="mt-2 text-red-600 font-medium">
+                  ✖ Candidate denied consent. Verification cannot proceed.
+                </p>
+              ) : consentStatus.consentStatus === "PENDING_CONSENT" ? (
+                <p className="mt-2 text-yellow-600 font-medium">
+                  ⏳ Waiting for candidate to respond.
+                </p>
+              ) : consentStatus.consentStatus === "TOKEN_EXPIRED" ? (
+                <p className="mt-2 text-red-600 font-medium">
+                  Token expired. You must resend the consent email.
+                </p>
+              ) : null}
+
+              {(consentStatus.consentStatus === "NOT_REQUESTED" ||
+                consentStatus.consentStatus === "PENDING_CONSENT" ||
+                consentStatus.consentStatus === "TOKEN_EXPIRED") && (
+                <button
+                  onClick={sendConsentEmail}
+                  disabled={sendingConsent}
+                  className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center gap-2"
+                >
+                  {sendingConsent ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Sending...
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle size={16} /> Send Consent Email
+                    </>
+                  )}
+                </button>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={sendConsentEmail}
+              disabled={sendingConsent}
+              className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center gap-2"
+            >
+              {sendingConsent ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Sending...
+                </>
+              ) : (
+                <>
+                  <PlusCircle size={16} /> Send Consent Email
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
         {/* MAIN GRID */}
         <div className="bg-white border p-6 rounded-xl shadow grid md:grid-cols-3 gap-6">
@@ -985,7 +1136,13 @@ export default function BGVInitiationPage() {
                       initLoading ||
                       candidateVerification?.stages?.primary?.length > 0
                     }
-                    onClick={() => handleInitiateStage("primary")}
+                    onClick={() => {
+                      if (!candidateHasConsented) {
+                        setShowConsentWarning({ open: true, stage: "primary" });
+                      } else {
+                        handleInitiateStage("primary");
+                      }
+                    }}
                     className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
                   >
                     {initLoading ? (
@@ -1735,6 +1892,41 @@ export default function BGVInitiationPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      {showConsentWarning.open && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-xl max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-red-600">
+              Candidate Consent Not Provided
+            </h3>
+
+            <p className="text-sm text-gray-700 mt-2">
+              The candidate has not yet provided consent for verification. Are
+              you sure you want to continue and initiate this stage?
+            </p>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() =>
+                  setShowConsentWarning({ open: false, stage: null })
+                }
+                className="px-4 py-2 border rounded-md"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => {
+                  handleInitiateStage(showConsentWarning.stage);
+                  setShowConsentWarning({ open: false, stage: null });
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+              >
+                Yes, Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
