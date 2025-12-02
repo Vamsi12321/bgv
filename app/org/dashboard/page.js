@@ -292,7 +292,6 @@ export default function OrgAdminDashboard() {
       <PageHeader
         title={role === "ORG_HR" ? "HR Dashboard" : "Verifications Overview"}
         subtitle="Monitor and manage your verification activities"
-       
         action={
           <Link href="/org/verifications">
             <Button variant="primary" icon={ArrowRight} iconPosition="right">
@@ -322,7 +321,9 @@ export default function OrgAdminDashboard() {
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={16} className="text-[#ff004f]" />
-            <h2 className="text-base font-semibold">Stage Breakdown</h2>
+            <h2 className="text-base text-black font-semibold">
+              Stage Breakdown
+            </h2>
           </div>
 
           <div className="h-[260px] sm:h-[300px]">
@@ -374,7 +375,9 @@ export default function OrgAdminDashboard() {
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 mb-4">
           <Activity size={16} className="text-[#ff004f]" />
-          <h2 className="text-base font-semibold">Recent Activity</h2>
+          <h2 className="text-base text-black font-semibold">
+            Recent Activity
+          </h2>
         </div>
 
         {activityLoading ? (

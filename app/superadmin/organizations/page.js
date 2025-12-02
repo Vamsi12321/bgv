@@ -12,12 +12,16 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
-// 🔥 FIXED REAL SERVICES FOR ORGANIZATION LIST PAGE
+/* ----------------------------------------------------
+   UPDATED SERVICES LIST (ALL REAL SERVICES)
+---------------------------------------------------- */
 const AVAILABLE_SERVICES = [
   "pan_aadhaar_seeding",
   "pan_verification",
@@ -25,6 +29,13 @@ const AVAILABLE_SERVICES = [
   "aadhaar_to_uan",
   "credit_report",
   "court_record",
+
+  // ⭐ NEW SERVICES ADDED ⭐
+  "address_verification",
+  "education_check_manual",
+  "supervisory_check",
+  "resume_validation",
+  "education_check_ai",
 ];
 
 export default function OrganizationsPage() {
@@ -46,7 +57,7 @@ export default function OrganizationsPage() {
   });
 
   const showError = (msg) =>
-    setModal({ show: true, type: "error", message: msg.detail });
+    setModal({ show: true, type: "error", message: msg });
 
   const showSuccess = (msg) =>
     setModal({ show: true, type: "success", message: msg });
@@ -61,6 +72,7 @@ export default function OrganizationsPage() {
       setOrgs(parsed);
       setFilteredOrgs(parsed);
     }
+
     fetchOrganizations();
   }, []);
 
@@ -89,6 +101,7 @@ export default function OrganizationsPage() {
       setLoading(false);
     }
   };
+
   const router = useRouter();
   useEffect(() => {
     const stored = localStorage.getItem("bgvUser");
@@ -100,11 +113,11 @@ export default function OrganizationsPage() {
     const user = JSON.parse(stored);
     const role = user.role?.toUpperCase();
 
-    // ❌ SUPER_ADMIN_HELPER cannot access organizations
     if (role === "SUPER_ADMIN_HELPER") {
       router.replace("/superadmin/dashboard");
     }
   }, []);
+
   /* ----------------------------------------------------
      SEARCH + SORT
   ---------------------------------------------------- */
@@ -123,7 +136,7 @@ export default function OrganizationsPage() {
   }, [search, sortAsc, orgs]);
 
   /* ----------------------------------------------------
-     Toggle active/inactive
+     Toggle active/inactive (RESTORED)
   ---------------------------------------------------- */
   const handleStatusToggle = async (org) => {
     const updatedStatus = !org.isActive;
@@ -146,6 +159,7 @@ export default function OrganizationsPage() {
         throw new Error(data.detail || data.message || "Update failed");
 
       await fetchOrganizations();
+
       showSuccess(
         `Organization ${
           updatedStatus ? "activated" : "suspended"
@@ -272,17 +286,7 @@ export default function OrganizationsPage() {
 
         <button
           onClick={() => setSortAsc(!sortAsc)}
-          className="
-    flex items-center gap-2 
-    px-2 py-2
-    rounded-full
-    border border-gray-300 
-    bg-white 
-    shadow-sm
-    text-gray-700
-    hover:bg-gray-100 
-    transition-all
-  "
+          className="flex items-center gap-2 px-2 py-2 rounded-full border border-gray-300 bg-white shadow-sm text-gray-700 hover:bg-gray-100 transition-all"
         >
           {sortAsc ? (
             <SortAsc size={14} className="text-gray-600" />
@@ -292,6 +296,7 @@ export default function OrganizationsPage() {
           <span className="text-sm">{sortAsc ? "A → Z" : "Z → A"}</span>
         </button>
       </div>
+
       {/* ----------------------------------------------------
          DESKTOP TABLE
       ---------------------------------------------------- */}
@@ -312,6 +317,7 @@ export default function OrganizationsPage() {
                     "SPOC",
                     "Email",
                     "Domain",
+                    "Status",
                     "Actions",
                   ].map((header) => (
                     <th
@@ -352,6 +358,33 @@ export default function OrganizationsPage() {
                       </td>
 
                       <td className="p-3">{org.subDomain}</td>
+
+                      {/* STATUS TOGGLE RESTORED */}
+                      <td className="p-3">
+                        <button
+                          onClick={() => handleStatusToggle(org)}
+                          className="flex items-center gap-2"
+                        >
+                          {org.isActive ? (
+                            <>
+                              <ToggleRight
+                                size={28}
+                                className="text-green-600"
+                              />
+                              <span className="text-green-700 font-medium">
+                                Active
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <ToggleLeft size={28} className="text-red-500" />
+                              <span className="text-red-600 font-medium">
+                                Inactive
+                              </span>
+                            </>
+                          )}
+                        </button>
+                      </td>
 
                       <td className="p-3 flex items-center gap-4">
                         <button
@@ -417,13 +450,17 @@ export default function OrganizationsPage() {
                     </div>
                   </div>
 
-                  <span
-                    className={`text-sm font-semibold ${
-                      org.isActive ? "text-green-600" : "text-red-500"
-                    }`}
-                  >
-                    {org.isActive ? "Active" : "Inactive"}
-                  </span>
+                  <button onClick={() => handleStatusToggle(org)}>
+                    {org.isActive ? (
+                      <span className="text-green-600 font-semibold">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="text-red-500 font-semibold">
+                        Inactive
+                      </span>
+                    )}
+                  </button>
                 </div>
 
                 <p className="text-sm text-gray-700 mt-2 truncate">
@@ -446,7 +483,7 @@ export default function OrganizationsPage() {
 
                   <button
                     onClick={() => setDrawer({ show: true, org, mode: "edit" })}
-                    className="text-[#ff004f] hover:text-[#d90044]"
+                    className="text-[#ff004f] hover:text-[#d90044] transition"
                   >
                     <Edit2 size={18} />
                   </button>
@@ -457,7 +494,7 @@ export default function OrganizationsPage() {
         </>
       )}
 
-      {/* Drawer in Part 3 */}
+      {/* Drawer Component */}
       {drawer.show && (
         <OrganizationDrawer
           drawer={drawer}
@@ -472,16 +509,10 @@ export default function OrganizationsPage() {
     </div>
   );
 }
-/* ---------------------------------------------------------
-   PART 3 — ORGANIZATION DRAWER (ADD, EDIT, VIEW)
---------------------------------------------------------- */
-/* ---------------------------------------------------------
-   UPDATED DRAWER WITH VALIDATIONS + AUTO-CAP + BORDER REMOVED
---------------------------------------------------------- */
-/* ---------------------------------------------------------
-   UPDATED DRAWER WITH VALIDATIONS + SHAKE + HIGHLIGHT
---------------------------------------------------------- */
 
+/* ------------------------------------------------------------------
+   PART 3 — ORGANIZATION DRAWER (ADD, EDIT, VIEW)
+------------------------------------------------------------------ */
 function OrganizationDrawer({
   drawer,
   setDrawer,
@@ -500,7 +531,9 @@ function OrganizationDrawer({
   const [errors, setErrors] = useState({});
   const [shake, setShake] = useState(false);
 
-  // 🔥 FIXED REAL SERVICES FOR YOUR PRODUCT
+  /* ----------------------------------------
+    🔥 UPDATED SERVICE LIST INCLUDING NEW ONES
+  ---------------------------------------- */
   const ALL_SERVICES = [
     "pan_aadhaar_seeding",
     "pan_verification",
@@ -508,6 +541,11 @@ function OrganizationDrawer({
     "aadhaar_to_uan",
     "credit_report",
     "court_record",
+    "address_verification",
+    "education_check_manual",
+    "supervisory_check",
+    "resume_validation",
+    "education_check_ai",
   ];
 
   const offeredServices = org.services.map((s) => s.serviceName);
@@ -515,9 +553,9 @@ function OrganizationDrawer({
     (s) => !offeredServices.includes(s)
   );
 
-  /* ---------------------------------------------------------
-     VALIDATION RULES
-  --------------------------------------------------------- */
+  /* ----------------------------------------
+      Validation Rules (unchanged)
+  ---------------------------------------- */
   const validators = {
     organizationName: (v) =>
       v.trim().length < 3 ? "Must be at least 3 characters" : "",
@@ -537,7 +575,6 @@ function OrganizationDrawer({
       v && !/^[A-Za-z0-9.-]+$/.test(v) ? "Invalid domain" : "",
   };
 
-  /* ===== Price Validation ===== */
   const validatePrice = (price) => {
     if (price === "" || price === null) return "Price required";
     if (Number(price) < 0) return "Price cannot be negative";
@@ -571,14 +608,9 @@ function OrganizationDrawer({
     return !hasError;
   };
 
-  /* ---------------------------------------------------------
-     AUTO CAPITALIZE ORG NAME
-  --------------------------------------------------------- */
-  const autoCapitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
-
-  /* ---------------------------------------------------------
-     Logo Upload
-  --------------------------------------------------------- */
+  /* ----------------------------------------
+      Upload Logo
+  ---------------------------------------- */
   const uploadLogo = async () => {
     if (!logoFile) return null;
 
@@ -606,9 +638,9 @@ function OrganizationDrawer({
     }
   };
 
-  /* ---------------------------------------------------------
-     SAVE Handler (with shake animation if invalid)
-  --------------------------------------------------------- */
+  /* ----------------------------------------
+      Save Handler
+  ---------------------------------------- */
   const handleSave = async () => {
     if (!validateAll()) {
       setShake(true);
@@ -644,6 +676,7 @@ function OrganizationDrawer({
       if (!res.ok) throw new Error(data.message || "Save failed");
 
       showSuccess(isEdit ? "Organization updated!" : "Organization added!");
+
       setDrawer({ show: false, org: null, mode: "" });
       fetchOrganizations();
     } catch (err) {
@@ -653,9 +686,9 @@ function OrganizationDrawer({
     }
   };
 
-  /* ---------------------------------------------------------
-     Toggle Services
-  --------------------------------------------------------- */
+  /* ----------------------------------------
+      Toggle Services
+  ---------------------------------------- */
   const toggleService = (service) => {
     if (offeredServices.includes(service)) {
       const updated = org.services.filter((s) => s.serviceName !== service);
@@ -668,9 +701,9 @@ function OrganizationDrawer({
     }
   };
 
-  /* ---------------------------------------------------------
-     Render Drawer
-  --------------------------------------------------------- */
+  /* ----------------------------------------
+      Drawer UI
+  ---------------------------------------- */
   return (
     <div className="fixed inset-0 z-[2000] flex">
       <div
@@ -710,7 +743,6 @@ function OrganizationDrawer({
           />
         </div>
 
-        {/* Upload Logo */}
         {!isView && (
           <div className="mb-5">
             <label className="block font-semibold text-gray-700 mb-1">
@@ -725,7 +757,7 @@ function OrganizationDrawer({
           </div>
         )}
 
-        {/* INPUTS */}
+        {/* Inputs */}
         {[
           ["Organization Name", "organizationName"],
           ["SPOC Name", "spocName"],
@@ -744,20 +776,14 @@ function OrganizationDrawer({
               value={org[key] || ""}
               onChange={(e) => {
                 let value = e.target.value;
-                if (key === "organizationName") {
-                  value = autoCapitalize(value);
-                }
                 setOrg((prev) => ({ ...prev, [key]: value }));
                 validateField(key, value);
               }}
-              className={`border rounded-lg p-2 w-full 
-                ${
-                  errors[key]
-                    ? "border-red-500 bg-red-50"
-                    : "focus:ring-2 focus:ring-[#ff004f]"
-                }
-                ${isView ? "bg-gray-100" : ""}
-              `}
+              className={`border rounded-lg p-2 w-full ${
+                errors[key]
+                  ? "border-red-500 bg-red-50"
+                  : "focus:ring-2 focus:ring-[#ff004f]"
+              } ${isView ? "bg-gray-100" : ""}`}
             />
 
             {errors[key] && (
@@ -766,7 +792,7 @@ function OrganizationDrawer({
           </div>
         ))}
 
-        {/* SERVICES */}
+        {/* Services */}
         <div className="mt-4 border-t pt-4">
           <h3 className="font-semibold mb-2">Offered Services</h3>
 
@@ -832,7 +858,7 @@ function OrganizationDrawer({
           )}
         </div>
 
-        {/* CREDENTIALS */}
+        {/* Credentials */}
         <div className="border-t mt-5 pt-4">
           <h3 className="font-semibold mb-2">Credentials</h3>
           <div className="flex gap-3">

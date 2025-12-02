@@ -199,6 +199,17 @@ export default function OrgHelpDeskPage() {
           body: JSON.stringify({ comment: comment }),
         }
       );
+      setSelectedTicket((prev) => ({
+        ...prev,
+        comments: [
+          {
+            comment: comment,
+            commentedBy: "You",
+            commentedAt: new Date().toISOString(),
+          },
+          ...(prev.comments || []),
+        ],
+      }));
 
       setComment("");
       refreshTicketDetails();
@@ -715,15 +726,17 @@ export default function OrgHelpDeskPage() {
                       <div key={idx} className="bg-gray-50 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-medium text-sm text-gray-900">
-                            {c.commentedBy || c.commentBy}
+                            {c.commentedBy || c.commentBy || c.commentedByName}
                           </span>
                           <span className="text-xs text-gray-500">
                             {new Date(
-                              c.timestamp || c.commentedAt
+                              c.commentedAt || c.timestamp
                             ).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700">{c.message}</p>
+                        <p className="text-sm text-gray-700">
+                          {c.comment || c.message}
+                        </p>
                       </div>
                     ))
                   ) : (

@@ -44,6 +44,24 @@ export default function SelfVerificationPage() {
 
   const steps = ["primary", "secondary", "final"];
 
+  const API_CHECKS = [
+    "pan_aadhaar_seeding",
+    "pan_verification",
+    "employment_history",
+    "aadhaar_to_uan",
+    "credit_report",
+    "court_record",
+  ];
+
+  const MANUAL_CHECKS = [
+    "address_verification",
+    "education_check_manual",
+    "supervisory_check",
+    "employment_history_manual",
+  ];
+
+  const AI_CHECKS = ["resume_validation", "education_check_ai"];
+
   /* ---------------------------------------------- */
   /* STATE                                           */
   /* ---------------------------------------------- */
@@ -315,13 +333,21 @@ export default function SelfVerificationPage() {
     const org = organizations.find((o) => o._id === orgId);
 
     if (org?.services?.length) {
+      // Extract service names
       const serviceNames = org.services
         .filter((s) => s.serviceName?.trim())
-        .map((s) => s.serviceName);
+        .map((s) => s.serviceName.toLowerCase());
 
-      const dynamicChecks = serviceNames.map((name) => ({
-        key: name,
-        ...getCheckConfig(name),
+      // 🔥 API-ONLY FILTER
+      const apiChecksOnly = serviceNames.filter((svc) =>
+        API_CHECKS.includes(svc)
+      );
+
+      // Convert to UI object
+      const dynamicChecks = apiChecksOnly.map((key) => ({
+        key,
+        ...getCheckConfig(key),
+        type: "API", // mark type if needed later
       }));
 
       setAvailableChecks(dynamicChecks);

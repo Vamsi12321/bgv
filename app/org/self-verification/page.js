@@ -40,6 +40,14 @@ export default function OrgCandidateSelfVerification() {
       }
     );
   };
+  const API_CHECKS = [
+    "pan_aadhaar_seeding",
+    "pan_verification",
+    "employment_history",
+    "aadhaar_to_uan",
+    "credit_report",
+    "court_record",
+  ];
 
   const steps = ["primary", "secondary", "final"];
 
@@ -139,8 +147,10 @@ export default function OrgCandidateSelfVerification() {
 
         // Load checks from org services
         if (parsed?.services?.length) {
+          // Only API-based services should appear in the self-verification page
           const dynamicChecks = parsed.services
             .filter((s) => s.serviceName?.trim())
+            .filter((s) => API_CHECKS.includes(s.serviceName)) // <-- FILTER ADDED
             .map((s) => ({
               key: s.serviceName,
               ...getCheckConfig(s.serviceName),

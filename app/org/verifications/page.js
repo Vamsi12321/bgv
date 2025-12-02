@@ -12,11 +12,13 @@ export default function OrgVerificationsPage() {
   const [verifications, setVerifications] = useState([]);
   const [summary, setSummary] = useState([]);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
+
   const [filters, setFilters] = useState({
     status: "",
     name: "",
     fromDate: "",
     toDate: "",
+    initiatedByName: "",
   });
 
   const router = useRouter();
@@ -35,6 +37,7 @@ export default function OrgVerificationsPage() {
       const data = await res.json();
       if (!res.ok)
         throw new Error(data.message || "Failed to fetch verifications");
+
       setSummary(data.candidatesSummary || []);
       setVerifications(data.verifications || []);
     } catch (err) {
@@ -44,24 +47,26 @@ export default function OrgVerificationsPage() {
     }
   };
 
-  /* ---------------------- Filters ---------------------- */
-  const filteredCandidates = useMemo(() => {
-    return summary.filter((c) => {
-      const matchStatus = filters.status
-        ? c.overallStatus?.toLowerCase() === filters.status.toLowerCase()
-        : true;
-      const matchName = filters.name
-        ? c.candidateName?.toLowerCase().includes(filters.name.toLowerCase())
-        : true;
-      const matchFromDate = filters.fromDate
-        ? new Date(c.createdAt || c.date) >= new Date(filters.fromDate)
-        : true;
-      const matchToDate = filters.toDate
-        ? new Date(c.createdAt || c.date) <= new Date(filters.toDate)
-        : true;
-      return matchStatus && matchName && matchFromDate && matchToDate;
+  /* ---------------------------------------------------------------
+     Merge initiatedByName from verifications → summary
+     --------------------------------------------------------------- */
+  const mergedSummary = useMemo(() => {
+    return summary.map((c) => {
+      const v = verifications.find((v) => v.candidateId === c.candidateId);
+      return {
+        ...c,
+        initiatedByName: v?.initiatedByName || "",
+      };
     });
-  }, [filters, summary]);
+  }, [summary, verifications]);
+
+  /* ---------------------------------------------------------------
+     Override status → Completed if 100%
+     --------------------------------------------------------------- */
+  const getDisplayStatus = (c) => {
+    if (c.completionPercentage === 100) return "COMPLETED";
+    return c.overallStatus || "PENDING";
+  };
 
   const getStatusBadge = (status) => {
     const base =
@@ -82,11 +87,71 @@ export default function OrgVerificationsPage() {
     }
   };
 
+  /* ---------------------------------------------------------------
+     Build dropdown list of unique initiators
+     --------------------------------------------------------------- */
+  const initiatorsList = useMemo(() => {
+    return [
+      ...new Set(
+        verifications
+          .map((v) => v.initiatedByName)
+          .filter((n) => n && n.trim() !== "")
+      ),
+    ];
+  }, [verifications]);
+
+  /* ---------------------------------------------------------------
+     Apply Filters
+     --------------------------------------------------------------- */
+  const filteredCandidates = useMemo(() => {
+    return mergedSummary.filter((c) => {
+      const matchStatus = filters.status
+        ? getDisplayStatus(c).toLowerCase() === filters.status.toLowerCase()
+        : true;
+
+      const matchName = filters.name
+        ? c.candidateName?.toLowerCase().includes(filters.name.toLowerCase())
+        : true;
+
+      const matchInitiator = filters.initiatedByName
+        ? c.initiatedByName === filters.initiatedByName
+        : true;
+
+      const matchFromDate = filters.fromDate
+        ? new Date(c.createdAt || c.date) >= new Date(filters.fromDate)
+        : true;
+
+      const matchToDate = filters.toDate
+        ? new Date(c.createdAt || c.date) <= new Date(filters.toDate)
+        : true;
+
+      return (
+        matchStatus &&
+        matchName &&
+        matchInitiator &&
+        matchFromDate &&
+        matchToDate
+      );
+    });
+  }, [filters, mergedSummary]);
+
+  /* --------------------------------------------------------------- */
   const openCandidateDetails = (candidate) => {
     const details = verifications.find(
       (v) => v.candidateId === candidate.candidateId
     );
-    setSelectedCandidate(details || candidate);
+
+    // merge summary info (completionPercentage, overallStatus, initiatedByName)
+    const summaryInfo = mergedSummary.find(
+      (s) => s.candidateId === candidate.candidateId
+    );
+
+    setSelectedCandidate({
+      ...(details || candidate),
+      completionPercentage: summaryInfo?.completionPercentage || 0,
+      overallStatus: summaryInfo?.overallStatus || details?.overallStatus,
+      initiatedByName: summaryInfo?.initiatedByName || details?.initiatedByName,
+    });
   };
 
   /* ---------------------- UI ---------------------- */
@@ -141,6 +206,24 @@ export default function OrgVerificationsPage() {
             />
           </div>
 
+          {/* Initiated By Filter (NEW) */}
+          <div className="min-w-[160px]">
+            <select
+              value={filters.initiatedByName}
+              onChange={(e) =>
+                setFilters({ ...filters, initiatedByName: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-red-500"
+            >
+              <option value="">Initiated By</option>
+              {initiatorsList.map((name, idx) => (
+                <option key={idx} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Date Range */}
           <div className="flex items-center gap-2 flex-wrap">
             <input
@@ -180,6 +263,9 @@ export default function OrgVerificationsPage() {
                     Candidate
                   </th>
                   <th className="px-4 py-3 text-left font-semibold">Stage</th>
+                  <th className="px-4 py-3 text-left font-semibold">
+                    Initiated By
+                  </th>
                   <th className="px-4 py-3 text-left font-semibold">Status</th>
                   <th className="px-4 py-3 text-left font-semibold">
                     Progress
@@ -201,8 +287,9 @@ export default function OrgVerificationsPage() {
                       <td className="px-4 py-3 capitalize">
                         {c.currentStage || "-"}
                       </td>
+                      <td className="px-4 py-3">{c.initiatedByName || "-"}</td>
                       <td className="px-4 py-3">
-                        {getStatusBadge(c.overallStatus)}
+                        {getStatusBadge(getDisplayStatus(c))}
                       </td>
                       <td className="px-4 py-3 w-[120px]">
                         <div className="bg-gray-200 h-2 rounded-full">
@@ -237,7 +324,7 @@ export default function OrgVerificationsPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="text-center py-6 text-gray-500 font-medium"
                     >
                       No matching records found.
@@ -267,12 +354,19 @@ export default function OrgVerificationsPage() {
                 <h3 className="font-semibold text-gray-800 text-base">
                   {c.candidateName}
                 </h3>
-                {getStatusBadge(c.overallStatus)}
+                {getStatusBadge(getDisplayStatus(c))}
               </div>
+
               <p className="text-sm text-gray-600">
                 <span className="font-semibold">Stage:</span>{" "}
                 {c.currentStage || "-"}
               </p>
+
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold">Initiated By:</span>{" "}
+                {c.initiatedByName || "-"}
+              </p>
+
               <div className="mt-2">
                 <div className="bg-gray-200 h-2 rounded-full">
                   <div
@@ -317,6 +411,7 @@ export default function OrgVerificationsPage() {
             <h2 className="text-xl font-bold mb-2 text-red-600">
               {selectedCandidate.candidateName}
             </h2>
+
             <p className="text-sm text-gray-600 mb-4">
               Candidate verification details overview
             </p>
@@ -327,8 +422,12 @@ export default function OrgVerificationsPage() {
                 {selectedCandidate.currentStage}
               </p>
               <p>
+                <span className="font-semibold">Initiated By:</span>{" "}
+                {selectedCandidate.initiatedByName}
+              </p>
+              <p>
                 <span className="font-semibold">Status:</span>{" "}
-                {getStatusBadge(selectedCandidate.overallStatus)}
+                {getStatusBadge(getDisplayStatus(selectedCandidate))}
               </p>
               <p>
                 <span className="font-semibold">Completion:</span>{" "}
@@ -339,7 +438,7 @@ export default function OrgVerificationsPage() {
             {selectedCandidate.stages && (
               <div className="mt-5 space-y-4">
                 {Object.entries(selectedCandidate.stages)
-                  .filter(([key, value]) => Array.isArray(value)) // ✅ only arrays
+                  .filter(([key, value]) => Array.isArray(value))
                   .map(([stage, checks]) => (
                     <div
                       key={stage}

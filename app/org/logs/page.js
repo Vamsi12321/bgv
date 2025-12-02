@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-
 import {
   CheckCircle,
   XCircle,
@@ -15,73 +14,58 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
-import * as XLSX from "xlsx";
 import { useRouter } from "next/navigation";
 
-/* ---------------------------------------------------
-   CONFIG
------------------------------------------------------*/
+/* CONFIG */
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
 
 export default function OrgLogsPage() {
-  /* ---------------------------------------------------
-     ORG DETAILS
-  -----------------------------------------------------*/
+  /* STATE */
   const [orgId, setOrgId] = useState("");
-
-  /* ---------------------------------------------------
-     RAW LOGS + BACKEND COUNT
-  -----------------------------------------------------*/
   const [allLogs, setAllLogs] = useState([]);
   const [totalCount, setTotalCount] = useState(null);
-  const loadedPagesRef = useRef(new Set());
 
-  /* ---------------------------------------------------
-     UI STATE
-  -----------------------------------------------------*/
-  const [loadingInitial, setLoadingInitial] = useState(false);
-  const [loadingChunk, setLoadingChunk] = useState(false);
-  const [error, setError] = useState("");
-
-  /* ---------------------------------------------------
-     FILTER STATE (MINIMIZED)
-  -----------------------------------------------------*/
   const [filters, setFilters] = useState({
     role: "",
+    search: "",
     fromDate: "",
     toDate: "",
-    search: "",
   });
 
-  const debounceRef = useRef(null);
-
-  /* ---------------------------------------------------
-     PAGE + LIMIT
-  -----------------------------------------------------*/
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
+  const [loadingChunk, setLoadingChunk] = useState(false);
+  const [loadingInitial, setLoadingInitial] = useState(false);
+  const [error, setError] = useState("");
 
-  /* ---------------------------------------------------
-     FILTERED LIST
-  -----------------------------------------------------*/
-  const [filteredLogs, setFilteredLogs] = useState([]);
+  const loadedPagesRef = useRef(new Set());
+  const sentinelRef = useRef(null);
 
   const router = useRouter();
 
-  /* ---------------------------------------------------
-     LOAD ORG ID
-  -----------------------------------------------------*/
+  /* Drawer State */
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [showDrawer, setShowDrawer] = useState(false);
+
+  const openDrawer = (log) => {
+    setSelectedLog(log);
+    setShowDrawer(true);
+  };
+
+  const closeDrawer = () => {
+    setSelectedLog(null);
+    setShowDrawer(false);
+  };
+
+  /* LOAD ORG ID */
   useEffect(() => {
     const stored = localStorage.getItem("bgvUser");
 
-    if (!stored) {
-      router.replace("/");
-      return;
-    }
+    if (!stored) return router.replace("/");
 
     const user = JSON.parse(stored);
 
@@ -93,14 +77,13 @@ export default function OrgLogsPage() {
     setOrgId(user.organizationId);
   }, []);
 
-  /* ---------------------------------------------------
-     FETCH PAGE (ONLY ONCE PER PAGE)
-  -----------------------------------------------------*/
+  /* FETCH PAGE */
   const fetchPage = useCallback(
     async (pageToFetch) => {
       if (!orgId) return;
 
       if (loadedPagesRef.current.has(pageToFetch)) return;
+
       loadedPagesRef.current.add(pageToFetch);
 
       try {
@@ -111,33 +94,27 @@ export default function OrgLogsPage() {
           page: pageToFetch,
           limit,
           orgId,
-        });
+        }).toString();
 
         const res = await fetch(`${API_BASE}/secure/activityLogs?${qs}`, {
           credentials: "include",
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to fetch logs");
+
+        if (!res.ok) throw new Error(data.message);
 
         const logs = data.logs || [];
-        const total = data.totalCount ?? null;
-
-        setTotalCount(total);
+        setTotalCount(data.totalCount ?? null);
 
         setAllLogs((prev) => {
-          const merged = [...prev, ...logs];
-          const uniq = [];
           const seen = new Set();
-
-          merged.forEach((l) => {
-            if (!seen.has(l._id)) {
-              seen.add(l._id);
-              uniq.push(l);
-            }
+          const merged = [...prev, ...logs].filter((l) => {
+            if (seen.has(l._id)) return false;
+            seen.add(l._id);
+            return true;
           });
-
-          return uniq;
+          return merged;
         });
       } catch (err) {
         setError(err.message);
@@ -146,386 +123,461 @@ export default function OrgLogsPage() {
         setLoadingChunk(false);
       }
     },
-    [limit, orgId]
+    [orgId, limit]
   );
 
-  /* ---------------------------------------------------
-     INITIAL LOAD
-  -----------------------------------------------------*/
+  /* INITIAL LOAD */
   useEffect(() => {
     if (!orgId) return;
 
-    loadedPagesRef.current = new Set();
+    loadedPagesRef.current.clear();
     setAllLogs([]);
-    setPage(1);
-
     fetchPage(1);
+    setPage(1);
   }, [orgId, limit]);
 
-  /* ---------------------------------------------------
-     INFINITE SCROLL
-  -----------------------------------------------------*/
-  const sentinelRef = useRef(null);
-
+  /* INFINITE SCROLL */
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    const target = sentinelRef.current;
+    if (!target) return;
 
-    const obs = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries[0].isIntersecting) return;
+        if (!entries[0].isIntersecting || loadingChunk) return;
 
         const nextPage = loadedPagesRef.current.size + 1;
 
-        if (totalCount && allLogs.length >= totalCount) return;
+        if (totalCount !== null && allLogs.length >= totalCount) return;
 
         fetchPage(nextPage);
       },
       { rootMargin: "200px" }
     );
 
-    obs.observe(sentinel);
-    return () => obs.disconnect();
-  }, [allLogs.length, totalCount]);
+    observer.observe(target);
 
-  /* ---------------------------------------------------
-     FILTER ENGINE
-  -----------------------------------------------------*/
-  useEffect(() => {
-    clearTimeout(debounceRef.current);
+    return () => observer.disconnect();
+  }, [allLogs, loadingChunk]);
 
-    debounceRef.current = setTimeout(() => {
-      const q = filters.search.toLowerCase();
-      const from = filters.fromDate ? new Date(filters.fromDate) : null;
-      const to = filters.toDate ? new Date(filters.toDate) : null;
+  /* FILTER LOGS */
+  const filteredLogs = allLogs.filter((log) => {
+    const search = filters.search.toLowerCase();
 
-      const fl = allLogs.filter((l) => {
-        let hay = `${l.action} ${l.description} ${l.userEmail}`.toLowerCase();
+    if (filters.role && log.userRole !== filters.role) return false;
 
-        if (q && !hay.includes(q)) return false;
+    if (search) {
+      const hay = `${log.action} ${log.description} ${log.userEmail}`
+        .toLowerCase()
+        .replace(/\s+/g, " ");
 
-        const ts = new Date(l.timestamp);
+      if (!hay.includes(search)) return false;
+    }
 
-        if (from && ts < from) return false;
+    if (filters.fromDate) {
+      if (new Date(log.timestamp) < new Date(filters.fromDate)) return false;
+    }
 
-        if (to) {
-          let end = new Date(to);
-          end.setHours(23, 59, 59);
-          if (ts > end) return false;
-        }
+    if (filters.toDate) {
+      if (new Date(log.timestamp) > new Date(filters.toDate + "T23:59:59"))
+        return false;
+    }
 
-        if (filters.role && l.userRole !== filters.role) return false;
+    return true;
+  });
 
-        return true;
-      });
-
-      setFilteredLogs(fl);
-      setPage(1);
-    }, 250);
-
-    return () => clearTimeout(debounceRef.current);
-  }, [filters, allLogs]);
-
-  /* ---------------------------------------------------
-     PAGINATION
-  -----------------------------------------------------*/
   const pageCount = Math.ceil(filteredLogs.length / limit) || 1;
-
   const visibleLogs = filteredLogs.slice((page - 1) * limit, page * limit);
 
-  /* ---------------------------------------------------
-     CSV EXPORT (Includes userId)
-  -----------------------------------------------------*/
-  const downloadCSV = () => {
-    if (!filteredLogs.length) return alert("No logs available.");
-
-    const rows = [
-      [
-        "Action",
-        "Description",
-        "User Email",
-        "User Role",
-        "User ID",
-        "Status",
-        "Timestamp",
-      ],
-      ...filteredLogs.map((l) => [
-        l.action,
-        l.description,
-        l.userEmail,
-        l.userRole,
-        l.userId, // INCLUDED
-        l.status,
-        l.timestamp,
-      ]),
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Logs");
-
-    XLSX.writeFile(
-      wb,
-      `org_logs_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-  };
-
-  /* ---------------------------------------------------
-     ICON HELPERS
-  -----------------------------------------------------*/
+  /* Helpers */
   const getIcon = (action = "") => {
     const a = action.toLowerCase();
-
-    if (a.includes("view")) return <Search className="text-blue-600" size={18} />;
     if (a.includes("create"))
-      return <UserPlus className="text-green-600" size={18} />;
+      return <UserPlus size={18} className="text-green-600" />;
     if (a.includes("update"))
-      return <Edit3 className="text-yellow-600" size={18} />;
+      return <Edit3 size={18} className="text-yellow-600" />;
     if (a.includes("delete"))
-      return <Trash2 className="text-red-600" size={18} />;
+      return <Trash2 size={18} className="text-red-600" />;
+    if (a.includes("approve"))
+      return <Shield size={18} className="text-blue-600" />;
+    if (a.includes("fail") || a.includes("reject"))
+      return <XCircle size={18} className="text-red-600" />;
 
-    return <CheckCircle className="text-gray-500" size={18} />;
+    return <CheckCircle size={18} className="text-gray-500" />;
   };
 
   const getStatusColor = (status = "") => {
     const s = status.toLowerCase();
     if (s.includes("success")) return "bg-green-100 text-green-700";
-    if (s.includes("fail")) return "bg-red-100 text-red-700";
+    if (s.includes("error") || s.includes("fail"))
+      return "bg-red-100 text-red-700";
+    if (s.includes("warning")) return "bg-yellow-100 text-yellow-700";
     return "bg-gray-100 text-gray-700";
   };
 
-  const formatDate = (iso) => {
-    try {
-      return new Date(iso).toLocaleString();
-    } catch {
-      return iso;
+  const formatDate = (iso) => new Date(iso).toLocaleString();
+
+  /* CSV – Visible Logs */
+  const downloadVisibleCSV = () => {
+    if (!visibleLogs.length) {
+      alert("No visible logs to download.");
+      return;
     }
+
+    const safe = (val) => String(val || "").replace(/"/g, '""');
+
+    const rows = [
+      ["#", "Action", "Description", "Email", "Role", "Status", "Timestamp"],
+      ...visibleLogs.map((log, i) => [
+        (page - 1) * limit + (i + 1),
+        safe(log.action),
+        safe(log.description),
+        safe(log.userEmail),
+        safe(log.userRole),
+        safe(log.status),
+        safe(formatDate(log.timestamp)),
+      ]),
+    ];
+
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `org_logs_page_${page}.csv`;
+    link.click();
+
+    URL.revokeObjectURL(url);
   };
 
-  /* ---------------------------------------------------
-     UI
-  -----------------------------------------------------*/
+  /* UI */
   return (
-    <div className="p-6 bg-gray-50 min-h-screen text-gray-900">
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-900">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
+      <div className="max-w-[1200px] mx-auto">
+        <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-extrabold text-[#ff004f]">
             Organization Logs
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Activity logs filtered for your organization.
-          </p>
+
+          <button
+            onClick={downloadVisibleCSV}
+            className="flex items-center gap-2 bg-[#ff004f] text-white px-4 py-2 rounded-lg shadow hover:bg-[#e60047] transition"
+          >
+            <Download size={18} />
+            Download Page
+          </button>
         </div>
 
-        <button
-          onClick={downloadCSV}
-          className="px-4 py-2 bg-[#ff004f] text-white rounded-lg flex items-center gap-2"
-        >
-          <Download size={16} /> Download CSV
-        </button>
-      </div>
-
-      {/* FILTERS */}
-      <div className="bg-white border rounded-xl shadow-md p-5 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* ROLE */}
-          <div>
-            <label className="block text-xs font-semibold mb-1">Role</label>
-            <select
-              value={filters.role}
-              onChange={(e) =>
-                setFilters({ ...filters, role: e.target.value })
-              }
-              className="border rounded-lg p-2 w-full text-sm"
-            >
-              <option value="">All Roles</option>
-              <option value="ORG_ADMIN">ORG_ADMIN</option>
-              <option value="ORG_HR">ORG_HR</option>
-              <option value="USER">USER</option>
-            </select>
-          </div>
-
-          {/* FROM DATE */}
-          <div>
-            <label className="block text-xs font-semibold mb-1">From</label>
-            <input
-              type="date"
-              value={filters.fromDate}
-              onChange={(e) =>
-                setFilters({ ...filters, fromDate: e.target.value })
-              }
-              className="border rounded-lg p-2 w-full text-sm"
-            />
-          </div>
-
-          {/* TO DATE */}
-          <div>
-            <label className="block text-xs font-semibold mb-1">To</label>
-            <input
-              type="date"
-              value={filters.toDate}
-              onChange={(e) =>
-                setFilters({ ...filters, toDate: e.target.value })
-              }
-              className="border rounded-lg p-2 w-full text-sm"
-            />
-          </div>
-
-          {/* SEARCH */}
-          <div>
-            <label className="block text-xs font-semibold mb-1">Search</label>
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-2 top-[10px] text-gray-500"
-              />
-              <input
-                type="text"
-                value={filters.search}
+        {/* FILTER PANEL */}
+        <div className="bg-white rounded-xl shadow-sm p-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+            {/* ROLE */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600">
+                Role
+              </label>
+              <select
+                value={filters.role}
                 onChange={(e) =>
-                  setFilters({ ...filters, search: e.target.value })
+                  setFilters({ ...filters, role: e.target.value })
                 }
-                placeholder="Search logs..."
-                className="border rounded-lg p-2 pl-8 w-full text-sm"
+                className="border border-gray-300 rounded-md w-full p-2 text-sm"
+              >
+                <option value="">All Roles</option>
+                <option value="ORG_ADMIN">ORG_ADMIN</option>
+                <option value="ORG_HR">ORG_HR</option>
+                <option value="HELPER">HELPER</option>
+              </select>
+            </div>
+
+            {/* FROM DATE */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600">
+                From
+              </label>
+              <input
+                type="date"
+                value={filters.fromDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, fromDate: e.target.value })
+                }
+                className="border rounded-lg w-full p-2 text-sm"
               />
+            </div>
+
+            {/* TO DATE */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600">To</label>
+              <input
+                type="date"
+                value={filters.toDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, toDate: e.target.value })
+                }
+                className="border rounded-lg w-full p-2 text-sm"
+              />
+            </div>
+
+            {/* SEARCH */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600">
+                Search
+              </label>
+              <div className="relative">
+                <Search
+                  size={15}
+                  className="absolute left-2 top-3 text-gray-400"
+                />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
+                  placeholder="Search anything..."
+                  className="pl-8 border rounded-lg w-full p-2 text-sm"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* CLEAR */}
-        <div className="mt-4 text-right">
-          <button
-            onClick={() =>
-              setFilters({ role: "", fromDate: "", toDate: "", search: "" })
-            }
-            className="px-4 py-2 border rounded-lg text-sm"
-          >
-            Clear Filters
-          </button>
-        </div>
-      </div>
-
-      {/* TABLE */}
-      <div className="bg-white rounded-xl border shadow overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#ffeef3] text-[#ff004f] text-xs uppercase">
-            <tr>
-              <th className="p-3 w-10">#</th>
-              <th className="p-3">Action</th>
-              <th className="p-3">Description</th>
-              <th className="p-3">User Email</th>
-              <th className="p-3">Role</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Time</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loadingInitial && (
-              <tr>
-                <td colSpan={7} className="p-8 text-center">
-                  <Loader2 className="animate-spin text-[#ff004f] mx-auto" />
-                </td>
-              </tr>
-            )}
-
-            {!loadingInitial &&
-              visibleLogs.map((l, i) => (
-                <tr key={l._id} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{(page - 1) * limit + i + 1}</td>
-                  <td className="p-3 flex items-center gap-2">
-                    {getIcon(l.action)} {l.action}
-                  </td>
-                  <td className="p-3">{l.description}</td>
-                  <td className="p-3">{l.userEmail}</td>
-                  <td className="p-3">{l.userRole}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                        l.status
-                      )}`}
-                    >
-                      {l.status}
-                    </span>
-                  </td>
-                  <td className="p-3 whitespace-nowrap">
-                    {formatDate(l.timestamp)}
-                  </td>
+        {/* TABLE WRAPPER */}
+        <div className="overflow-hidden">
+          {/* DESKTOP TABLE */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full table-fixed text-sm">
+              <thead className="bg-[#ffeef3] text-[#ff004f]">
+                <tr>
+                  <th className="px-3 py-2 text-left w-[50px]">#</th>
+                  <th className="px-3 py-2 text-left w-[150px]">Action</th>
+                  <th className="px-3 py-2 text-left w-[240px]">Email</th>
+                  <th className="px-3 py-2 text-left w-[140px]">Role</th>
+                  <th className="px-3 py-2 text-left w-[120px]">Status</th>
+                  <th className="px-3 py-2 text-left w-[160px]">Timestamp</th>
                 </tr>
-              ))}
+              </thead>
 
-            {!loadingInitial && visibleLogs.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-500">
-                  No logs found.
-                </td>
-              </tr>
-            )}
+              <tbody>
+                {loadingInitial && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-4 text-gray-600">
+                      <Loader2 className="animate-spin inline mr-2 text-[#ff004f]" />
+                      Loading logs...
+                    </td>
+                  </tr>
+                )}
 
-            {loadingChunk && (
-              <tr>
-                <td colSpan={7} className="p-3 text-center">
-                  <Loader2 className="animate-spin text-[#ff004f] mx-auto" />
-                  <p className="text-xs">Loading more...</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                {visibleLogs.map((log, i) => {
+                  const idx = (page - 1) * limit + i + 1;
 
-      {/* PAGINATION */}
-      {pageCount > 1 && (
-        <div className="flex justify-between items-center mt-6">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 border rounded-md"
-            >
-              <ChevronLeft size={16} />
-            </button>
+                  return (
+                    <tr
+                      key={log._id}
+                      onClick={() => openDrawer(log)}
+                      className="border-t hover:bg-gray-50 cursor-pointer"
+                    >
+                      <td className="px-3 py-2">{idx}</td>
+                      <td className="px-3 py-2 truncate flex items-center gap-2">
+                        {getIcon(log.action)}
+                        <span className="truncate">{log.action}</span>
+                      </td>
+                      <td className="px-3 py-2 truncate">{log.userEmail}</td>
+                      <td className="px-3 py-2 truncate">{log.userRole}</td>
+                      <td className="px-3 py-2 truncate">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                            log.status
+                          )}`}
+                        >
+                          {log.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 truncate">
+                        {formatDate(log.timestamp)}
+                      </td>
+                    </tr>
+                  );
+                })}
 
-            {Array.from({ length: pageCount }).map((_, i) => {
-              const n = i + 1;
-              return (
-                <button
-                  key={n}
-                  onClick={() => setPage(n)}
-                  className={`px-3 py-1 rounded-md ${
-                    page === n
-                      ? "bg-[#ff004f] text-white"
-                      : "border bg-white"
-                  }`}
-                >
-                  {n}
-                </button>
-              );
-            })}
-
-            <button
-              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              disabled={page === pageCount}
-              className="px-3 py-1 border rounded-md"
-            >
-              <ChevronRight size={16} />
-            </button>
+                {loadingChunk && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-4 text-gray-600">
+                      <Loader2 className="animate-spin inline mr-2 text-[#ff004f]" />
+                      Loading more logs...
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <div className="text-sm text-gray-600">
-            Showing <b>{visibleLogs.length}</b> of <b>{filteredLogs.length}</b>{" "}
-            filtered logs
+          {/* MOBILE CARDS */}
+          <div className="md:hidden space-y-4 px-0">
+            {visibleLogs.map((log) => (
+              <div
+                key={log._id}
+                className="bg-white shadow-md rounded-xl p-4 w-full border border-gray-200"
+                onClick={() => openDrawer(log)}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span
+                    className={`px-3 py-1 rounded-full text-[12px] font-semibold ${getStatusColor(
+                      log.status
+                    )}`}
+                  >
+                    {log.status}
+                  </span>
+
+                  <span className="text-[12px] text-gray-500">
+                    {formatDate(log.timestamp)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-[#ff004f] font-bold text-sm mb-1">
+                  {getIcon(log.action)}
+                  <span className="truncate">{log.action}</span>
+                </div>
+
+                <p className="text-[13px] text-gray-700 mb-3 line-clamp-2">
+                  {log.description || "—"}
+                </p>
+
+                <div className="text-[13px] text-gray-700 space-y-0.5">
+                  <p>
+                    <b>Email:</b> {log.userEmail}
+                  </p>
+                  <p>
+                    <b>Role:</b> {log.userRole}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      )}
 
-      {/* INFINITE SCROLL SENTINEL */}
-      <div ref={sentinelRef} className="h-10"></div>
+        {/* PAGINATION — 5 PAGE WINDOW */}
+        <div className="mt-6 flex justify-center items-center gap-2">
+          {(() => {
+            const windowSize = 5;
+            const start = Math.floor((page - 1) / windowSize) * windowSize + 1;
+            const end = Math.min(start + windowSize - 1, pageCount);
 
-      {error && (
-        <div className="p-3 bg-red-100 text-red-800 border border-red-300 rounded mt-5">
-          {error}
+            const pages = [];
+            for (let i = start; i <= end; i++) pages.push(i);
+
+            return (
+              <>
+                {/* PREV BLOCK */}
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage(Math.max(1, start - 1))}
+                  className="px-3 py-2 border rounded-md disabled:opacity-40 bg-white"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+
+                {/* PAGES */}
+                <div className="flex gap-2">
+                  {pages.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium ${
+                        page === p
+                          ? "bg-[#ff004f] text-white shadow"
+                          : "border bg-white text-gray-700"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                {/* NEXT BLOCK */}
+                <button
+                  disabled={page === pageCount}
+                  onClick={() => setPage(Math.min(pageCount, end + 1))}
+                  className="px-3 py-2 border rounded-md disabled:opacity-40 bg-white"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </>
+            );
+          })()}
+        </div>
+
+        {/* ERROR */}
+        {error && (
+          <div className="mt-4 text-red-600 bg-red-100 border border-red-300 p-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* INFINITE SCROLL TARGET */}
+        <div ref={sentinelRef} className="h-10"></div>
+      </div>
+
+      {/* DRAWER */}
+      {showDrawer && selectedLog && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50">
+          <div className="w-full sm:w-[380px] bg-white h-full shadow-xl p-5 overflow-y-auto slide-in-right">
+            <button
+              onClick={closeDrawer}
+              className="text-gray-600 hover:text-black mb-4"
+            >
+              ✕ Close
+            </button>
+
+            <h2 className="text-xl font-bold text-[#ff004f] mb-4">
+              Log Details
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              <p>
+                <b>Action:</b> {selectedLog.action}
+              </p>
+
+              <p>
+                <b>Status:</b>
+                <span
+                  className={`ml-2 px-2 py-1 rounded-full text-xs ${getStatusColor(
+                    selectedLog.status
+                  )}`}
+                >
+                  {selectedLog.status}
+                </span>
+              </p>
+
+              <p>
+                <b>Email:</b> {selectedLog.userEmail}
+              </p>
+
+              <p>
+                <b>Role:</b> {selectedLog.userRole}
+              </p>
+
+              <p>
+                <b>Date:</b> {formatDate(selectedLog.timestamp)}
+              </p>
+
+              <div>
+                <p className="font-semibold mb-1">Description:</p>
+                <p className="p-3 bg-gray-100 rounded-md text-gray-700 whitespace-pre-line">
+                  {selectedLog.description || "—"}
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold mb-1">Raw Data:</p>
+                <pre className="p-3 bg-gray-900 text-green-300 rounded-md text-xs overflow-x-auto">
+                  {JSON.stringify(selectedLog, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

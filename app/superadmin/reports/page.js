@@ -645,10 +645,20 @@ function ServiceCertificate({ id, candidate, orgName, check, stage }) {
 function CertificateBase({ id, title, candidate, orgName, checks }) {
   const verification = candidate.verification;
   const serviceName = formatServiceName(checks[0]?.check || "");
+  let bulletItems = [];
+  const remarks = checks[0]?.remarks;
 
-  const bulletItems = checks[0]?.remarks
-    ? Object.entries(checks[0].remarks).map(([k, v]) => `${k}: ${String(v)}`)
-    : ["No remarks available"];
+  if (!remarks) {
+    bulletItems = ["No remarks available"];
+  } else if (typeof remarks === "string") {
+    bulletItems = [remarks];
+  } else if (Array.isArray(remarks)) {
+    bulletItems = remarks.map((r) => String(r));
+  } else if (typeof remarks === "object") {
+    bulletItems = Object.entries(remarks).map(([k, v]) => `${k}: ${String(v)}`);
+  } else {
+    bulletItems = [String(remarks)];
+  }
 
   return (
     <div

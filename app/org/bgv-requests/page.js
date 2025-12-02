@@ -10,8 +10,13 @@ import {
   ChevronLeft,
   CheckCircle,
   RotateCcw,
+  Cpu,
+  FileCheck,
+  FileSearch,
+  Brain,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ConsentSection from "@/app/components/ConsentSection";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
@@ -39,6 +44,32 @@ export default function OrgBGVRequestsPage() {
   const stepNames = ["Primary", "Secondary", "Final"];
   const [currentStep, setCurrentStep] = useState(0);
   const [visibleStage, setVisibleStage] = useState("primary");
+  const [manualVerifyModal, setManualVerifyModal] = useState({
+    open: false,
+    check: "",
+    remarks: "",
+    status: "COMPLETED",
+  });
+
+  const API_SERVICES = [
+    "pan_aadhaar_seeding",
+    "pan_verification",
+    "employment_history",
+    "aadhaar_to_uan",
+    "credit_report",
+    "court_record",
+  ];
+
+  const MANUAL_SERVICES = [
+    { id: "address_verification", name: "Address Verification" },
+    { id: "education_check_manual", name: "Education Manual Check" },
+    { id: "supervisory_check", name: "Supervisory Check" },
+  ];
+
+  const AI_SERVICES = [
+    { id: "resume_validation", name: "Resume Validation" },
+    { id: "education_check_ai", name: "Education AI Check" },
+  ];
 
   const emptyCandidate = {
     firstName: "",
@@ -399,6 +430,49 @@ export default function OrgBGVRequestsPage() {
       setReinitLoading(false);
     }
   };
+  const handleManualVerificationSubmit = async () => {
+    try {
+      setLoading(true);
+
+      const res = await fetch(`${API_BASE}/secure/updateInternalVerification`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          verificationId: candidateVerification._id,
+          stage: visibleStage,
+          checkName: manualVerifyModal.check,
+          status: manualVerifyModal.status,
+
+          remarks: manualVerifyModal.remarks,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok)
+        throw new Error(data.message || "Failed to submit manual check");
+
+      showModal({
+        type: "success",
+        title: "Manual Check Updated",
+        message: `${manualVerifyModal.check} marked as completed.`,
+      });
+
+      setManualVerifyModal({
+        open: false,
+        check: "",
+        remarks: "",
+        status: "COMPLETED",
+      });
+
+      fetchCandidateVerification(selectedCandidate);
+    } catch (err) {
+      showModal({ type: "error", title: "Error", message: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* ---------------------------------------------------------------------
       START INDIVIDUAL CHECK
@@ -446,6 +520,16 @@ export default function OrgBGVRequestsPage() {
       setStartLoading((p) => ({ ...p, [check]: false }));
     }
   };
+  const finalizedChecks = useMemo(() => {
+    if (!candidateVerification?.stages) return DEFAULTS;
+
+    return {
+      primary: candidateVerification.stages.primary?.map((c) => c.check) || [],
+      secondary:
+        candidateVerification.stages.secondary?.map((c) => c.check) || [],
+      final: candidateVerification.stages.final?.map((c) => c.check) || [],
+    };
+  }, [candidateVerification]);
 
   /* ---------------------------------------------------------------------
       FINAL COMPLETION CHECK
@@ -454,6 +538,105 @@ export default function OrgBGVRequestsPage() {
     isStageCompleted("primary") &&
     isStageCompleted("secondary") &&
     isStageCompleted("final");
+
+  const renderServiceCard = (key, label, type) => {
+    const stageKey = visibleStage;
+    const status = getCheckStatus(key);
+    const selected = stages[stageKey]?.includes(key);
+    const completed = isCheckCompletedAnywhere(key);
+    const locked = isStageLocked(stageKey);
+
+    // icon selection
+    const iconMap = {
+      api: <Cpu size={20} className="text-blue-600" />,
+      manual: <FileCheck size={20} className="text-orange-600" />,
+      ai: <Brain size={20} className="text-purple-600" />,
+    };
+
+    return (
+      <motion.div
+        key={key}
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.15 }}
+        className={`
+        rounded-2xl p-4 shadow-lg border
+        ${
+          selected
+            ? "border-red-500 bg-red-50"
+            : completed
+            ? "border-green-400 bg-green-50"
+            : "border-gray-200 bg-white hover:shadow-xl hover:bg-gray-50"
+        }
+        transition-all duration-150
+      `}
+      >
+        {/* Title, Icon, Status */}
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-2">
+            {iconMap[type]}
+            <div className="text-lg font-semibold capitalize text-gray-800">
+              {label}
+            </div>
+          </div>
+
+          <div className="flex items-center ml-2">
+            {status === "COMPLETED" && (
+              <CheckCircle className="text-green-600" size={22} />
+            )}
+            {status === "FAILED" && <X className="text-red-600" size={22} />}
+            {status === "IN_PROGRESS" && (
+              <Loader2 className="text-yellow-500 animate-spin" size={22} />
+            )}
+            {!status && (
+              <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+            )}
+          </div>
+        </div>
+
+        <div className="border-t my-3" />
+
+        {/* Checkbox OR Manual Verify */}
+        {!completed ? (
+          <div className="flex items-center gap-3 py-2">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => handleStageToggle(key, stageKey)}
+              disabled={locked}
+              className="w-5 h-5 accent-red-600 cursor-pointer"
+            />
+            <span className="text-sm text-gray-700">
+              {locked ? "Locked" : `Add to ${stepNames[currentStep]}`}
+            </span>
+          </div>
+        ) : null}
+
+        {/* Manual Verify Button */}
+        {type === "manual" &&
+          isStageLocked(stageKey) &&
+          finalizedChecks[stageKey].includes(key) &&
+          status !== "COMPLETED" &&
+          status !== "FAILED" && (
+            <button
+              onClick={() =>
+                setManualVerifyModal({
+                  open: true,
+                  check: key,
+                  remarks: "",
+                  status: "COMPLETED", // default
+                })
+              }
+              className="mt-3 w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-md"
+            >
+              Verify Manually
+            </button>
+          )}
+      </motion.div>
+    );
+  };
 
   /* ---------------------------------------------------------------------
       RETURN UI
@@ -536,6 +719,11 @@ export default function OrgBGVRequestsPage() {
             );
           })}
         </div>
+
+        <div className="mt-6">
+          <ConsentSection candidateId={selectedCandidate} />
+        </div>
+
         {/* -----------------------------------------------------------------
             CANDIDATE & STATUS
         ----------------------------------------------------------------- */}
@@ -708,13 +896,12 @@ export default function OrgBGVRequestsPage() {
                   </button>
 
                   <button
-                   disabled={
-  !isStageCompleted("primary") ||
-  isStageCompleted("secondary") ||
-  runLoading ||
-  !candidateVerification
-}
-
+                    disabled={
+                      !isStageCompleted("primary") ||
+                      isStageCompleted("secondary") ||
+                      runLoading ||
+                      !candidateVerification
+                    }
                     onClick={() => handleRunStage("secondary")}
                     className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-blue-300"
                   >
@@ -850,124 +1037,61 @@ export default function OrgBGVRequestsPage() {
             )}
 
             {/* Verification Cards */}
+            {/* ======== GROUPED CHECK SECTIONS (API / MANUAL / AI) ========== */}
             {!isStageCompleted(visibleStage) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                <AnimatePresence mode="popLayout">
-                  {servicesOffered
-                    .filter((service) => {
-                      const primary = stages.primary;
-                      const secondary = stages.secondary;
+              <div className="space-y-10">
+                {/* ---------------- API CHECKS ---------------- */}
+                {/* ---------------- API CHECKS ---------------- */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span className="text-blue-600">🔗</span> API-Based Checks
+                  </h3>
 
-                      if (visibleStage === "primary") {
-                        if (isStageLocked("primary"))
-                          return primary.includes(service);
-                        return true;
-                      }
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {API_SERVICES.filter(
+                      (s) =>
+                        servicesOffered.includes(s) &&
+                        (!isStageLocked(visibleStage) ||
+                          finalizedChecks[visibleStage].includes(s))
+                    ).map((s) =>
+                      renderServiceCard(s, s.replace(/_/g, " "), "api")
+                    )}
+                  </div>
+                </div>
 
-                      if (visibleStage === "secondary") {
-                        if (isStageLocked("secondary"))
-                          return secondary.includes(service);
-                        return (
-                          !primary.includes(service) ||
-                          secondary.includes(service)
-                        );
-                      }
+                {/* ---------------- MANUAL CHECKS ---------------- */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span className="text-orange-600">📝</span> Manual
+                    Verification
+                  </h3>
 
-                      if (visibleStage === "final") {
-                        if (isStageLocked("final")) {
-                          return stages.final.includes(service);
-                        }
-                        return (
-                          !primary.includes(service) &&
-                          !secondary.includes(service)
-                        );
-                      }
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {MANUAL_SERVICES.filter(
+                      (s) =>
+                        servicesOffered.includes(s.id) &&
+                        (!isStageLocked(visibleStage) ||
+                          finalizedChecks[visibleStage].includes(s.id))
+                    ).map((s) => renderServiceCard(s.id, s.name, "manual"))}
+                  </div>
+                </div>
 
-                      return true;
-                    })
-                    .map((v) => {
-                      const stageKey = visibleStage;
-                      const status = getCheckStatus(v);
-                      const selected = stages[stageKey]?.includes(v);
-                      const completed = isCheckCompletedAnywhere(v);
-                      const locked = isStageLocked(stageKey);
+                {/* ---------------- AI CHECKS ---------------- */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span className="text-purple-600">🤖</span> AI-Powered
+                    Checks
+                  </h3>
 
-                      return (
-                        <motion.div
-                          key={v}
-                          layout
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.15 }}
-                          className={`
-              rounded-2xl p-4 md:p-5 flex flex-col shadow-lg border
-              ${
-                selected
-                  ? "border-red-500 bg-red-50"
-                  : completed
-                  ? "border-green-400 bg-green-50"
-                  : "border-gray-200 bg-white hover:shadow-xl hover:bg-gray-50"
-              }
-              transition-all duration-150
-            `}
-                        >
-                          {/* Title + Status */}
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="text-lg font-semibold capitalize leading-tight text-gray-800 break-words">
-                              {v.replace(/_/g, " ")}
-                            </div>
-
-                            {/* Status Icon */}
-                            <div className="flex items-center ml-2">
-                              {status === "COMPLETED" && (
-                                <CheckCircle
-                                  className="text-green-600"
-                                  size={22}
-                                />
-                              )}
-
-                              {status === "FAILED" && (
-                                <X className="text-red-600" size={22} />
-                              )}
-
-                              {status === "IN_PROGRESS" && (
-                                <Loader2
-                                  className="text-yellow-500 animate-spin"
-                                  size={22}
-                                />
-                              )}
-
-                              {!status && (
-                                <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Divider */}
-                          <div className="border-t my-3" />
-
-                          {/* Checkbox */}
-                          <div className="flex items-center gap-3 py-2">
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              onChange={() => handleStageToggle(v, stageKey)}
-                              disabled={locked || completed}
-                              className="w-5 h-5 accent-red-600 cursor-pointer"
-                            />
-                            <span className="text-sm text-gray-700">
-                              {completed
-                                ? "Already Verified"
-                                : locked
-                                ? "Locked"
-                                : `Add to ${stepNames[currentStep]}`}
-                            </span>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                </AnimatePresence>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {AI_SERVICES.filter(
+                      (s) =>
+                        servicesOffered.includes(s.id) &&
+                        (!isStageLocked(visibleStage) ||
+                          finalizedChecks[visibleStage].includes(s.id))
+                    ).map((s) => renderServiceCard(s.id, s.name, "ai"))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1578,6 +1702,71 @@ export default function OrgBGVRequestsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      {manualVerifyModal.open && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-xl">
+            <h3 className="text-xl font-semibold mb-4">
+              Verify Manually — {manualVerifyModal.check.replace(/_/g, " ")}
+            </h3>
+
+            {/* STATUS SELECT */}
+            <label className="text-sm font-medium">Verification Result</label>
+            <select
+              value={manualVerifyModal.status}
+              onChange={(e) =>
+                setManualVerifyModal((p) => ({
+                  ...p,
+                  status: e.target.value,
+                }))
+              }
+              className="w-full border rounded-md p-2 mt-1 mb-4"
+            >
+              <option value="COMPLETED">Completed (Pass)</option>
+              <option value="FAILED">Failed (Reject)</option>
+            </select>
+
+            {/* REMARKS */}
+            <label className="text-sm font-medium">Remarks</label>
+            <textarea
+              value={manualVerifyModal.remarks}
+              onChange={(e) =>
+                setManualVerifyModal((p) => ({ ...p, remarks: e.target.value }))
+              }
+              placeholder="Add remarks..."
+              rows={4}
+              className="w-full border rounded-md p-2 mt-1"
+            />
+
+            {/* ACTION BUTTONS */}
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() =>
+                  setManualVerifyModal({
+                    open: false,
+                    check: "",
+                    remarks: "",
+                    status: "COMPLETED",
+                  })
+                }
+                className="px-4 py-2 border rounded-md"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleManualVerificationSubmit}
+                className={`px-4 py-2 rounded-md text-white ${
+                  manualVerifyModal.status === "FAILED"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                Submit Verification
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

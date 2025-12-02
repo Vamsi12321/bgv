@@ -13,6 +13,10 @@ import {
   XCircle,
   Circle,
   ChevronDown,
+  Cpu,
+  FileCheck,
+  FileSearch,
+  Brain,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -46,6 +50,32 @@ export default function BGVInitiationPage() {
     open: false,
     stage: null,
   });
+  const [manualModal, setManualModal] = useState({
+    open: false,
+    check: null,
+    stage: null,
+    remarks: "",
+    status: "COMPLETED",
+    loading: false,
+  });
+
+  const API_CHECKS = [
+    "pan_aadhaar_seeding",
+    "pan_verification",
+    "employment_history",
+    "aadhaar_to_uan",
+    "credit_report",
+    "court_record",
+  ];
+
+  const MANUAL_CHECKS = [
+    "address_verification",
+    "education_check_manual",
+    "supervisory_check",
+    "employment_history_manual",
+  ];
+
+  const AI_CHECKS = ["resume_validation", "education_check_ai"];
 
   // FULL candidate schema
   const emptyCandidate = {
@@ -145,6 +175,12 @@ export default function BGVInitiationPage() {
     }
     return null;
   };
+  function getCheckType(checkId) {
+    if (API_CHECKS.includes(checkId)) return "API";
+    if (MANUAL_CHECKS.includes(checkId)) return "MANUAL";
+    if (AI_CHECKS.includes(checkId)) return "AI";
+    return "OTHER";
+  }
 
   const isStageCompleted = (stage) => {
     const arr = candidateVerification?.stages?.[stage];
@@ -307,13 +343,14 @@ export default function BGVInitiationPage() {
 
       setCandidateVerification(data.verifications?.[0] || null);
 
-      // if (
-      //   isStageCompleted("primary") &&
-      //   isStageCompleted("secondary") &&
-      //   isStageCompleted("final")
-      // ) {
-      //   setVisibleStage("final");
-      // }
+      setStages({
+        primary:
+          data.verifications?.[0]?.stages?.primary?.map((c) => c.check) || [],
+        secondary:
+          data.verifications?.[0]?.stages?.secondary?.map((c) => c.check) || [],
+        final:
+          data.verifications?.[0]?.stages?.final?.map((c) => c.check) || [],
+      });
     } catch (err) {
       showModal({
         title: "Error",
@@ -789,6 +826,7 @@ export default function BGVInitiationPage() {
     isStageCompleted("primary") &&
     isStageCompleted("secondary") &&
     isStageCompleted("final");
+
   /* -------------------------------------------------- */
   /* RETURN UI */
   /* -------------------------------------------------- */
@@ -864,6 +902,161 @@ export default function BGVInitiationPage() {
         )}
       </div>
     );
+  }
+  function renderCheckCard(v) {
+    const stageKey = visibleStage;
+    const status = getCheckStatus(v);
+    const selected = stages[stageKey]?.includes(v);
+    const completed = isCheckCompletedAnywhere(v);
+    const locked = isStageLocked(stageKey);
+
+    const type = getCheckType(v);
+
+    const icon =
+      type === "API" ? (
+        <Cpu size={20} className="text-blue-600" />
+      ) : type === "MANUAL" ? (
+        <FileSearch size={20} className="text-orange-600" />
+      ) : (
+        <Brain size={20} className="text-purple-600" />
+      );
+
+    const typeBadge =
+      type === "API"
+        ? "bg-blue-100 text-blue-700"
+        : type === "MANUAL"
+        ? "bg-orange-100 text-orange-700"
+        : "bg-purple-100 text-purple-700";
+
+    return (
+      <motion.div
+        key={v}
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.15 }}
+        className={`rounded-xl p-5 shadow-md border-2 
+      ${
+        selected
+          ? "border-red-500 bg-red-50"
+          : "border-gray-200 bg-white hover:border-gray-300"
+      }
+      transition-all duration-150`}
+      >
+        {/* TOP ROW — ICON + BADGE + STATUS */}
+        <div className="flex justify-between items-start">
+          <div className="flex gap-3 items-center">
+            {icon}
+
+            <div className="text-lg font-semibold capitalize">
+              {v.replace(/_/g, " ")}
+            </div>
+          </div>
+
+          {/* STATUS ICON */}
+          <div>
+            {status === "COMPLETED" && (
+              <CheckCircle className="text-green-600" size={20} />
+            )}
+            {status === "FAILED" && (
+              <XCircle className="text-red-600" size={20} />
+            )}
+            {status === "IN_PROGRESS" && (
+              <Loader2 className="text-yellow-500 animate-spin" size={20} />
+            )}
+          </div>
+        </div>
+
+        {/* TYPE BADGE */}
+        <span
+          className={`inline-block text-xs px-2 py-1 mt-2 rounded-md font-semibold ${typeBadge}`}
+        >
+          {type} Check
+        </span>
+
+        <div className="border-t my-3" />
+
+        {/* CHECKBOX */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={completed || locked}
+            onChange={() => handleStageToggle(v, stageKey)}
+            className="w-5 h-5 accent-red-600"
+          />
+          <span className="text-sm">
+            {completed
+              ? "Already Verified"
+              : locked
+              ? "Locked"
+              : "Add to Stage"}
+          </span>
+        </div>
+
+        {/* MANUAL VERIFY BUTTON */}
+        {type === "MANUAL" && isStageLocked(stageKey) && !completed && (
+          <button
+            onClick={() => openManualVerify(v, stageKey)}
+            className="mt-4 w-full px-3 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium"
+          >
+            Verify Manually
+          </button>
+        )}
+      </motion.div>
+    );
+  }
+
+  function openManualVerify(check, stage) {
+    setManualModal({
+      open: true,
+      check,
+      stage,
+      remarks: "",
+      status: "COMPLETED",
+      loading: false,
+    });
+  }
+  async function handleManualSubmit() {
+    try {
+      setManualModal((m) => ({ ...m, loading: true }));
+
+      const res = await fetch(`${API_BASE}/secure/updateInternalVerification`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          verificationId: candidateVerification._id,
+          stage: manualModal.stage,
+          checkName: manualModal.check,
+          status: manualModal.status,
+          remarks: manualModal.remarks,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Failed");
+
+      showModal({
+        title: "Manual Verification Updated",
+        message: `${manualModal.check} marked as ${manualModal.status}`,
+        type: "success",
+      });
+
+      setManualModal({ ...manualModal, open: false });
+
+      await fetchCandidateVerification(selectedCandidate);
+    } catch (err) {
+      showModal({
+        title: "Error",
+        message: err.message,
+        type: "error",
+      });
+    } finally {
+      setManualModal((m) => ({ ...m, loading: false }));
+    }
   }
 
   return (
@@ -996,6 +1189,7 @@ export default function BGVInitiationPage() {
           </div>
         </div>
         {/* CONSENT STATUS BOX */}
+        {/* CONSENT STATUS BOX */}
         <div className="bg-white border p-6 rounded-xl shadow mt-4">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">
             Candidate Consent
@@ -1019,7 +1213,7 @@ export default function BGVInitiationPage() {
                 </p>
               ) : consentStatus.consentStatus === "CONSENT_DENIED" ? (
                 <p className="mt-2 text-red-600 font-medium">
-                  ✖ Candidate denied consent. Verification cannot proceed.
+                  ✖ Candidate denied consent.
                 </p>
               ) : consentStatus.consentStatus === "PENDING_CONSENT" ? (
                 <p className="mt-2 text-yellow-600 font-medium">
@@ -1031,11 +1225,17 @@ export default function BGVInitiationPage() {
                 </p>
               ) : null}
 
+              {/* UPDATED RESEND CONDITIONS */}
               {(consentStatus.consentStatus === "NOT_REQUESTED" ||
                 consentStatus.consentStatus === "PENDING_CONSENT" ||
-                consentStatus.consentStatus === "TOKEN_EXPIRED") && (
+                consentStatus.consentStatus === "TOKEN_EXPIRED" ||
+                consentStatus.consentStatus === "CONSENT_DENIED") && (
                 <button
-                  onClick={sendConsentEmail}
+                  onClick={async () => {
+                    await sendConsentEmail();
+                    // Immediately update UI → remove button and show "Waiting"
+                    fetchConsentStatus(selectedCandidate);
+                  }}
                   disabled={sendingConsent}
                   className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center gap-2"
                 >
@@ -1045,7 +1245,10 @@ export default function BGVInitiationPage() {
                     </>
                   ) : (
                     <>
-                      <PlusCircle size={16} /> Send Consent Email
+                      <PlusCircle size={16} />
+                      {consentStatus.consentStatus === "NOT_REQUESTED"
+                        ? "Send Consent Email"
+                        : "Resend Consent Email"}
                     </>
                   )}
                 </button>
@@ -1343,88 +1546,46 @@ export default function BGVInitiationPage() {
 
             {/* ONLY SHOW CARDS IF NOT COMPLETED */}
             {!isStageCompleted(visibleStage) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                <AnimatePresence mode="popLayout">
-                  {getAvailableChecksForStage(visibleStage).map((v) => {
-                    const stageKey = visibleStage;
-                    const status = getCheckStatus(v);
-                    const selected = stages[stageKey]?.includes(v);
-                    const completed = isCheckCompletedAnywhere(v);
-                    const locked = isStageLocked(stageKey);
+              <div className="space-y-8">
+                {/* API CHECKS */}
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-2">
+                  <Cpu className="text-blue-600" size={20} /> API Checks
+                </h3>
 
-                    return (
-                      <motion.div
-                        key={v}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.15 }}
-                        className={`rounded-2xl p-4 md:p-5 flex flex-col shadow-lg border 
-              ${
-                selected
-                  ? "border-red-500 bg-red-50"
-                  : "border-gray-200 bg-white"
-              }
-              hover:shadow-xl transition-all duration-150`}
-                      >
-                        {/* Title + Status */}
-                        {/* Title + Status */}
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="text-lg font-semibold capitalize leading-tight text-gray-800 break-words">
-                            {v.replace(/_/g, " ")}
-                          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <AnimatePresence mode="popLayout">
+                    {getAvailableChecksForStage(visibleStage)
+                      .filter((c) => getCheckType(c) === "API")
+                      .map(renderCheckCard)}
+                  </AnimatePresence>
+                </div>
 
-                          {/* STATUS ICON ONLY */}
-                          <div className="flex items-center ml-2">
-                            {status === "COMPLETED" && (
-                              <CheckCircle
-                                className="text-green-600"
-                                size={20}
-                              />
-                            )}
+                {/* MANUAL CHECKS */}
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-2">
+                  <FileSearch className="text-orange-600" size={20} /> Manual
+                  Checks
+                </h3>
 
-                            {status === "FAILED" && (
-                              <XCircle className="text-red-600" size={20} />
-                            )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <AnimatePresence mode="popLayout">
+                    {getAvailableChecksForStage(visibleStage)
+                      .filter((c) => getCheckType(c) === "MANUAL")
+                      .map(renderCheckCard)}
+                  </AnimatePresence>
+                </div>
 
-                            {status === "IN_PROGRESS" && (
-                              <Loader2
-                                className="text-yellow-500 animate-spin"
-                                size={20}
-                              />
-                            )}
+                {/* AI CHECKS */}
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-2">
+                  <Brain className="text-purple-600" size={20} /> AI Checks
+                </h3>
 
-                            {!status && (
-                              <Circle className="text-gray-400" size={20} />
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="border-t my-3" />
-
-                        {/* Checkbox */}
-                        <div className="flex items-center gap-3 py-2">
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => handleStageToggle(v, stageKey)}
-                            disabled={locked || completed}
-                            className="w-5 h-5 accent-red-600 cursor-pointer"
-                          />
-
-                          <span className="text-sm text-gray-700">
-                            {completed
-                              ? "Already Verified"
-                              : locked
-                              ? "Locked"
-                              : `Add to ${stepNames[currentStep]}`}
-                          </span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <AnimatePresence mode="popLayout">
+                    {getAvailableChecksForStage(visibleStage)
+                      .filter((c) => getCheckType(c) === "AI")
+                      .map(renderCheckCard)}
+                  </AnimatePresence>
+                </div>
               </div>
             )}
           </div>
@@ -1922,6 +2083,67 @@ export default function BGVInitiationPage() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
               >
                 Yes, Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {manualModal.open && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-semibold mb-3 capitalize">
+              Manual Verification — {manualModal.check.replace(/_/g, " ")}
+            </h3>
+
+            {/* Status */}
+            <label className="block text-sm font-medium text-gray-700 mt-2">
+              Status
+            </label>
+            <select
+              value={manualModal.status}
+              onChange={(e) =>
+                setManualModal((m) => ({ ...m, status: e.target.value }))
+              }
+              className="border rounded-md p-2 w-full"
+            >
+              <option value="COMPLETED">Completed</option>
+              <option value="FAILED">Failed</option>
+            </select>
+
+            {/* Remarks */}
+            <label className="block text-sm font-medium text-gray-700 mt-4">
+              Remarks
+            </label>
+            <textarea
+              value={manualModal.remarks}
+              onChange={(e) =>
+                setManualModal((m) => ({ ...m, remarks: e.target.value }))
+              }
+              className="border rounded-md p-2 w-full mt-1"
+              rows={4}
+              placeholder="Add manual verification notes..."
+            />
+
+            {/* ACTIONS */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setManualModal({ ...manualModal, open: false })}
+                className="px-4 py-2 border rounded-md"
+              >
+                Cancel
+              </button>
+
+              <button
+                disabled={manualModal.loading}
+                onClick={handleManualSubmit}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+              >
+                {manualModal.loading ? (
+                  <Loader2 size={16} className="animate-spin inline" />
+                ) : (
+                  "Submit"
+                )}
               </button>
             </div>
           </div>

@@ -112,7 +112,11 @@ export default function SuperAdminTicketsPage() {
 
       const data = await res.json();
       if (res.ok) {
-        setSelectedTicket(data);
+        setSelectedTicket({
+          ...data,
+          comments: normalizeComments(data.comments),
+        });
+
         setShowDetailModal(true);
         fetchAvailableAssignees(ticket.ticketId);
       }
@@ -132,7 +136,11 @@ export default function SuperAdminTicketsPage() {
       );
 
       const data = await res.json();
-      if (res.ok) setSelectedTicket(data);
+      if (res.ok)
+        setSelectedTicket({
+          ...data,
+          comments: normalizeComments(data.comments),
+        });
     } catch (err) {
       console.error("Error refreshing ticket:", err);
     }
@@ -156,6 +164,12 @@ export default function SuperAdminTicketsPage() {
       console.error("Error loading assignees:", err);
     }
   };
+  const normalizeComments = (comments = []) =>
+    comments.map((c) => ({
+      commentBy: c.commentedByName || c.commentedBy || "Unknown",
+      timestamp: c.commentedAt,
+      message: c.comment,
+    }));
 
   // ===========================
   // ADD COMMENT
@@ -177,6 +191,18 @@ export default function SuperAdminTicketsPage() {
       );
 
       if (res.ok) {
+        setSelectedTicket((prev) => ({
+          ...prev,
+          comments: [
+            {
+              comment: comment,
+              commentedBy: "You",
+              commentedAt: new Date().toISOString(),
+            },
+            ...(prev.comments || []),
+          ],
+        }));
+
         setComment("");
         refreshTicketDetails();
       }

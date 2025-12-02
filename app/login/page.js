@@ -54,7 +54,7 @@ export default function LoginPage() {
 
         if (["SUPER_ADMIN", "SUPER_ADMIN_HELPER", "SUPER_SPOC"].includes(role))
           router.replace("/superadmin/dashboard");
-        else if (["ORG_HR", "HELPER", "SPOC"].includes(role))
+        else if (["ORG_HR", "HELPER", "SPOC", "ORG_SPOC"].includes(role))
           router.replace("/org/dashboard");
       } catch {
         localStorage.removeItem("bgvUser");
