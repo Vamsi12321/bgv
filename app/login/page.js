@@ -87,7 +87,7 @@ export default function LoginPage() {
     setErrorMsg("");
 
     try {
-      const res = await fetch("https://maihoo.onrender.com/auth/login", {
+      const res = await fetch("/api/proxy/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

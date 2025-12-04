@@ -14,12 +14,12 @@ import {
 
 import { jsPDF } from "jspdf";
 import { safeHtml2Canvas } from "@/utils/safeHtml2Canvas";
+import { useSuperAdminState } from "../../context/SuperAdminStateContext";
 
 /* ----------------------------------------------- */
 /* 🔗 API BASE */
 /* ----------------------------------------------- */
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 /* ----------------------------------------------- */
 /* SERVICE ICONS */
@@ -134,9 +134,15 @@ async function mergeAllCertificates(ids, fileName, setDownloading) {
 /* MAIN PAGE */
 /* ----------------------------------------------- */
 export default function SuperAdminReportsPage() {
+  const {
+    reportsData: candidates,
+    setReportsData: setCandidates,
+    reportsFilters,
+    setReportsFilters,
+  } = useSuperAdminState();
+
   const [organizations, setOrganizations] = useState([]);
-  const [selectedOrg, setSelectedOrg] = useState("");
-  const [candidates, setCandidates] = useState([]);
+  const [selectedOrg, setSelectedOrg] = useState(reportsFilters.organizationId || "");
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -153,7 +159,7 @@ export default function SuperAdminReportsPage() {
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/secure/getOrganizations`, {
+        const res = await fetch(`/api/proxy/secure/getOrganizations`, {
           credentials: "include",
         });
         const data = await res.json();
@@ -166,11 +172,20 @@ export default function SuperAdminReportsPage() {
 
   /* Fetch Candidates */
   const fetchCandidates = async (orgId) => {
+    // Save selected org to context
+    setReportsFilters({ ...reportsFilters, organizationId: orgId });
+
+    // Only fetch if we don't have data or org changed
+    if (candidates.length > 0 && reportsFilters.organizationId === orgId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/getCandidates?orgId=${orgId}`,
+        `/api/proxy/secure/getCandidates?orgId=${orgId}`,
         { credentials: "include" }
       );
 
@@ -183,7 +198,7 @@ export default function SuperAdminReportsPage() {
         list.map(async (c) => {
           try {
             const verRes = await fetch(
-              `${API_BASE}/secure/getVerifications?candidateId=${c._id}`,
+              `/api/proxy/secure/getVerifications?candidateId=${c._id}`,
               { credentials: "include" }
             );
             const verData = await verRes.json();

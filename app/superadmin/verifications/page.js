@@ -2,27 +2,25 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Filter, X, Loader2 } from "lucide-react";
+import { useSuperAdminState } from "../../context/SuperAdminStateContext";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function SuperAdminVerificationsPage() {
+  const {
+    verificationsData: verifications,
+    setVerificationsData: setVerifications,
+    verificationsSummary: summary,
+    setVerificationsSummary: setSummary,
+    verificationsFilters: filters,
+    setVerificationsFilters: setFilters,
+  } = useSuperAdminState();
+
   /* -----------------------------------------------------------
      STATE
   ------------------------------------------------------------*/
   const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState([]);
-  const [verifications, setVerifications] = useState([]);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
-
-  const [filters, setFilters] = useState({
-    org: "",
-    status: "",
-    name: "",
-    initiatedBy: "",
-    fromDate: "",
-    toDate: "",
-  });
 
   const [openOrgFilter, setOpenOrgFilter] = useState(false);
   const [orgSearch, setOrgSearch] = useState("");
@@ -49,22 +47,32 @@ export default function SuperAdminVerificationsPage() {
      FETCH
   ------------------------------------------------------------*/
   useEffect(() => {
-    fetchData();
+    // Only fetch if we don't have data (check both verifications and summary)
+    if (verifications.length === 0 && summary.length === 0) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/secure/getVerifications`, {
+      const res = await fetch(`/api/proxy/secure/getVerifications`, {
         credentials: "include",
       });
 
       const data = await res.json();
 
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to fetch verifications");
+      }
+
       setSummary(data.candidatesSummary || []);
       setVerifications(data.verifications || []);
     } catch (err) {
-      alert("Failed fetching verifications");
+      console.error("Fetch error:", err);
+      alert("Failed fetching verifications: " + err.message);
     } finally {
       setLoading(false);
     }

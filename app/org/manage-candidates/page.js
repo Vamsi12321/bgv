@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { PlusCircle, X, Edit, Trash2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useOrgState } from "../../context/OrgStateContext";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 /* -------------------------------------------- */
 /* NORMALIZE CANDIDATE                          */
@@ -39,7 +39,13 @@ const normalizeCandidate = (c = {}) => ({
 /* ====================================================================== */
 
 export default function ManageCandidatesPage() {
-  const [candidates, setCandidates] = useState([]);
+  const {
+    candidatesData: candidates,
+    setCandidatesData: setCandidates,
+    candidatesFilters: filters,
+    setCandidatesFilters: setFilters,
+  } = useOrgState();
+
   const [loading, setLoading] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -90,7 +96,7 @@ export default function ManageCandidatesPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${API_BASE}/secure/getCandidates?orgId=${orgId}`,
+        `/api/proxy/secure/getCandidates?orgId=${orgId}`,
         { credentials: "include" }
       );
       const data = await res.json();
@@ -104,8 +110,13 @@ export default function ManageCandidatesPage() {
   };
 
   useEffect(() => {
-    loadCandidates();
-  }, []);
+    if (orgId) {
+      // Only load if we don't have data
+      if (candidates.length === 0) {
+        loadCandidates();
+      }
+    }
+  }, [orgId]);
 
   /* ====================================================================== */
   /* =========================== VALIDATION =============================== */
@@ -188,7 +199,12 @@ export default function ManageCandidatesPage() {
   /* =============================== ADD ================================== */
   /* ====================================================================== */
 
-  const handleAddChange = (e) => {
+  const handleAddChange = (e, isFile = false) => {
+    if (isFile) {
+      setNewCandidate((p) => ({ ...p, resume: e.target.files[0] }));
+      return;
+    }
+
     let { name, value } = e.target;
 
     if (name === "panNumber")
@@ -203,17 +219,43 @@ export default function ManageCandidatesPage() {
     if (!validateCandidate(newCandidate)) return;
 
     setSaving(true);
-    try {
-      const payload = { ...newCandidate, organizationId: orgId };
 
-      const res = await fetch(`${API_BASE}/secure/addCandidate`, {
+    try {
+      const formData = new FormData();
+
+      // 🔥 ALL FIELDS EXACTLY AS BACKEND NEEDS
+      formData.append("firstName", newCandidate.firstName);
+      formData.append("middleName", newCandidate.middleName);
+      formData.append("lastName", newCandidate.lastName);
+      formData.append("phone", newCandidate.phone);
+      formData.append("aadhaarNumber", newCandidate.aadhaarNumber);
+      formData.append("panNumber", newCandidate.panNumber);
+      formData.append("address", newCandidate.address);
+      formData.append("email", newCandidate.email);
+      formData.append("fatherName", newCandidate.fatherName);
+      formData.append("dob", newCandidate.dob);
+      formData.append("gender", newCandidate.gender);
+      formData.append("uanNumber", newCandidate.uanNumber);
+      formData.append("district", newCandidate.district);
+      formData.append("state", newCandidate.state);
+      formData.append("pincode", newCandidate.pincode);
+
+      // org-level auto organizationId
+      formData.append("organizationId", orgId);
+
+      // resume optional
+      if (newCandidate.resume) {
+        formData.append("resume", newCandidate.resume);
+      }
+
+      const res = await fetch(`/api/proxy/secure/addCandidate`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const data = await res.json();
+
       if (!res.ok) return showError(data.detail || "Add failed.");
 
       showSuccess("Candidate added!");
@@ -226,14 +268,19 @@ export default function ManageCandidatesPage() {
       setSaving(false);
     }
   };
+
   const hasChanges = (candidate, initial) =>
     JSON.stringify(candidate) !== JSON.stringify(initial);
 
   /* ====================================================================== */
   /* =============================== EDIT ================================= */
   /* ====================================================================== */
+  const handleEditChange = (e, isFile = false) => {
+    if (isFile) {
+      setEditCandidate((p) => ({ ...p, resume: e.target.files[0] }));
+      return;
+    }
 
-  const handleEditChange = (e) => {
     let { name, value } = e.target;
 
     if (name === "panNumber")
@@ -248,22 +295,45 @@ export default function ManageCandidatesPage() {
     if (!validateCandidate(editCandidate)) return;
 
     setSaving(true);
-    try {
-      const payload = {
-        operation: "edit",
-        candidateId: editCandidate._id,
-        organizationId: orgId,
-        updates: { ...editCandidate },
-      };
 
-      const res = await fetch(`${API_BASE}/secure/modifyCandidate`, {
+    try {
+      const formData = new FormData();
+
+      formData.append("operation", "edit");
+      formData.append("candidateId", editCandidate._id);
+      formData.append("organizationId", orgId);
+
+      // ALL editable fields
+      formData.append("firstName", editCandidate.firstName);
+      formData.append("middleName", editCandidate.middleName);
+      formData.append("lastName", editCandidate.lastName);
+      formData.append("email", editCandidate.email);
+      formData.append("phone", editCandidate.phone);
+      formData.append("aadhaarNumber", editCandidate.aadhaarNumber);
+      formData.append("panNumber", editCandidate.panNumber);
+      formData.append("address", editCandidate.address);
+      formData.append("dob", editCandidate.dob);
+      formData.append("passportNumber", editCandidate.passportNumber);
+      formData.append("uanNumber", editCandidate.uanNumber);
+      formData.append("bankAccountNumber", editCandidate.bankAccountNumber);
+      formData.append("fatherName", editCandidate.fatherName);
+      formData.append("gender", editCandidate.gender);
+      formData.append("district", editCandidate.district);
+      formData.append("state", editCandidate.state);
+      formData.append("pincode", editCandidate.pincode);
+
+      if (editCandidate.resume) {
+        formData.append("resume", editCandidate.resume);
+      }
+
+      const res = await fetch(`/api/proxy/secure/modifyCandidate`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const data = await res.json();
+
       if (!res.ok) return showError(data.detail || "Edit failed.");
 
       showSuccess("Candidate updated!");
@@ -279,24 +349,24 @@ export default function ManageCandidatesPage() {
   /* ====================================================================== */
   /* ============================== DELETE ================================ */
   /* ====================================================================== */
-
   const handleDelete = async () => {
     setSaving(true);
-    try {
-      const payload = {
-        operation: "delete",
-        candidateId: selectedCandidate._id,
-        organizationId: orgId,
-      };
 
-      const res = await fetch(`${API_BASE}/secure/modifyCandidate`, {
+    try {
+      const formData = new FormData();
+
+      formData.append("operation", "delete");
+      formData.append("candidateId", selectedCandidate._id);
+      formData.append("organizationId", orgId);
+
+      const res = await fetch(`/api/proxy/secure/modifyCandidate`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const data = await res.json();
+
       if (!res.ok) return showError(data.detail || "Delete failed.");
 
       showSuccess("Candidate deleted.");
@@ -831,6 +901,22 @@ function CandidateForm({ data, onChange, onSubmit, saving, submitText }) {
           className="border p-2 rounded"
         />
       </div>
+      <h3 className="font-semibold text-lg mt-6 mb-3 text-red-600">
+        Resume Upload (Optional)
+      </h3>
+
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx"
+        onChange={(e) => onChange(e, true)}
+        className="border p-2 rounded w-full"
+      />
+
+      {data.resume && (
+        <p className="text-sm text-gray-700 mt-2">
+          Selected: <span className="font-semibold">{data.resume.name}</span>
+        </p>
+      )}
 
       <button
         onClick={onSubmit}

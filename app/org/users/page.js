@@ -10,10 +10,10 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useOrgState } from "../../context/OrgStateContext";
 
 /* 🔹 Base API */
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 /* 🔹 Updated Org-Level Permissions (as requested) */
 const allPermissions = [
@@ -57,8 +57,13 @@ const rolePermissionPresets = {
    MAIN PAGE
 ========================================================== */
 export default function OrgUsersPage() {
-  const [users, setUsers] = useState([]);
-  const [filterRole, setFilterRole] = useState("All");
+  const {
+    usersData: users,
+    setUsersData: setUsers,
+    usersFilterRole: filterRole,
+    setUsersFilterRole: setFilterRole,
+  } = useOrgState();
+
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +89,7 @@ export default function OrgUsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/secure/getUsers`, {
+      const res = await fetch(`/api/proxy/secure/getUsers`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -98,16 +103,21 @@ export default function OrgUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    // Only fetch if we don't have data
+    if (users.length === 0) {
+      fetchUsers();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   /* 🔹 Add/Edit user */
   const handleSaveUser = async (payload, mode, userId) => {
     try {
-      let url = `${API_BASE}/secure/addHelper`;
+      let url = `/api/proxy/secure/addHelper`;
       let method = "POST";
       if (mode === "edit" && userId) {
-        url = `${API_BASE}/secure/updateUser/${userId}`;
+        url = `/api/proxy/secure/updateUser/${userId}`;
         method = "PUT";
       }
 

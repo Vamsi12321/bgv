@@ -13,6 +13,9 @@ export default function SelfVerificationPage() {
   const [verificationId, setVerificationId] = useState("");
   const [checks, setChecks] = useState([]);
 
+  // ★ NEW: loading state per check
+  const [checkLoading, setCheckLoading] = useState(null);
+
   /* ---------------------- IF TOKEN MISSING ---------------------- */
   if (!token) {
     return (
@@ -49,7 +52,7 @@ export default function SelfVerificationPage() {
       const formData = new FormData();
       formData.append("token", token);
 
-      const res = await fetch(`https://maihoo.onrender.com/self/verify/start`, {
+      const res = await fetch(`/api/proxy/self/verify/start`, {
         method: "POST",
         body: formData,
       });
@@ -71,11 +74,13 @@ export default function SelfVerificationPage() {
 
   /* ---------------------- START CHECK ---------------------- */
   async function startCheck(checkName) {
+    setCheckLoading(checkName);
+
     const formData = new FormData();
     formData.append("verificationId", verificationId);
     formData.append("check", checkName);
 
-    const res = await fetch(`https://maihoo.onrender.com/self/verify/check`, {
+    const res = await fetch(`/api/proxy/self/verify/check`, {
       method: "POST",
       body: formData,
     });
@@ -83,26 +88,27 @@ export default function SelfVerificationPage() {
     const data = await res.json();
     alert(`Check Completed: ${data.remarks}`);
 
+    setCheckLoading(null);
     refreshChecks();
   }
 
   /* ---------------------- RETRY CHECK ---------------------- */
   async function retryCheck(checkName) {
+    setCheckLoading(checkName);
+
     const formData = new FormData();
     formData.append("verificationId", verificationId);
     formData.append("check", checkName);
 
-    const res = await fetch(
-      `https://maihoo.onrender.com/self/verify/retryCheck`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
+    const res = await fetch(`/api/proxy/self/verify/retryCheck`, {
+      method: "POST",
+      body: formData,
+    });
 
     const data = await res.json();
     alert(`Retry Status: ${data.status}`);
 
+    setCheckLoading(null);
     refreshChecks();
   }
 
@@ -111,7 +117,7 @@ export default function SelfVerificationPage() {
     const formData = new FormData();
     formData.append("token", token);
 
-    const res = await fetch(`https://maihoo.onrender.com/self/verify/start`, {
+    const res = await fetch(`/api/proxy/self/verify/start`, {
       method: "POST",
       body: formData,
     });
@@ -175,18 +181,42 @@ export default function SelfVerificationPage() {
             {chk.status === "NOT_STARTED" && (
               <button
                 onClick={() => startCheck(chk.check)}
-                className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                disabled={checkLoading === chk.check}
+                className={`mt-4 px-4 py-2 rounded-lg text-white 
+                  ${
+                    checkLoading === chk.check
+                      ? "bg-red-400 cursor-not-allowed"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
               >
-                Start Check
+                {checkLoading === chk.check ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="animate-spin w-4 h-4" /> Starting...
+                  </div>
+                ) : (
+                  "Start Check"
+                )}
               </button>
             )}
 
             {chk.status === "FAILED" && (
               <button
                 onClick={() => retryCheck(chk.check)}
-                className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                disabled={checkLoading === chk.check}
+                className={`mt-4 px-4 py-2 rounded-lg text-white 
+                  ${
+                    checkLoading === chk.check
+                      ? "bg-red-400 cursor-not-allowed"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
               >
-                Retry Check
+                {checkLoading === chk.check ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="animate-spin w-4 h-4" /> Retrying...
+                  </div>
+                ) : (
+                  "Retry Check"
+                )}
               </button>
             )}
 

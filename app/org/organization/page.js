@@ -15,12 +15,12 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useOrgState } from "../../context/OrgStateContext";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function OrganizationProfilePage() {
-  const [org, setOrg] = useState(null);
+  const { organizationData: org, setOrganizationData: setOrg } = useOrgState();
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,13 +54,18 @@ export default function OrganizationProfilePage() {
   }, []);
   /* ---------------------- Fetch Org Profile ---------------------- */
   useEffect(() => {
-    fetchOrganizationProfile();
+    // Only fetch if we don't have data
+    if (!org) {
+      fetchOrganizationProfile();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const fetchOrganizationProfile = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/secure/getOrganizations`, {
+      const res = await fetch(`/api/proxy/secure/getOrganizations`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -111,7 +116,7 @@ export default function OrganizationProfilePage() {
     try {
       setSaving(true);
       const res = await fetch(
-        `${API_BASE}/secure/updateOrganization/${org._id || org.orgId}`,
+        `/api/proxy/secure/updateOrganization/${org._id || org.orgId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -157,7 +162,7 @@ export default function OrganizationProfilePage() {
         org.organizationName?.replace(/\s+/g, "_").toLowerCase() || "logo"
       );
 
-      const res = await fetch(`${API_BASE}/secure/uploadLogo`, {
+      const res = await fetch(`/api/proxy/secure/uploadLogo`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -346,34 +351,35 @@ export default function OrganizationProfilePage() {
         </div>
 
         {/* SERVICES */}
-       {/* SERVICES */}
-<div className="border-t pt-4">
-  <h3 className="text-lg font-semibold text-[#ff004f] mb-3">
-    Services Offered
-  </h3>
+        {/* SERVICES */}
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-semibold text-[#ff004f] mb-3">
+            Services Offered
+          </h3>
 
-  {org.services?.map((s, i) => (
-    <div key={i} className="grid sm:grid-cols-2 gap-3 mb-3 items-center">
-      
-      {/* Service Name — Disabled */}
-      <input
-        type="text"
-        disabled={true}
-        value={s.serviceName}
-        className="border rounded-md p-2 bg-gray-100 text-gray-700 cursor-not-allowed"
-      />
+          {org.services?.map((s, i) => (
+            <div
+              key={i}
+              className="grid sm:grid-cols-2 gap-3 mb-3 items-center"
+            >
+              {/* Service Name — Disabled */}
+              <input
+                type="text"
+                disabled={true}
+                value={s.serviceName}
+                className="border rounded-md p-2 bg-gray-100 text-gray-700 cursor-not-allowed"
+              />
 
-      {/* Service Price — Disabled */}
-      <input
-        type="number"
-        disabled={true}
-        value={s.price}
-        className="border rounded-md p-2 bg-gray-100 text-gray-700 cursor-not-allowed"
-      />
-    </div>
-  ))}
-</div>
-
+              {/* Service Price — Disabled */}
+              <input
+                type="number"
+                disabled={true}
+                value={s.price}
+                className="border rounded-md p-2 bg-gray-100 text-gray-700 cursor-not-allowed"
+              />
+            </div>
+          ))}
+        </div>
 
         {/* CREDENTIALS */}
         <div className="border-t pt-4">

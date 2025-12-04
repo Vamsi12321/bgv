@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   PlusCircle,
   Loader2,
@@ -10,29 +10,42 @@ import {
   ChevronLeft,
   CheckCircle,
   RotateCcw,
+  XCircle,
+  Circle,
+  ChevronDown,
   Cpu,
   FileCheck,
   FileSearch,
   Brain,
+  Shield,
+  AlertCircle,
+  Info,
+  FileText,
+  UserPlus,
+  User,
+  Mail,
+  MapPin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ConsentSection from "@/app/components/ConsentSection";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+import { useOrgState } from "../../context/OrgStateContext";
 
 export default function OrgBGVRequestsPage() {
   /* ---------------------------------------------------------------------
       STATE
   --------------------------------------------------------------------- */
+  // State management context
+  const { bgvState = {}, setBgvState = () => {} } = useOrgState();
+
   const [candidates, setCandidates] = useState([]);
-  const [selectedCandidate, setSelectedCandidate] = useState("");
+  const [selectedCandidate, setSelectedCandidate] = useState(bgvState.selectedCandidate || "");
   const [candidateVerification, setCandidateVerification] = useState(null);
 
   const [userOrgId, setUserOrgId] = useState("");
   const [userServices, setUserServices] = useState([]);
 
   const [loading, setLoading] = useState(false);
+  const [candidateLoading, setCandidateLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(false);
   const [runLoading, setRunLoading] = useState(false);
   const [startLoading, setStartLoading] = useState({});
@@ -42,8 +55,8 @@ export default function OrgBGVRequestsPage() {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
 
   const stepNames = ["Primary", "Secondary", "Final"];
-  const [currentStep, setCurrentStep] = useState(0);
-  const [visibleStage, setVisibleStage] = useState("primary");
+  const [currentStep, setCurrentStep] = useState(bgvState.currentStep || 0);
+  const [visibleStage, setVisibleStage] = useState(bgvState.visibleStage || "primary");
   const [manualVerifyModal, setManualVerifyModal] = useState({
     open: false,
     check: "",
@@ -67,8 +80,8 @@ export default function OrgBGVRequestsPage() {
   ];
 
   const AI_SERVICES = [
-    { id: "resume_validation", name: "Resume Validation" },
-    { id: "education_check_ai", name: "Education AI Check" },
+    { id: "ai_cv_validation", name: "Resume Validation" },
+    { id: "ai_education_validation", name: "Education AI Check" },
   ];
 
   const emptyCandidate = {
@@ -112,9 +125,24 @@ export default function OrgBGVRequestsPage() {
     final: [],
   };
 
-  const [stages, setStages] = useState({ ...DEFAULTS });
+  const [stages, setStages] = useState(bgvState.stages || { ...DEFAULTS });
 
   const [lastRunStage, setLastRunStage] = useState(null);
+
+  // Use ref to always have latest values for state persistence
+  const stateRef = useRef({ selectedCandidate, stages, currentStep, visibleStage });
+  
+  // Update ref whenever state changes
+  useEffect(() => {
+    stateRef.current = { selectedCandidate, stages, currentStep, visibleStage };
+  }, [selectedCandidate, stages, currentStep, visibleStage]);
+
+  // Save state on unmount (when navigating away)
+  useEffect(() => {
+    return () => {
+      setBgvState(stateRef.current);
+    };
+  }, [setBgvState]);
 
   /* ---------------------------------------------------------------------
       LOAD ORG FROM LOCALSTORAGE + FETCH CANDIDATES
@@ -138,9 +166,9 @@ export default function OrgBGVRequestsPage() {
   --------------------------------------------------------------------- */
   const fetchCandidates = async (orgId) => {
     try {
-      setLoading(true);
+      setCandidateLoading(true);
       const res = await fetch(
-        `${API_BASE}/secure/getCandidates?orgId=${orgId}`,
+        `/api/proxy/secure/getCandidates?orgId=${orgId}`,
         { credentials: "include" }
       );
 
@@ -153,7 +181,7 @@ export default function OrgBGVRequestsPage() {
     } catch (err) {
       showModal({ title: "Error", message: err.message, type: "error" });
     } finally {
-      setLoading(false);
+      setCandidateLoading(false);
     }
   };
 
@@ -165,7 +193,7 @@ export default function OrgBGVRequestsPage() {
       setLoading(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/getVerifications?candidateId=${candidateId}`,
+        `/api/proxy/secure/getVerifications?candidateId=${candidateId}`,
         { credentials: "include" }
       );
 
@@ -301,7 +329,7 @@ export default function OrgBGVRequestsPage() {
     try {
       setInitLoading(true);
 
-      const res = await fetch(`${API_BASE}/secure/initiateStageVerification`, {
+      const res = await fetch(`/api/proxy/secure/initiateStageVerification`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -353,7 +381,7 @@ export default function OrgBGVRequestsPage() {
     try {
       setRunLoading(true);
 
-      const res = await fetch(`${API_BASE}/secure/runStage`, {
+      const res = await fetch(`/api/proxy/secure/runStage`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -405,7 +433,7 @@ export default function OrgBGVRequestsPage() {
       }
 
       for (const entry of failed) {
-        await fetch(`${API_BASE}/secure/retryCheck`, {
+        await fetch(`/api/proxy/secure/retryCheck`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -434,7 +462,7 @@ export default function OrgBGVRequestsPage() {
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/secure/updateInternalVerification`, {
+      const res = await fetch(`/api/proxy/secure/updateInternalVerification`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -483,7 +511,7 @@ export default function OrgBGVRequestsPage() {
     try {
       setStartLoading((p) => ({ ...p, [check]: true }));
 
-      const res = await fetch(`${API_BASE}/secure/startCheck`, {
+      const res = await fetch(`/api/proxy/secure/startCheck`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -539,19 +567,109 @@ export default function OrgBGVRequestsPage() {
     isStageCompleted("secondary") &&
     isStageCompleted("final");
 
-  const renderServiceCard = (key, label, type) => {
+  function SearchableDropdown({ label, value, onChange, options, disabled }) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState("");
+
+    const filtered = options.filter((o) =>
+      o.label.toLowerCase().includes(query.toLowerCase())
+    );
+
+    return (
+      <div className="w-full relative">
+        {label && (
+          <label className="text-sm font-bold text-gray-700 mb-2 block">{label}</label>
+        )}
+
+        {/* Input Box - Enhanced */}
+        <div
+          className={`
+          border-2 rounded-xl px-4 py-3 bg-white 
+          flex justify-between items-center cursor-pointer
+          transition-all duration-200 shadow-sm
+          ${
+            disabled
+              ? "bg-gray-100 cursor-not-allowed border-gray-300"
+              : "hover:border-[#ff004f] hover:shadow-md border-gray-300"
+          }
+        `}
+          onClick={() => !disabled && setOpen(!open)}
+        >
+          <span className={`text-sm font-medium truncate ${value ? "text-gray-900" : "text-gray-400"}`}>
+            {options.find((o) => o.value === value)?.label || "Select..."}
+          </span>
+          <ChevronDown size={20} className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+
+        {/* DROPDOWN - Enhanced */}
+        {open && !disabled && (
+          <div className="absolute z-50 mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-2xl p-3">
+            {/* Search input */}
+            <input
+              type="text"
+              placeholder="🔍 Search..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none transition"
+            />
+
+            {/* Options list */}
+            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+              {filtered.length === 0 && (
+                <div className="p-4 text-gray-500 text-sm text-center">
+                  No results found
+                </div>
+              )}
+
+              {filtered.map((item) => (
+                <div
+                  key={item.value}
+                  onClick={() => {
+                    onChange(item.value);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  className="px-4 py-3 text-sm rounded-lg cursor-pointer hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-[#ff004f] transition-all duration-150 font-medium"
+                >
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderServiceCard(key, label, type) {
     const stageKey = visibleStage;
     const status = getCheckStatus(key);
     const selected = stages[stageKey]?.includes(key);
     const completed = isCheckCompletedAnywhere(key);
     const locked = isStageLocked(stageKey);
 
-    // icon selection
-    const iconMap = {
-      api: <Cpu size={20} className="text-blue-600" />,
-      manual: <FileCheck size={20} className="text-orange-600" />,
-      ai: <Brain size={20} className="text-purple-600" />,
-    };
+    const icon =
+      type === "api" ? (
+        <Cpu size={24} className="text-blue-600" />
+      ) : type === "manual" ? (
+        <FileSearch size={24} className="text-orange-600" />
+      ) : (
+        <Brain size={24} className="text-purple-600" />
+      );
+
+    const typeBadge =
+      type === "api"
+        ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300"
+        : type === "manual"
+        ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300"
+        : "bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300";
+
+    const cardGradient =
+      selected
+        ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
+        : completed
+        ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
+        : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
 
     return (
       <motion.div
@@ -560,83 +678,116 @@ export default function OrgBGVRequestsPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.15 }}
-        className={`
-        rounded-2xl p-4 shadow-lg border
-        ${
-          selected
-            ? "border-red-500 bg-red-50"
-            : completed
-            ? "border-green-400 bg-green-50"
-            : "border-gray-200 bg-white hover:shadow-xl hover:bg-gray-50"
-        }
-        transition-all duration-150
-      `}
+        transition={{ duration: 0.2 }}
+        className={`rounded-2xl p-6 shadow-md border-2 ${cardGradient} transition-all duration-200 transform hover:scale-105`}
       >
-        {/* Title, Icon, Status */}
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-2">
-            {iconMap[type]}
-            <div className="text-lg font-semibold capitalize text-gray-800">
-              {label}
+        {/* TOP ROW — ICON + TITLE */}
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex gap-3 items-start flex-1">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              {icon}
+            </div>
+            <div className="flex-1">
+              <div className="text-base font-bold capitalize text-gray-900 leading-tight">
+                {label}
+              </div>
+              {type === "manual" && (
+                <p className="text-xs text-gray-600 mt-1">
+                  Requires manual verification on this page
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center ml-2">
+          {/* STATUS ICON */}
+          <div className="flex-shrink-0">
             {status === "COMPLETED" && (
-              <CheckCircle className="text-green-600" size={22} />
+              <div className="bg-green-100 p-2 rounded-full">
+                <CheckCircle className="text-green-600" size={20} />
+              </div>
             )}
-            {status === "FAILED" && <X className="text-red-600" size={22} />}
+            {status === "FAILED" && (
+              <div className="bg-red-100 p-2 rounded-full">
+                <XCircle className="text-red-600" size={20} />
+              </div>
+            )}
             {status === "IN_PROGRESS" && (
-              <Loader2 className="text-yellow-500 animate-spin" size={22} />
-            )}
-            {!status && (
-              <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+              <div className="bg-yellow-100 p-2 rounded-full">
+                <Loader2 className="text-yellow-600 animate-spin" size={20} />
+              </div>
             )}
           </div>
         </div>
 
-        <div className="border-t my-3" />
-
-        {/* Checkbox OR Manual Verify */}
-        {!completed ? (
-          <div className="flex items-center gap-3 py-2">
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={() => handleStageToggle(key, stageKey)}
-              disabled={locked}
-              className="w-5 h-5 accent-red-600 cursor-pointer"
-            />
-            <span className="text-sm text-gray-700">
-              {locked ? "Locked" : `Add to ${stepNames[currentStep]}`}
+        {/* TYPE BADGE */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-bold ${typeBadge}`}>
+            {type === "api" && "⚡"}
+            {type === "manual" && "✍️"}
+            {type === "ai" && "🤖"}
+            {type.toUpperCase()} Check
+          </span>
+          {status && (
+            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+              status === "COMPLETED" ? "bg-green-200 text-green-800" :
+              status === "FAILED" ? "bg-red-200 text-red-800" :
+              "bg-yellow-200 text-yellow-800"
+            }`}>
+              {status}
             </span>
-          </div>
-        ) : null}
-
-        {/* Manual Verify Button */}
-        {type === "manual" &&
-          isStageLocked(stageKey) &&
-          finalizedChecks[stageKey].includes(key) &&
-          status !== "COMPLETED" &&
-          status !== "FAILED" && (
-            <button
-              onClick={() =>
-                setManualVerifyModal({
-                  open: true,
-                  check: key,
-                  remarks: "",
-                  status: "COMPLETED", // default
-                })
-              }
-              className="mt-3 w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-md"
-            >
-              Verify Manually
-            </button>
           )}
+        </div>
+
+        <div className="border-t border-gray-200 my-3" />
+
+        {/* CHECKBOX */}
+        <div className="flex items-center gap-3 mb-3">
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={completed || locked}
+            onChange={() => handleStageToggle(key, stageKey)}
+            className="w-5 h-5 accent-[#ff004f] cursor-pointer"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            {completed
+              ? "✓ Already Verified"
+              : locked
+              ? "🔒 Locked"
+              : "Add to Current Stage"}
+          </span>
+        </div>
+
+        {/* MANUAL VERIFY BUTTON */}
+        {type === "manual" && isStageLocked(stageKey) && !completed && (
+          <button
+            onClick={() =>
+              setManualVerifyModal({
+                open: true,
+                check: key,
+                remarks: "",
+                status: "COMPLETED",
+              })
+            }
+            className="mt-2 w-full px-4 py-3 text-sm bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            <FileCheck size={16} />
+            Verify Manually Here
+          </button>
+        )}
+
+        {/* INFO FOR AI CHECKS */}
+        {type === "ai" && !completed && (
+          <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded-lg">
+            <p className="text-xs text-purple-800 flex items-center gap-1">
+              <Info size={12} />
+              Can be performed from AI-CV-Verification page
+            </p>
+          </div>
+        )}
       </motion.div>
     );
-  };
+  }
 
   /* ---------------------------------------------------------------------
       RETURN UI
@@ -644,19 +795,51 @@ export default function OrgBGVRequestsPage() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-6 md:p-10">
       <div className="max-w-6xl mx-auto space-y-8">
-        {/* -----------------------------------------------------------------
-            PAGE HEADER
-        ----------------------------------------------------------------- */}
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-[#ff004f]">
-              Organization — BGV Requests
-            </h1>
-            <p className="text-gray-700 mt-1 text-sm">
-              Configure and run background verification checks.
-            </p>
+        {/* PAGE HEADER — ENHANCED WITH GRADIENT */}
+        <div className="bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] text-white p-6 md:p-8 rounded-2xl shadow-xl">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-3">
+                <Shield size={36} className="text-white" />
+                Background Verification Services
+              </h1>
+              <p className="text-white/90 mt-2 text-sm md:text-base">
+                Comprehensive verification workflows with AI-powered validation and manual checks
+              </p>
+            </div>
           </div>
+        </div>
 
+        {/* INFORMATIVE BANNER */}
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 shadow-md overflow-hidden">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-blue-600 flex-shrink-0 mt-1" size={24} />
+            <div className="flex-1">
+              <h3 className="font-bold text-blue-900 mb-2">Important Information</h3>
+              <div className="text-sm text-blue-800 space-y-2">
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">📋 Manual Verification:</span>
+                  <span>Education and employment checks require manual verification on this page itself. Click "Verify Manually" button on respective check cards.</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">🎓 Education Validation:</span>
+                  <span>Use AI-CV-Verification page for automated education analysis or verify manually here.</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">💼 Employment History:</span>
+                  <span>Both API-based and manual employment verification available. Manual checks provide detailed supervisory validation.</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">🤖 AI Checks:</span>
+                  <span>AI-powered CV and education validation can be performed from dedicated AI pages or initiated here.</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ACTION BUTTONS ROW */}
+        <div className="flex justify-end gap-3 flex-wrap">
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={() =>
@@ -679,93 +862,110 @@ export default function OrgBGVRequestsPage() {
           </div>
         </div>
 
-        {/* -----------------------------------------------------------------
-            STEPPER
-        ----------------------------------------------------------------- */}
-        <div className="bg-white border p-4 rounded-xl shadow flex justify-between">
-          {stepNames.map((name, i) => {
-            const key = name.toLowerCase();
-            const active = i === currentStep;
-            const done = isStageCompleted(key);
-
-            return (
-              <div key={i} className="flex items-center gap-3 flex-1">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center
-                  ${
-                    done
-                      ? "bg-green-600 text-white"
-                      : active
-                      ? "bg-red-600 text-white"
-                      : "bg-gray-300 text-gray-700"
-                  }`}
-                >
-                  {done ? <CheckCircle size={16} /> : i + 1}
-                </div>
-
-                <div>
+        {/* STEPPER - ENHANCED */}
+        <div className="bg-white border-2 p-6 rounded-2xl shadow-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Verification Progress</h3>
+            <span className="text-sm text-gray-600">
+              {isStageCompleted("primary") && isStageCompleted("secondary") && isStageCompleted("final") 
+                ? "All Stages Complete ✓" 
+                : `Stage ${currentStep + 1} of 3`}
+            </span>
+          </div>
+          <div className="flex justify-between relative">
+            {/* Progress Line */}
+            <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 -z-10">
+              <div 
+                className="h-full bg-gradient-to-r from-green-500 to-red-500 transition-all duration-500"
+                style={{ width: `${(currentStep / 2) * 100}%` }}
+              />
+            </div>
+            
+            {stepNames.map((name, i) => {
+              const active = i === currentStep;
+              const done = isStageCompleted(name.toLowerCase());
+              return (
+                <div key={i} className="flex flex-col items-center gap-2 flex-1 relative">
                   <div
-                    className={`font-semibold ${
-                      active ? "text-red-600" : "text-gray-800"
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-lg transition-all duration-300 transform ${
+                      done
+                        ? "bg-gradient-to-br from-green-500 to-green-600 text-white scale-110"
+                        : active
+                        ? "bg-gradient-to-br from-[#ff004f] to-[#ff6f6f] text-white scale-110 ring-4 ring-red-200"
+                        : "bg-white border-2 border-gray-300 text-gray-500"
                     }`}
                   >
-                    {name}
+                    {done ? <CheckCircle size={20} /> : i + 1}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {done ? "Completed" : active ? "Active stage" : "Pending"}
+                  <div className="text-center">
+                    <div
+                      className={`font-bold text-sm ${
+                        active ? "text-[#ff004f]" : done ? "text-green-600" : "text-gray-600"
+                      }`}
+                    >
+                      {name}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {done ? "✓ Completed" : active ? "In Progress" : "Pending"}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-6">
           <ConsentSection candidateId={selectedCandidate} />
         </div>
 
-        {/* -----------------------------------------------------------------
-            CANDIDATE & STATUS
-        ----------------------------------------------------------------- */}
-        <div className="bg-white border p-6 rounded-xl shadow space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            {/* Candidate Selection */}
+        {/* CANDIDATE & STATUS - Enhanced */}
+        <div className="bg-white border-2 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Selection Panel</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* CANDIDATE */}
             <div>
-              <label className="text-sm font-medium">Candidate</label>
-              <select
+              <SearchableDropdown
+                label="Candidate"
+                loading={candidateLoading}
+                options={candidates.map((c) => ({
+                  label: c.firstName + " " + c.lastName,
+                  value: c._id,
+                }))}
                 value={selectedCandidate}
-                onChange={(e) => handleCandidateSelect(e.target.value)}
-                className="border rounded-md p-2 w-full mt-1"
-              >
-                <option value="">-- Select --</option>
-                {candidates.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleCandidateSelect(v)}
+              />
             </div>
 
-            {/* Status */}
+            {/* STATUS */}
             <div>
-              <div className="text-sm text-gray-600">Status</div>
-              <div className="font-semibold mt-1">
-                {candidateVerification?.overallStatus || "Not Initiated"}
+              <label className="text-sm font-bold text-gray-700 mb-2 block">Verification Status</label>
+              <div className="border-2 border-gray-300 rounded-xl px-4 py-3 bg-gray-50">
+                <div className={`font-bold text-sm ${
+                  candidateVerification?.overallStatus === "COMPLETED" ? "text-green-600" :
+                  candidateVerification?.overallStatus === "IN_PROGRESS" ? "text-yellow-600" :
+                  candidateVerification?.overallStatus === "FAILED" ? "text-red-600" :
+                  "text-gray-600"
+                }`}>
+                  {candidateVerification?.overallStatus || "Not Initiated"}
+                </div>
               </div>
             </div>
 
             {/* Service Pricing */}
-            <div className="bg-gray-100 p-4 rounded-md border">
-              <h3 className="font-semibold mb-1 text-sm">Service Pricing</h3>
-              {userServices.map((s, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between text-sm text-gray-700 border-b py-1"
-                >
-                  <span>{s.serviceName}</span>
-                  <span>₹{s.price}</span>
-                </div>
-              ))}
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl border-2 border-gray-200 shadow-sm">
+              <h3 className="font-bold text-gray-900 text-sm mb-2">Service Pricing</h3>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {userServices.map((s, i) => (
+                  <div
+                    key={i}
+                    className="flex justify-between text-xs text-gray-700 border-b border-gray-300 py-1"
+                  >
+                    <span className="truncate flex-1">{s.serviceName}</span>
+                    <span className="font-semibold ml-2">₹{s.price}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -777,29 +977,47 @@ export default function OrgBGVRequestsPage() {
           {/* --------------------- LEFT PANEL --------------------- */}
           <div className="space-y-6">
             {/* Stage Info */}
-            <div className="bg-gray-100 p-4 rounded-md border">
-              <h3 className="font-semibold text-gray-800">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border-2 border-gray-200 shadow-sm">
+              <h3 className="font-bold text-gray-900 text-base mb-2">
                 {stepNames[currentStep]} Stage
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 leading-relaxed">
                 {currentStep === 0 &&
-                  "Primary: Choose initial verification checks."}
-                {currentStep === 1 && "Secondary: Checks not used in Primary."}
-                {currentStep === 2 && "Final: Remaining checks."}
+                  "Choose initial verification checks for primary stage."}
+                {currentStep === 1 &&
+                  "Select from remaining checks not used in Primary."}
+                {currentStep === 2 &&
+                  "Final stage with all remaining checks."}
               </p>
             </div>
 
             {/* Selected Checks */}
-            <div className="bg-gray-100 p-4 rounded-md border">
-              <div className="text-sm text-gray-600 mb-1">Selected Checks</div>
-              <div className="font-semibold">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
+              <div className="text-xs font-bold text-blue-900 mb-2">Selected Checks</div>
+              <div className="text-sm font-medium text-gray-900 break-words">
                 {[
                   ...new Set([
                     ...stages.primary,
                     ...stages.secondary,
                     ...stages.final,
                   ]),
-                ].join(", ") || "None"}
+                ].length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      ...new Set([
+                        ...stages.primary,
+                        ...stages.secondary,
+                        ...stages.final,
+                      ]),
+                    ].map((check, i) => (
+                      <span key={i} className="px-2 py-1 bg-blue-200 text-blue-900 rounded-md text-xs font-semibold">
+                        {check.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-500 text-xs">None selected</span>
+                )}
               </div>
             </div>
 
@@ -1037,59 +1255,76 @@ export default function OrgBGVRequestsPage() {
             )}
 
             {/* Verification Cards */}
-            {/* ======== GROUPED CHECK SECTIONS (API / MANUAL / AI) ========== */}
             {!isStageCompleted(visibleStage) && (
-              <div className="space-y-10">
-                {/* ---------------- API CHECKS ---------------- */}
-                {/* ---------------- API CHECKS ---------------- */}
+              <div className="space-y-8">
+                {/* API CHECKS SECTION */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <span className="text-blue-600">🔗</span> API-Based Checks
-                  </h3>
-
+                  <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-blue-200">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Cpu className="text-blue-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">API-Based Checks</h3>
+                      <p className="text-xs text-gray-600">Automated verification through external APIs</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {API_SERVICES.filter(
-                      (s) =>
-                        servicesOffered.includes(s) &&
-                        (!isStageLocked(visibleStage) ||
-                          finalizedChecks[visibleStage].includes(s))
-                    ).map((s) =>
-                      renderServiceCard(s, s.replace(/_/g, " "), "api")
-                    )}
+                    <AnimatePresence mode="popLayout">
+                      {API_SERVICES.filter(
+                        (s) =>
+                          servicesOffered.includes(s) &&
+                          (!isStageLocked(visibleStage) ||
+                            finalizedChecks[visibleStage].includes(s))
+                      ).map((s) =>
+                        renderServiceCard(s, s.replace(/_/g, " "), "api")
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
-                {/* ---------------- MANUAL CHECKS ---------------- */}
+                {/* MANUAL CHECKS SECTION */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <span className="text-orange-600">📝</span> Manual
-                    Verification
-                  </h3>
-
+                  <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-orange-200">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <FileSearch className="text-orange-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Manual Verification Checks</h3>
+                      <p className="text-xs text-gray-600">Requires manual verification on this page - Click "Verify Manually Here" button</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {MANUAL_SERVICES.filter(
-                      (s) =>
-                        servicesOffered.includes(s.id) &&
-                        (!isStageLocked(visibleStage) ||
-                          finalizedChecks[visibleStage].includes(s.id))
-                    ).map((s) => renderServiceCard(s.id, s.name, "manual"))}
+                    <AnimatePresence mode="popLayout">
+                      {MANUAL_SERVICES.filter(
+                        (s) =>
+                          servicesOffered.includes(s.id) &&
+                          (!isStageLocked(visibleStage) ||
+                            finalizedChecks[visibleStage].includes(s.id))
+                      ).map((s) => renderServiceCard(s.id, s.name, "manual"))}
+                    </AnimatePresence>
                   </div>
                 </div>
 
-                {/* ---------------- AI CHECKS ---------------- */}
+                {/* AI CHECKS SECTION */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <span className="text-purple-600">🤖</span> AI-Powered
-                    Checks
-                  </h3>
-
+                  <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-purple-200">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Brain className="text-purple-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">AI-Powered Validation</h3>
+                      <p className="text-xs text-gray-600">Advanced AI analysis for CV and education verification</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {AI_SERVICES.filter(
-                      (s) =>
-                        servicesOffered.includes(s.id) &&
-                        (!isStageLocked(visibleStage) ||
-                          finalizedChecks[visibleStage].includes(s.id))
-                    ).map((s) => renderServiceCard(s.id, s.name, "ai"))}
+                    <AnimatePresence mode="popLayout">
+                      {AI_SERVICES.filter(
+                        (s) =>
+                          servicesOffered.includes(s.id) &&
+                          (!isStageLocked(visibleStage) ||
+                            finalizedChecks[visibleStage].includes(s.id))
+                      ).map((s) => renderServiceCard(s.id, s.name, "ai"))}
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>
@@ -1097,24 +1332,31 @@ export default function OrgBGVRequestsPage() {
           </div>
         </div>
 
-        {/* -----------------------------------------------------------------
-            SUMMARY TABLE
-        ----------------------------------------------------------------- */}
+        {/* SUMMARY TABLE - Enhanced & Responsive */}
         {candidateVerification && (
           <div className="mt-10">
-            <h2 className="text-xl font-bold mb-4">
-              {visibleStage.toUpperCase()} Stage Summary
-            </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] rounded-lg">
+                <FileText className="text-white" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {visibleStage.charAt(0).toUpperCase() + visibleStage.slice(1)} Stage Summary
+                </h2>
+                <p className="text-sm text-gray-600">Detailed verification results</p>
+              </div>
+            </div>
 
-            <div className="overflow-x-auto bg-white border rounded-xl shadow">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto bg-white border-2 rounded-2xl shadow-lg">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 text-gray-700">
+                <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
                   <tr>
-                    <th className="p-3">Check</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Remarks</th>
-                    <th className="p-3">Submitted At</th>
-                    <th className="p-3">Stage</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Check</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Status</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Remarks</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Submitted At</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Stage</th>
                   </tr>
                 </thead>
 
@@ -1122,31 +1364,33 @@ export default function OrgBGVRequestsPage() {
                   {candidateVerification.stages?.[visibleStage]?.length ? (
                     candidateVerification.stages[visibleStage].map(
                       (item, i) => (
-                        <tr key={i} className="border-t hover:bg-gray-50">
-                          <td className="p-3 capitalize">{item.check}</td>
-                          <td className="p-3">
+                        <tr key={i} className="border-t hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors">
+                          <td className="p-4 capitalize font-medium text-gray-900">{item.check.replace(/_/g, " ")}</td>
+                          <td className="p-4">
                             <span
-                              className={`px-2 py-1 rounded text-xs ${
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
                                 item.status === "COMPLETED"
-                                  ? "bg-green-200 text-green-800"
+                                  ? "bg-green-100 text-green-800 border border-green-300"
                                   : item.status === "FAILED"
-                                  ? "bg-red-200 text-red-800"
+                                  ? "bg-red-100 text-red-800 border border-red-300"
                                   : item.status === "IN_PROGRESS"
-                                  ? "bg-yellow-200 text-yellow-700"
-                                  : "bg-gray-200 text-gray-700"
+                                  ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+                                  : "bg-gray-100 text-gray-800 border border-gray-300"
                               }`}
                             >
+                              {item.status === "COMPLETED" && "✓"}
+                              {item.status === "FAILED" && "✗"}
+                              {item.status === "IN_PROGRESS" && "⏳"}
                               {item.status}
                             </span>
                           </td>
-
-                          <td className="p-3">
+                          <td className="p-4 max-w-xs">
                             {item.remarks &&
                             typeof item.remarks === "object" ? (
                               <div className="text-xs text-gray-700 space-y-1">
                                 {Object.entries(item.remarks).map(
                                   ([key, value]) => (
-                                    <div key={key}>
+                                    <div key={key} className="break-words">
                                       <span className="font-semibold capitalize">
                                         {key}:{" "}
                                       </span>
@@ -1160,29 +1404,101 @@ export default function OrgBGVRequestsPage() {
                                 )}
                               </div>
                             ) : (
-                              item.remarks || "—"
+                              <span className="text-gray-700 break-words">{item.remarks || "—"}</span>
                             )}
                           </td>
 
-                          <td className="p-3">
+                          <td className="p-4 text-gray-700 whitespace-nowrap">
                             {item.submittedAt
                               ? new Date(item.submittedAt).toLocaleString()
                               : "—"}
                           </td>
-
-                          <td className="p-3 capitalize">{visibleStage}</td>
+                          <td className="p-4 capitalize font-medium text-gray-900">{visibleStage}</td>
                         </tr>
                       )
                     )
                   ) : (
                     <tr>
-                      <td className="p-4 text-center text-gray-500" colSpan={5}>
+                      <td className="p-8 text-center text-gray-500" colSpan={5}>
                         No checks in this stage.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile/Tablet Card View */}
+            <div className="lg:hidden space-y-4">
+              {candidateVerification.stages?.[visibleStage]?.length ? (
+                candidateVerification.stages[visibleStage].map((item, i) => (
+                  <div key={i} className="bg-white border-2 rounded-2xl shadow-lg p-5 space-y-3">
+                    {/* Check Name */}
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-bold text-gray-900 capitalize text-base flex-1">
+                        {item.check.replace(/_/g, " ")}
+                      </h3>
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${
+                          item.status === "COMPLETED"
+                            ? "bg-green-100 text-green-800 border border-green-300"
+                            : item.status === "FAILED"
+                            ? "bg-red-100 text-red-800 border border-red-300"
+                            : item.status === "IN_PROGRESS"
+                            ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+                            : "bg-gray-100 text-gray-800 border border-gray-300"
+                        }`}
+                      >
+                        {item.status === "COMPLETED" && "✓ "}
+                        {item.status === "FAILED" && "✗ "}
+                        {item.status === "IN_PROGRESS" && "⏳ "}
+                        {item.status}
+                      </span>
+                    </div>
+
+                    {/* Stage */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-semibold text-gray-600">Stage:</span>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-medium capitalize">
+                        {visibleStage}
+                      </span>
+                    </div>
+
+                    {/* Remarks */}
+                    {item.remarks && (
+                      <div className="bg-gray-50 p-3 rounded-lg border">
+                        <div className="font-semibold text-gray-700 text-xs mb-2">Remarks:</div>
+                        {typeof item.remarks === "object" ? (
+                          <div className="text-xs text-gray-700 space-y-1">
+                            {Object.entries(item.remarks).map(([key, value]) => (
+                              <div key={key} className="break-words">
+                                <span className="font-semibold capitalize">{key}: </span>
+                                <span>
+                                  {value === null || value === undefined ? "—" : value.toString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-700 break-words">{item.remarks}</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Submitted At */}
+                    {item.submittedAt && (
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <span className="font-semibold">Submitted:</span>
+                        <span>{new Date(item.submittedAt).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white border-2 rounded-2xl shadow-lg p-8 text-center">
+                  <p className="text-gray-500">No checks in this stage.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1524,6 +1840,26 @@ export default function OrgBGVRequestsPage() {
             {fieldErrors.address && (
               <p className="text-red-500 text-xs">{fieldErrors.address}</p>
             )}
+            {/* RESUME UPLOAD (Optional) */}
+            <div className="sm:col-span-2 mt-4">
+              <label className="text-sm font-medium">
+                Resume (PDF/DOC/DOCX)
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) =>
+                  setNewCandidate((p) => ({ ...p, resume: e.target.files[0] }))
+                }
+                className="border p-2 rounded w-full mt-1"
+              />
+
+              {newCandidate.resume && (
+                <p className="text-xs text-gray-600 mt-1">
+                  Selected: <strong>{newCandidate.resume.name}</strong>
+                </p>
+              )}
+            </div>
 
             {/* ACTION BUTTONS */}
             <div className="flex justify-end gap-3 mt-4">
@@ -1569,14 +1905,45 @@ export default function OrgBGVRequestsPage() {
                   try {
                     setLoading(true);
 
-                    const res = await fetch(`${API_BASE}/secure/addCandidate`, {
+                    const formData = new FormData();
+
+                    formData.append("organizationId", userOrgId);
+                    formData.append("firstName", newCandidate.firstName);
+                    formData.append("middleName", newCandidate.middleName);
+                    formData.append("lastName", newCandidate.lastName);
+                    formData.append("fatherName", newCandidate.fatherName);
+                    formData.append("dob", newCandidate.dob);
+                    formData.append("gender", newCandidate.gender);
+                    formData.append("phone", newCandidate.phone);
+                    formData.append("email", newCandidate.email);
+                    formData.append(
+                      "aadhaarNumber",
+                      newCandidate.aadhaarNumber
+                    );
+                    formData.append("panNumber", newCandidate.panNumber);
+                    formData.append("uanNumber", newCandidate.uanNumber);
+                    formData.append(
+                      "passportNumber",
+                      newCandidate.passportNumber
+                    );
+                    formData.append(
+                      "bankAccountNumber",
+                      newCandidate.bankAccountNumber
+                    );
+                    formData.append("district", newCandidate.district);
+                    formData.append("state", newCandidate.state);
+                    formData.append("pincode", newCandidate.pincode);
+                    formData.append("address", newCandidate.address);
+
+                    // Optional Resume
+                    if (newCandidate.resume) {
+                      formData.append("resume", newCandidate.resume);
+                    }
+
+                    const res = await fetch(`/api/proxy/secure/addCandidate`, {
                       method: "POST",
                       credentials: "include",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        organizationId: userOrgId,
-                        ...newCandidate,
-                      }),
+                      body: formData, // 👈 IMPORTANT: No headers
                     });
 
                     const data = await res.json();

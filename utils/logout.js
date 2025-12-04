@@ -1,20 +1,34 @@
-export function logout() {
+/**
+ * Logout utility function
+ * Clears user session and redirects to login page
+ */
+export async function logout() {
+  try {
+    // Clear cookies via API
+    await fetch("/api/auth/clear-cookies", {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (error) {
+    console.error("Error clearing cookies:", error);
+  }
+
   // Clear localStorage
-  localStorage.removeItem("bgvUser");
+  try {
+    localStorage.removeItem("bgvUser");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+  } catch (error) {
+    console.error("Error clearing localStorage:", error);
+  }
 
-  // Clear cookies client-side
-  document.cookie = "bgvUser=; Path=/; Max-Age=0;";
-  document.cookie = "bgvSession=; Path=/; Max-Age=0;";
-  document.cookie = "bgvTemp=; Path=/; Max-Age=0;";
+  // Clear sessionStorage
+  try {
+    sessionStorage.clear();
+  } catch (error) {
+    console.error("Error clearing sessionStorage:", error);
+  }
 
-  // Call backend logout endpoint to clear httpOnly cookies
-  fetch("https://maihoo.onrender.com/auth/logout", {
-    method: "POST",
-    credentials: "include",
-  }).catch((error) => {
-    console.error("Error calling backend logout:", error);
-  });
-
-  // Redirect to login
+  // Redirect to login page
   window.location.href = "/login";
 }

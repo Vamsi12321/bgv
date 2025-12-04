@@ -14,12 +14,12 @@ import {
 
 import { jsPDF } from "jspdf";
 import { safeHtml2Canvas } from "@/utils/safeHtml2Canvas";
+import { useOrgState } from "../../context/OrgStateContext";
 
 /* ----------------------------------------------- */
 /* 🔗 API BASE */
 /* ----------------------------------------------- */
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 /* ----------------------------------------------- */
 /* SERVICE ICONS */
@@ -114,9 +114,13 @@ async function mergeAllCertificates(ids, fileName, setDownloading) {
 /* ============================================================= */
 
 export default function OrgReportsPage() {
+  const {
+    reportsData: candidates,
+    setReportsData: setCandidates,
+  } = useOrgState();
+
   const [orgId, setOrgId] = useState("");
   const [orgName, setOrgName] = useState("");
-  const [candidates, setCandidates] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -145,11 +149,17 @@ export default function OrgReportsPage() {
   /* Fetch candidates with verification info */
   /* --------------------------------------------- */
   const fetchCandidates = async (orgId) => {
+    // Only fetch if we don't have data already
+    if (candidates.length > 0) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/getCandidates?orgId=${orgId}`,
+        `/api/proxy/secure/getCandidates?orgId=${orgId}`,
         { credentials: "include" }
       );
 
@@ -159,7 +169,7 @@ export default function OrgReportsPage() {
         (data.candidates || []).map(async (c) => {
           try {
             const verRes = await fetch(
-              `${API_BASE}/secure/getVerifications?candidateId=${c._id}`,
+              `/api/proxy/secure/getVerifications?candidateId=${c._id}`,
               { credentials: "include" }
             );
             const verData = await verRes.json();

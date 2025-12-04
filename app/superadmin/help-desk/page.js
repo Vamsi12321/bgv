@@ -25,8 +25,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function SuperAdminTicketsPage() {
   // ===========================
@@ -81,7 +80,7 @@ export default function SuperAdminTicketsPage() {
       if (filters.category !== "All")
         params.append("category", filters.category);
 
-      const res = await fetch(`${API_BASE}/secure/ticket/list?${params}`, {
+      const res = await fetch(`/api/proxy/secure/ticket/list?${params}`, {
         credentials: "include",
       });
 
@@ -106,7 +105,7 @@ export default function SuperAdminTicketsPage() {
   // ===========================
   const handleViewTicket = async (ticket) => {
     try {
-      const res = await fetch(`${API_BASE}/secure/ticket/${ticket.ticketId}`, {
+      const res = await fetch(`/api/proxy/secure/ticket/${ticket.ticketId}`, {
         credentials: "include",
       });
 
@@ -131,7 +130,7 @@ export default function SuperAdminTicketsPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}`,
         { credentials: "include" }
       );
 
@@ -152,7 +151,7 @@ export default function SuperAdminTicketsPage() {
   const fetchAvailableAssignees = async (ticketId) => {
     try {
       const res = await fetch(
-        `${API_BASE}/secure/ticket/${ticketId}/available-assignees`,
+        `/api/proxy/secure/ticket/${ticketId}/available-assignees`,
         { credentials: "include" }
       );
       const data = await res.json();
@@ -181,7 +180,7 @@ export default function SuperAdminTicketsPage() {
       setCommenting(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/comment`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}/comment`,
         {
           method: "POST",
           credentials: "include",
@@ -228,7 +227,7 @@ export default function SuperAdminTicketsPage() {
       if (newStatus === "RESOLVED") payload.resolution = resolutionText;
 
       const res = await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/status`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}/status`,
         {
           method: "PUT",
           credentials: "include",
@@ -260,7 +259,7 @@ export default function SuperAdminTicketsPage() {
       setAssigning(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/reassign`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}/reassign`,
         {
           method: "PUT",
           credentials: "include",
@@ -291,7 +290,7 @@ export default function SuperAdminTicketsPage() {
   const handleCloseTicket = async () => {
     try {
       await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/close`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}/close`,
         {
           method: "POST",
           credentials: "include",
@@ -310,7 +309,7 @@ export default function SuperAdminTicketsPage() {
   const handleReopenTicket = async () => {
     try {
       await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/reopen`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}/reopen`,
         {
           method: "POST",
           credentials: "include",

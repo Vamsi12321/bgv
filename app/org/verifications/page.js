@@ -3,44 +3,49 @@
 import { useEffect, useState, useMemo } from "react";
 import { Filter, X, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useOrgState } from "../../context/OrgStateContext";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function OrgVerificationsPage() {
-  const [loading, setLoading] = useState(false);
-  const [verifications, setVerifications] = useState([]);
-  const [summary, setSummary] = useState([]);
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const {
+    verificationsData: verifications,
+    setVerificationsData: setVerifications,
+    verificationsFilters: filters,
+    setVerificationsFilters: setFilters,
+    verificationsSummary,
+    setVerificationsSummary,
+  } = useOrgState();
 
-  const [filters, setFilters] = useState({
-    status: "",
-    name: "",
-    fromDate: "",
-    toDate: "",
-    initiatedByName: "",
-  });
+  const [loading, setLoading] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   const router = useRouter();
 
   /* ---------------------- Fetch Verifications ---------------------- */
   useEffect(() => {
-    fetchVerifications();
+    // Only fetch if we don't have data (check both verifications and summary)
+    if (verifications.length === 0 && verificationsSummary.length === 0) {
+      fetchVerifications();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const fetchVerifications = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/secure/getVerifications`, {
+      const res = await fetch(`/api/proxy/secure/getVerifications`, {
         credentials: "include",
       });
       const data = await res.json();
       if (!res.ok)
         throw new Error(data.message || "Failed to fetch verifications");
 
-      setSummary(data.candidatesSummary || []);
+      setVerificationsSummary(data.candidatesSummary || []);
       setVerifications(data.verifications || []);
     } catch (err) {
+      console.error("Fetch error:", err);
       alert(err.message);
     } finally {
       setLoading(false);
@@ -51,14 +56,14 @@ export default function OrgVerificationsPage() {
      Merge initiatedByName from verifications → summary
      --------------------------------------------------------------- */
   const mergedSummary = useMemo(() => {
-    return summary.map((c) => {
+    return verificationsSummary.map((c) => {
       const v = verifications.find((v) => v.candidateId === c.candidateId);
       return {
         ...c,
         initiatedByName: v?.initiatedByName || "",
       };
     });
-  }, [summary, verifications]);
+  }, [verificationsSummary, verifications]);
 
   /* ---------------------------------------------------------------
      Override status → Completed if 100%

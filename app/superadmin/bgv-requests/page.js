@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   PlusCircle,
   Loader2,
@@ -17,20 +17,31 @@ import {
   FileCheck,
   FileSearch,
   Brain,
+  Shield,
+  AlertCircle,
+  Info,
+  FileText,
+  UserPlus,
+  User,
+  Mail,
+  MapPin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+import { useSuperAdminState } from "../../context/SuperAdminStateContext";
 
 export default function BGVInitiationPage() {
+  // State management context
+  const { bgvState = {}, setBgvState = () => {} } = useSuperAdminState();
+
   const [organizations, setOrganizations] = useState([]);
   const [candidates, setCandidates] = useState([]);
-  const [selectedOrg, setSelectedOrg] = useState("");
-  const [selectedCandidate, setSelectedCandidate] = useState("");
+  const [selectedOrg, setSelectedOrg] = useState(bgvState.selectedOrg || "");
+  const [selectedCandidate, setSelectedCandidate] = useState(bgvState.selectedCandidate || "");
   const [candidateVerification, setCandidateVerification] = useState(null);
 
   const [loading, setLoading] = useState(false);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [candidateLoading, setCandidateLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(false);
   const [runLoading, setRunLoading] = useState(false);
   const [reinitLoading, setReinitLoading] = useState(false);
@@ -38,8 +49,8 @@ export default function BGVInitiationPage() {
   const [startLoading, setStartLoading] = useState({});
   const [orgDetails, setOrgDetails] = useState(null);
 
-  const [visibleStage, setVisibleStage] = useState("primary");
-  const [currentStep, setCurrentStep] = useState(0);
+  const [visibleStage, setVisibleStage] = useState(bgvState.visibleStage || "primary");
+  const [currentStep, setCurrentStep] = useState(bgvState.currentStep || 0);
   const stepNames = ["Primary", "Secondary", "Final"];
   const [showConfirmClose, setShowConfirmClose] = useState(false);
 
@@ -75,7 +86,7 @@ export default function BGVInitiationPage() {
     "employment_history_manual",
   ];
 
-  const AI_CHECKS = ["resume_validation", "education_check_ai"];
+  const AI_CHECKS = ["ai_cv_validation", "ai_education_validation"];
 
   // FULL candidate schema
   const emptyCandidate = {
@@ -100,7 +111,13 @@ export default function BGVInitiationPage() {
 
   const [newCandidate, setNewCandidate] = useState(emptyCandidate);
   const [fieldErrors, setFieldErrors] = useState({});
-  const handleInputChange = (e) => {
+
+  const handleInputChange = (e, isFile = false) => {
+    if (isFile) {
+      setNewCandidate((p) => ({ ...p, resume: e.target.files[0] }));
+      return;
+    }
+
     let { name, value } = e.target;
 
     if (name === "panNumber")
@@ -126,7 +143,7 @@ export default function BGVInitiationPage() {
     final: [],
   };
 
-  const [stages, setStages] = useState({
+  const [stages, setStages] = useState(bgvState.stages || {
     primary: [...DEFAULTS.primary],
     secondary: [...DEFAULTS.secondary],
     final: [...DEFAULTS.final],
@@ -138,6 +155,21 @@ export default function BGVInitiationPage() {
     message: "",
     type: "info",
   });
+
+  // Use ref to always have latest values for state persistence
+  const stateRef = useRef({ selectedOrg, selectedCandidate, stages, currentStep, visibleStage });
+  
+  // Update ref whenever state changes
+  useEffect(() => {
+    stateRef.current = { selectedOrg, selectedCandidate, stages, currentStep, visibleStage };
+  }, [selectedOrg, selectedCandidate, stages, currentStep, visibleStage]);
+
+  // Save state on unmount (when navigating away)
+  useEffect(() => {
+    return () => {
+      setBgvState(stateRef.current);
+    };
+  }, [setBgvState]);
 
   const showModal = ({ title, message, type }) =>
     setModal({
@@ -220,23 +252,29 @@ export default function BGVInitiationPage() {
   useEffect(() => {
     (async () => {
       try {
-        setLoading(true);
-        const res = await fetch(`${API_BASE}/secure/getOrganizations`, {
+        setOrgLoading(true);
+        const res = await fetch(`/api/proxy/secure/getOrganizations`, {
           credentials: "include",
         });
         const data = await res.json();
-        if (res.ok) setOrganizations(data.organizations || []);
+        if (res.ok) {
+          setOrganizations(data.organizations || []);
+          // Restore candidates if org was selected
+          if (bgvState.selectedOrg) {
+            fetchCandidates(bgvState.selectedOrg);
+          }
+        }
       } finally {
-        setLoading(false);
+        setOrgLoading(false);
       }
     })();
   }, []);
 
   const fetchCandidates = async (orgId) => {
     try {
-      setLoading(true);
+      setCandidateLoading(true);
       const res = await fetch(
-        `${API_BASE}/secure/getCandidates?orgId=${orgId}`,
+        `/api/proxy/secure/getCandidates?orgId=${orgId}`,
         { credentials: "include" }
       );
 
@@ -255,14 +293,14 @@ export default function BGVInitiationPage() {
         type: "error",
       });
     } finally {
-      setLoading(false);
+      setCandidateLoading(false);
     }
   };
   const fetchConsentStatus = async (candidateId) => {
     try {
       setCheckingConsent(true);
       const res = await fetch(
-        `${API_BASE}/secure/verification/${candidateId}/consent-status`,
+        `/api/proxy/secure/verification/${candidateId}/consent-status`,
         {
           credentials: "include",
         }
@@ -287,7 +325,7 @@ export default function BGVInitiationPage() {
       setSendingConsent(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/verification/${selectedCandidate}/send-consent`,
+        `/api/proxy/secure/verification/${selectedCandidate}/send-consent`,
         {
           method: "POST",
           credentials: "include",
@@ -330,7 +368,7 @@ export default function BGVInitiationPage() {
     try {
       setLoading(true);
       const res = await fetch(
-        `${API_BASE}/secure/getVerifications?candidateId=${candidateId}`,
+        `/api/proxy/secure/getVerifications?candidateId=${candidateId}`,
         { credentials: "include" }
       );
 
@@ -404,8 +442,8 @@ export default function BGVInitiationPage() {
       });
     }
 
+    // VALIDATION (unchanged)
     const errors = {};
-
     const {
       firstName,
       lastName,
@@ -423,9 +461,9 @@ export default function BGVInitiationPage() {
       passportNumber,
       uanNumber,
       bankAccountNumber,
+      resume,
     } = newCandidate;
 
-    // REQUIRED
     if (!firstName) errors.firstName = "First name is required";
     if (!lastName) errors.lastName = "Last name is required";
     if (!fatherName) errors.fatherName = "Father name is required";
@@ -433,40 +471,12 @@ export default function BGVInitiationPage() {
     if (!gender) errors.gender = "Gender is required";
     if (!phone) errors.phone = "Phone is required";
     if (!email) errors.email = "Email is required";
-    if (!aadhaarNumber) errors.aadhaarNumber = "Aadhaar number required";
+    if (!aadhaarNumber) errors.aadhaarNumber = "Aadhaar required";
     if (!panNumber) errors.panNumber = "PAN required";
     if (!address) errors.address = "Address required";
     if (!district) errors.district = "District required";
     if (!state) errors.state = "State required";
     if (!pincode) errors.pincode = "Pincode required";
-
-    // FORMAT VALIDATIONS
-    const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-    const validatePhone = (v) => /^\d{10}$/.test(v);
-    const validateAadhaar = (v) => /^\d{12}$/.test(v);
-    const validatePAN = (v) => /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v);
-    const validateDOB = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
-    const validatePincode = (v) => /^\d{6}$/.test(v);
-    const validatePassport = (v) => /^[A-PR-WYa-pr-wy][1-9]\d{6}$/.test(v);
-    const validateUAN = (v) => /^\d{12}$/.test(v);
-    const validateAccount = (v) => /^\d{6,18}$/.test(v);
-
-    if (phone && !validatePhone(phone))
-      errors.phone = "Phone must be 10 digits";
-    if (email && !validateEmail(email)) errors.email = "Invalid email";
-    if (aadhaarNumber && !validateAadhaar(aadhaarNumber))
-      errors.aadhaarNumber = "Aadhaar must be 12 digits";
-    if (panNumber && !validatePAN(panNumber))
-      errors.panNumber = "Format ABCDE1234F required";
-    if (dob && !validateDOB(dob)) errors.dob = "Use YYYY-MM-DD";
-    if (pincode && !validatePincode(pincode))
-      errors.pincode = "Must be 6 digits";
-    if (passportNumber && !validatePassport(passportNumber))
-      errors.passportNumber = "Invalid passport format";
-    if (uanNumber && !validateUAN(uanNumber))
-      errors.uanNumber = "UAN must be 12 digits";
-    if (bankAccountNumber && !validateAccount(bankAccountNumber))
-      errors.bankAccountNumber = "6–18 digits required";
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -476,14 +486,36 @@ export default function BGVInitiationPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/secure/addCandidate`, {
+      const formData = new FormData();
+
+      formData.append("organizationId", selectedOrg);
+      formData.append("firstName", firstName);
+      formData.append("middleName", newCandidate.middleName);
+      formData.append("lastName", lastName);
+      formData.append("fatherName", fatherName);
+      formData.append("dob", dob);
+      formData.append("gender", gender);
+      formData.append("phone", phone);
+      formData.append("email", email);
+      formData.append("aadhaarNumber", aadhaarNumber);
+      formData.append("panNumber", panNumber);
+      formData.append("uanNumber", uanNumber);
+      formData.append("passportNumber", passportNumber);
+      formData.append("bankAccountNumber", bankAccountNumber);
+      formData.append("address", address);
+      formData.append("district", district);
+      formData.append("state", state);
+      formData.append("pincode", pincode);
+
+      // resume optional
+      if (resume) {
+        formData.append("resume", resume);
+      }
+
+      const res = await fetch(`/api/proxy/secure/addCandidate`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          organizationId: selectedOrg,
-          ...newCandidate,
-        }),
+        body: formData,
       });
 
       const data = await res.json();
@@ -491,7 +523,7 @@ export default function BGVInitiationPage() {
       if (!res.ok) {
         return showModal({
           title: "Error Adding Candidate",
-          message: data.detail || "Server error",
+          message: data.detail || data.message || "Server error",
           type: "error",
         });
       }
@@ -611,7 +643,7 @@ export default function BGVInitiationPage() {
     try {
       setInitLoading(true);
 
-      const res = await fetch(`${API_BASE}/secure/initiateStageVerification`, {
+      const res = await fetch(`/api/proxy/secure/initiateStageVerification`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -681,7 +713,7 @@ export default function BGVInitiationPage() {
     try {
       setRunLoading(true);
 
-      const res = await fetch(`${API_BASE}/secure/runStage`, {
+      const res = await fetch(`/api/proxy/secure/runStage`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -733,7 +765,7 @@ export default function BGVInitiationPage() {
       }
 
       for (const f of failed) {
-        const res = await fetch(`${API_BASE}/secure/retryCheck`, {
+        const res = await fetch(`/api/proxy/secure/retryCheck`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -776,7 +808,7 @@ export default function BGVInitiationPage() {
     try {
       setStartLoading((p) => ({ ...p, [check]: true }));
 
-      const res = await fetch(`${API_BASE}/secure/startCheck`, {
+      const res = await fetch(`/api/proxy/secure/startCheck`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -831,7 +863,7 @@ export default function BGVInitiationPage() {
   /* RETURN UI */
   /* -------------------------------------------------- */
 
-  function SearchableDropdown({ label, value, onChange, options, disabled }) {
+  function SearchableDropdown({ label, value, onChange, options, disabled, loading }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
 
@@ -842,45 +874,50 @@ export default function BGVInitiationPage() {
     return (
       <div className="w-full relative">
         {label && (
-          <label className="text-sm font-medium text-gray-700">{label}</label>
+          <label className="text-sm font-bold text-gray-700 mb-2 block">{label}</label>
         )}
 
-        {/* Input Box */}
+        {/* Input Box - Enhanced with Loading */}
         <div
           className={`
-          mt-1 border rounded-lg px-3 py-2 bg-white 
+          border-2 rounded-xl px-4 py-3 bg-white 
           flex justify-between items-center cursor-pointer
+          transition-all duration-200 shadow-sm
           ${
-            disabled
-              ? "bg-gray-100 cursor-not-allowed"
-              : "hover:border-gray-400"
+            disabled || loading
+              ? "bg-gray-100 cursor-not-allowed border-gray-300"
+              : "hover:border-[#ff004f] hover:shadow-md border-gray-300"
           }
         `}
-          onClick={() => !disabled && setOpen(!open)}
+          onClick={() => !disabled && !loading && setOpen(!open)}
         >
-          <span className={value ? "text-gray-900" : "text-gray-400"}>
-            {options.find((o) => o.value === value)?.label || "Select..."}
+          <span className={`text-sm font-medium truncate ${value ? "text-gray-900" : "text-gray-400"}`}>
+            {loading ? "Loading..." : (options.find((o) => o.value === value)?.label || "Select...")}
           </span>
-          <ChevronDown size={18} className="text-gray-600" />
+          {loading ? (
+            <Loader2 size={20} className="text-gray-600 animate-spin flex-shrink-0 ml-2" />
+          ) : (
+            <ChevronDown size={20} className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`} />
+          )}
         </div>
 
-        {/* DROPDOWN */}
-        {open && !disabled && (
-          <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-md p-2">
+        {/* DROPDOWN - Enhanced */}
+        {open && !disabled && !loading && (
+          <div className="absolute z-50 mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-2xl p-3">
             {/* Search input */}
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="🔍 Search..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full border rounded-md px-2 py-1 mb-2 text-sm focus:ring-1 focus:ring-red-500 outline-none"
+              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm text-gray-900 focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none transition"
             />
 
             {/* Options list */}
-            <div className="max-h-52 overflow-y-auto">
+            <div className="max-h-60 overflow-y-auto custom-scrollbar">
               {filtered.length === 0 && (
-                <div className="p-2 text-gray-500 text-sm text-center">
-                  No results
+                <div className="p-4 text-gray-500 text-sm text-center">
+                  No results found
                 </div>
               )}
 
@@ -892,7 +929,7 @@ export default function BGVInitiationPage() {
                     setOpen(false);
                     setQuery("");
                   }}
-                  className="px-3 py-2 text-sm rounded-md cursor-pointer hover:bg-red-50 hover:text-red-700"
+                  className="px-4 py-3 text-sm text-gray-900 rounded-lg cursor-pointer hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-[#ff004f] transition-all duration-150 font-medium"
                 >
                   {item.label}
                 </div>
@@ -914,19 +951,26 @@ export default function BGVInitiationPage() {
 
     const icon =
       type === "API" ? (
-        <Cpu size={20} className="text-blue-600" />
+        <Cpu size={24} className="text-blue-600" />
       ) : type === "MANUAL" ? (
-        <FileSearch size={20} className="text-orange-600" />
+        <FileSearch size={24} className="text-orange-600" />
       ) : (
-        <Brain size={20} className="text-purple-600" />
+        <Brain size={24} className="text-purple-600" />
       );
 
     const typeBadge =
       type === "API"
-        ? "bg-blue-100 text-blue-700"
+        ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300"
         : type === "MANUAL"
-        ? "bg-orange-100 text-orange-700"
-        : "bg-purple-100 text-purple-700";
+        ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300"
+        : "bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300";
+
+    const cardGradient =
+      selected
+        ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
+        : completed
+        ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
+        : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
 
     return (
       <motion.div
@@ -935,63 +979,83 @@ export default function BGVInitiationPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.15 }}
-        className={`rounded-xl p-5 shadow-md border-2 
-      ${
-        selected
-          ? "border-red-500 bg-red-50"
-          : "border-gray-200 bg-white hover:border-gray-300"
-      }
-      transition-all duration-150`}
+        transition={{ duration: 0.2 }}
+        className={`rounded-2xl p-6 shadow-md border-2 ${cardGradient} transition-all duration-200 transform hover:scale-105`}
       >
-        {/* TOP ROW — ICON + BADGE + STATUS */}
-        <div className="flex justify-between items-start">
-          <div className="flex gap-3 items-center">
-            {icon}
-
-            <div className="text-lg font-semibold capitalize">
-              {v.replace(/_/g, " ")}
+        {/* TOP ROW — ICON + TITLE */}
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex gap-3 items-start flex-1">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              {icon}
+            </div>
+            <div className="flex-1">
+              <div className="text-base font-bold capitalize text-gray-900 leading-tight">
+                {v.replace(/_/g, " ")}
+              </div>
+              {type === "MANUAL" && (
+                <p className="text-xs text-gray-600 mt-1">
+                  Requires manual verification on this page
+                </p>
+              )}
             </div>
           </div>
 
           {/* STATUS ICON */}
-          <div>
+          <div className="flex-shrink-0">
             {status === "COMPLETED" && (
-              <CheckCircle className="text-green-600" size={20} />
+              <div className="bg-green-100 p-2 rounded-full">
+                <CheckCircle className="text-green-600" size={20} />
+              </div>
             )}
             {status === "FAILED" && (
-              <XCircle className="text-red-600" size={20} />
+              <div className="bg-red-100 p-2 rounded-full">
+                <XCircle className="text-red-600" size={20} />
+              </div>
             )}
             {status === "IN_PROGRESS" && (
-              <Loader2 className="text-yellow-500 animate-spin" size={20} />
+              <div className="bg-yellow-100 p-2 rounded-full">
+                <Loader2 className="text-yellow-600 animate-spin" size={20} />
+              </div>
             )}
           </div>
         </div>
 
         {/* TYPE BADGE */}
-        <span
-          className={`inline-block text-xs px-2 py-1 mt-2 rounded-md font-semibold ${typeBadge}`}
-        >
-          {type} Check
-        </span>
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-bold ${typeBadge}`}>
+            {type === "API" && "⚡"}
+            {type === "MANUAL" && "✍️"}
+            {type === "AI" && "🤖"}
+            {type} Check
+          </span>
+          {status && (
+            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+              status === "COMPLETED" ? "bg-green-200 text-green-800" :
+              status === "FAILED" ? "bg-red-200 text-red-800" :
+              "bg-yellow-200 text-yellow-800"
+            }`}>
+              {status}
+            </span>
+          )}
+        </div>
 
-        <div className="border-t my-3" />
+        <div className="border-t border-gray-200 my-3" />
 
         {/* CHECKBOX */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-3">
           <input
             type="checkbox"
             checked={selected}
             disabled={completed || locked}
             onChange={() => handleStageToggle(v, stageKey)}
-            className="w-5 h-5 accent-red-600"
+            className="w-5 h-5 accent-[#ff004f] cursor-pointer"
           />
-          <span className="text-sm">
+          <span className="text-sm font-medium text-gray-700">
             {completed
-              ? "Already Verified"
+              ? "✓ Already Verified"
               : locked
-              ? "Locked"
-              : "Add to Stage"}
+              ? "🔒 Locked"
+              : "Add to Current Stage"}
           </span>
         </div>
 
@@ -999,10 +1063,21 @@ export default function BGVInitiationPage() {
         {type === "MANUAL" && isStageLocked(stageKey) && !completed && (
           <button
             onClick={() => openManualVerify(v, stageKey)}
-            className="mt-4 w-full px-3 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium"
+            className="mt-2 w-full px-4 py-3 text-sm bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
           >
-            Verify Manually
+            <FileCheck size={16} />
+            Verify Manually Here
           </button>
+        )}
+
+        {/* INFO FOR AI CHECKS */}
+        {type === "AI" && !completed && (
+          <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded-lg">
+            <p className="text-xs text-purple-800 flex items-center gap-1">
+              <Info size={12} />
+              Can be performed from AI-CV-Verification page
+            </p>
+          </div>
         )}
       </motion.div>
     );
@@ -1022,7 +1097,7 @@ export default function BGVInitiationPage() {
     try {
       setManualModal((m) => ({ ...m, loading: true }));
 
-      const res = await fetch(`${API_BASE}/secure/updateInternalVerification`, {
+      const res = await fetch(`/api/proxy/secure/updateInternalVerification`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -1063,17 +1138,51 @@ export default function BGVInitiationPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 p-6 md:p-10">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* HEADER */}
-        {/* PAGE HEADER — SAME STYLE AS ORG PAGE */}
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-[#ff004f]">
-              Background Verification
-            </h1>
-
-            <p className="text-gray-700 mt-1 text-sm">
-              Configure and start verification workflows for candidates.
-            </p>
+        {/* PAGE HEADER — ENHANCED WITH GRADIENT */}
+        <div className="bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] text-white p-6 md:p-8 rounded-2xl shadow-xl">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-3">
+                <Shield size={36} className="text-white" />
+                Background Verification Services
+              </h1>
+              <p className="text-white/90 mt-2 text-sm md:text-base">
+                Comprehensive verification workflows with AI-powered validation and manual checks
+              </p>
+            </div>
           </div>
+        </div>
+
+        {/* INFORMATIVE BANNER - SCROLLING TEXT */}
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 shadow-md overflow-hidden">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-blue-600 flex-shrink-0 mt-1" size={24} />
+            <div className="flex-1">
+              <h3 className="font-bold text-blue-900 mb-2">Important Information</h3>
+              <div className="text-sm text-blue-800 space-y-2">
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">📋 Manual Verification:</span>
+                  <span>Education and employment checks require manual verification on this page itself. Click "Verify Manually" button on respective check cards.</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">🎓 Education Validation:</span>
+                  <span>Use AI-CV-Verification page for automated education analysis or verify manually here.</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">💼 Employment History:</span>
+                  <span>Both API-based and manual employment verification available. Manual checks provide detailed supervisory validation.</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold">🤖 AI Checks:</span>
+                  <span>AI-powered CV and education validation can be performed from dedicated AI pages or initiated here.</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ACTION BUTTONS ROW */}
+        <div className="flex justify-end gap-3 flex-wrap">
 
           <div className="flex gap-3 flex-wrap">
             <button
@@ -1107,46 +1216,63 @@ export default function BGVInitiationPage() {
           </div>
         </div>
 
-        {/* STEPPER */}
-        <div className="bg-white border p-4 rounded-xl shadow flex justify-between">
-          {stepNames.map((name, i) => {
-            const active = i === currentStep;
-            const done = isStageCompleted(name.toLowerCase());
-            return (
-              <div key={i} className="flex items-center gap-3 flex-1">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center
-                  ${
-                    done
-                      ? "bg-green-600 text-white"
-                      : active
-                      ? "bg-red-600 text-white"
-                      : "bg-gray-300 text-gray-700"
-                  }
-                `}
-                >
-                  {done ? <CheckCircle size={16} /> : i + 1}
-                </div>
-                <div>
+        {/* STEPPER - ENHANCED */}
+        <div className="bg-white border-2 p-6 rounded-2xl shadow-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Verification Progress</h3>
+            <span className="text-sm text-gray-600">
+              {isStageCompleted("primary") && isStageCompleted("secondary") && isStageCompleted("final") 
+                ? "All Stages Complete ✓" 
+                : `Stage ${currentStep + 1} of 3`}
+            </span>
+          </div>
+          <div className="flex justify-between relative">
+            {/* Progress Line */}
+            <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 -z-10">
+              <div 
+                className="h-full bg-gradient-to-r from-green-500 to-red-500 transition-all duration-500"
+                style={{ width: `${(currentStep / 2) * 100}%` }}
+              />
+            </div>
+            
+            {stepNames.map((name, i) => {
+              const active = i === currentStep;
+              const done = isStageCompleted(name.toLowerCase());
+              return (
+                <div key={i} className="flex flex-col items-center gap-2 flex-1 relative">
                   <div
-                    className={`font-semibold ${
-                      active ? "text-red-600" : "text-gray-800"
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-lg transition-all duration-300 transform ${
+                      done
+                        ? "bg-gradient-to-br from-green-500 to-green-600 text-white scale-110"
+                        : active
+                        ? "bg-gradient-to-br from-[#ff004f] to-[#ff6f6f] text-white scale-110 ring-4 ring-red-200"
+                        : "bg-white border-2 border-gray-300 text-gray-500"
                     }`}
                   >
-                    {name}
+                    {done ? <CheckCircle size={20} /> : i + 1}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {done ? "Completed" : active ? "Active stage" : "Pending"}
+                  <div className="text-center">
+                    <div
+                      className={`font-bold text-sm ${
+                        active ? "text-[#ff004f]" : done ? "text-green-600" : "text-gray-600"
+                      }`}
+                    >
+                      {name}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {done ? "✓ Completed" : active ? "In Progress" : "Pending"}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
-        {/* ORG + CANDIDATE SELECT */}
-        <div className="bg-white border p-6 rounded-xl shadow space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
+        {/* ORG + CANDIDATE SELECT - Enhanced */}
+        <div className="bg-white border-2 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Selection Panel</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* ORG */}
             <div>
               <SearchableDropdown
@@ -1156,6 +1282,7 @@ export default function BGVInitiationPage() {
                   value: o._id,
                 }))}
                 value={selectedOrg}
+                loading={orgLoading}
                 onChange={(v) => {
                   setSelectedOrg(v);
                   setCandidates([]);
@@ -1170,6 +1297,7 @@ export default function BGVInitiationPage() {
               <SearchableDropdown
                 label="Candidate"
                 disabled={!selectedOrg}
+                loading={candidateLoading}
                 options={candidates.map((c) => ({
                   label: c.firstName + " " + c.lastName,
                   value: c._id,
@@ -1181,19 +1309,33 @@ export default function BGVInitiationPage() {
 
             {/* STATUS */}
             <div>
-              <div className="text-sm text-gray-600">Status</div>
-              <div className="font-semibold mt-1">
-                {candidateVerification?.overallStatus || "Not Initiated"}
+              <label className="text-sm font-bold text-gray-700 mb-2 block">Verification Status</label>
+              <div className="border-2 border-gray-300 rounded-xl px-4 py-3 bg-gray-50">
+                <div className={`font-bold text-sm ${
+                  candidateVerification?.overallStatus === "COMPLETED" ? "text-green-600" :
+                  candidateVerification?.overallStatus === "IN_PROGRESS" ? "text-yellow-600" :
+                  candidateVerification?.overallStatus === "FAILED" ? "text-red-600" :
+                  "text-gray-600"
+                }`}>
+                  {candidateVerification?.overallStatus || "Not Initiated"}
+                </div>
               </div>
             </div>
           </div>
         </div>
-        {/* CONSENT STATUS BOX */}
-        {/* CONSENT STATUS BOX */}
-        <div className="bg-white border p-6 rounded-xl shadow mt-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Candidate Consent
-          </h3>
+        {/* CONSENT STATUS BOX - ENHANCED */}
+        <div className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 p-6 rounded-2xl shadow-lg mt-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+              <FileCheck size={24} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">
+                Candidate Consent Status
+              </h3>
+              <p className="text-sm text-gray-600">Required before initiating verification</p>
+            </div>
+          </div>
 
           {checkingConsent ? (
             <p className="text-gray-600">Checking consent status...</p>
@@ -1277,31 +1419,47 @@ export default function BGVInitiationPage() {
         <div className="bg-white border p-6 rounded-xl shadow grid md:grid-cols-3 gap-6">
           {/* LEFT PANEL */}
           <div className="space-y-6">
-            <div className="bg-gray-100 p-4 rounded-md border">
-              <h3 className="font-semibold text-gray-800">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border-2 border-gray-200 shadow-sm">
+              <h3 className="font-bold text-gray-900 text-base mb-2">
                 {stepNames[currentStep]} Stage
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 leading-relaxed">
                 {currentStep === 0 &&
-                  "Primary: Choose initial verification checks."}
+                  "Choose initial verification checks for primary stage."}
                 {currentStep === 1 &&
-                  "Secondary: Only checks not used in Primary show here."}
+                  "Select from remaining checks not used in Primary."}
                 {currentStep === 2 &&
-                  "Final: Only checks not used earlier appear here."}
+                  "Final stage with all remaining checks."}
               </p>
             </div>
 
             {/* SELECTED CHECKS */}
-            <div className="bg-gray-100 p-4 rounded-md border">
-              <div className="text-sm text-gray-600 mb-1">Selected Checks</div>
-              <div className="font-semibold text-gray-900">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
+              <div className="text-xs font-bold text-blue-900 mb-2">Selected Checks</div>
+              <div className="text-sm font-medium text-gray-900 break-words">
                 {[
                   ...new Set([
                     ...stages.primary,
                     ...stages.secondary,
                     ...stages.final,
                   ]),
-                ].join(", ") || "None"}
+                ].length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      ...new Set([
+                        ...stages.primary,
+                        ...stages.secondary,
+                        ...stages.final,
+                      ]),
+                    ].map((check, i) => (
+                      <span key={i} className="px-2 py-1 bg-blue-200 text-blue-900 rounded-md text-xs font-semibold">
+                        {check.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-500 text-xs">None selected</span>
+                )}
               </div>
             </div>
 
@@ -1547,66 +1705,95 @@ export default function BGVInitiationPage() {
             {/* ONLY SHOW CARDS IF NOT COMPLETED */}
             {!isStageCompleted(visibleStage) && (
               <div className="space-y-8">
-                {/* API CHECKS */}
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-2">
-                  <Cpu className="text-blue-600" size={20} /> API Checks
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <AnimatePresence mode="popLayout">
-                    {getAvailableChecksForStage(visibleStage)
-                      .filter((c) => getCheckType(c) === "API")
-                      .map(renderCheckCard)}
-                  </AnimatePresence>
+                {/* API CHECKS SECTION */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-blue-200">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Cpu className="text-blue-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">API-Based Checks</h3>
+                      <p className="text-xs text-gray-600">Automated verification through external APIs</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <AnimatePresence mode="popLayout">
+                      {getAvailableChecksForStage(visibleStage)
+                        .filter((c) => getCheckType(c) === "API")
+                        .map(renderCheckCard)}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
-                {/* MANUAL CHECKS */}
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-2">
-                  <FileSearch className="text-orange-600" size={20} /> Manual
-                  Checks
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <AnimatePresence mode="popLayout">
-                    {getAvailableChecksForStage(visibleStage)
-                      .filter((c) => getCheckType(c) === "MANUAL")
-                      .map(renderCheckCard)}
-                  </AnimatePresence>
+                {/* MANUAL CHECKS SECTION */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-orange-200">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <FileSearch className="text-orange-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Manual Verification Checks</h3>
+                      <p className="text-xs text-gray-600">Requires manual verification on this page - Click "Verify Manually Here" button</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <AnimatePresence mode="popLayout">
+                      {getAvailableChecksForStage(visibleStage)
+                        .filter((c) => getCheckType(c) === "MANUAL")
+                        .map(renderCheckCard)}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
-                {/* AI CHECKS */}
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-2">
-                  <Brain className="text-purple-600" size={20} /> AI Checks
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <AnimatePresence mode="popLayout">
-                    {getAvailableChecksForStage(visibleStage)
-                      .filter((c) => getCheckType(c) === "AI")
-                      .map(renderCheckCard)}
-                  </AnimatePresence>
+                {/* AI CHECKS SECTION */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-purple-200">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Brain className="text-purple-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">AI-Powered Validation</h3>
+                      <p className="text-xs text-gray-600">Advanced AI analysis for CV and education verification</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <AnimatePresence mode="popLayout">
+                      {getAvailableChecksForStage(visibleStage)
+                        .filter((c) => getCheckType(c) === "AI")
+                        .map(renderCheckCard)}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* SUMMARY TABLE */}
+        {/* SUMMARY TABLE - Enhanced & Responsive */}
         {candidateVerification && (
           <div className="mt-10">
-            <h2 className="text-xl font-bold mb-4">
-              {visibleStage.toUpperCase()} Stage Summary
-            </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] rounded-lg">
+                <FileText className="text-white" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {visibleStage.charAt(0).toUpperCase() + visibleStage.slice(1)} Stage Summary
+                </h2>
+                <p className="text-sm text-gray-600">Detailed verification results</p>
+              </div>
+            </div>
 
-            <div className="overflow-x-auto bg-white border rounded-xl shadow">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto bg-white border-2 rounded-2xl shadow-lg">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 text-gray-700">
+                <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
                   <tr>
-                    <th className="p-3">Check</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Remarks</th>
-                    <th className="p-3">Submitted At</th>
-                    <th className="p-3">Stage</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Check</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Status</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Remarks</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Submitted At</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Stage</th>
                   </tr>
                 </thead>
 
@@ -1614,30 +1801,33 @@ export default function BGVInitiationPage() {
                   {candidateVerification.stages?.[visibleStage]?.length ? (
                     candidateVerification.stages[visibleStage].map(
                       (item, i) => (
-                        <tr key={i} className="border-t hover:bg-gray-50">
-                          <td className="p-3 capitalize">{item.check}</td>
-                          <td className="p-3">
+                        <tr key={i} className="border-t hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors">
+                          <td className="p-4 capitalize font-medium text-gray-900">{item.check.replace(/_/g, " ")}</td>
+                          <td className="p-4">
                             <span
-                              className={`px-2 py-1 rounded text-xs ${
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
                                 item.status === "COMPLETED"
-                                  ? "bg-green-200 text-green-800"
+                                  ? "bg-green-100 text-green-800 border border-green-300"
                                   : item.status === "FAILED"
-                                  ? "bg-red-200 text-red-800"
+                                  ? "bg-red-100 text-red-800 border border-red-300"
                                   : item.status === "IN_PROGRESS"
-                                  ? "bg-yellow-200 text-yellow-700"
-                                  : "bg-gray-200 text-gray-700"
+                                  ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+                                  : "bg-gray-100 text-gray-800 border border-gray-300"
                               }`}
                             >
+                              {item.status === "COMPLETED" && "✓"}
+                              {item.status === "FAILED" && "✗"}
+                              {item.status === "IN_PROGRESS" && "⏳"}
                               {item.status}
                             </span>
                           </td>
-                          <td className="p-3">
+                          <td className="p-4 max-w-xs">
                             {item.remarks &&
                             typeof item.remarks === "object" ? (
                               <div className="text-xs text-gray-700 space-y-1">
                                 {Object.entries(item.remarks).map(
                                   ([key, value]) => (
-                                    <div key={key}>
+                                    <div key={key} className="break-words">
                                       <span className="font-semibold capitalize">
                                         {key}:{" "}
                                       </span>
@@ -1651,22 +1841,22 @@ export default function BGVInitiationPage() {
                                 )}
                               </div>
                             ) : (
-                              item.remarks || "—"
+                              <span className="text-gray-700 break-words">{item.remarks || "—"}</span>
                             )}
                           </td>
 
-                          <td className="p-3">
+                          <td className="p-4 text-gray-700 whitespace-nowrap">
                             {item.submittedAt
                               ? new Date(item.submittedAt).toLocaleString()
                               : "—"}
                           </td>
-                          <td className="p-3 capitalize">{visibleStage}</td>
+                          <td className="p-4 capitalize font-medium text-gray-900">{visibleStage}</td>
                         </tr>
                       )
                     )
                   ) : (
                     <tr>
-                      <td className="p-4 text-center text-gray-500" colSpan={5}>
+                      <td className="p-8 text-center text-gray-500" colSpan={5}>
                         No checks in this stage.
                       </td>
                     </tr>
@@ -1674,300 +1864,437 @@ export default function BGVInitiationPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile/Tablet Card View */}
+            <div className="lg:hidden space-y-4">
+              {candidateVerification.stages?.[visibleStage]?.length ? (
+                candidateVerification.stages[visibleStage].map((item, i) => (
+                  <div key={i} className="bg-white border-2 rounded-2xl shadow-lg p-5 space-y-3">
+                    {/* Check Name */}
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-bold text-gray-900 capitalize text-base flex-1">
+                        {item.check.replace(/_/g, " ")}
+                      </h3>
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${
+                          item.status === "COMPLETED"
+                            ? "bg-green-100 text-green-800 border border-green-300"
+                            : item.status === "FAILED"
+                            ? "bg-red-100 text-red-800 border border-red-300"
+                            : item.status === "IN_PROGRESS"
+                            ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+                            : "bg-gray-100 text-gray-800 border border-gray-300"
+                        }`}
+                      >
+                        {item.status === "COMPLETED" && "✓ "}
+                        {item.status === "FAILED" && "✗ "}
+                        {item.status === "IN_PROGRESS" && "⏳ "}
+                        {item.status}
+                      </span>
+                    </div>
+
+                    {/* Stage */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-semibold text-gray-600">Stage:</span>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-medium capitalize">
+                        {visibleStage}
+                      </span>
+                    </div>
+
+                    {/* Remarks */}
+                    {item.remarks && (
+                      <div className="bg-gray-50 p-3 rounded-lg border">
+                        <div className="font-semibold text-gray-700 text-xs mb-2">Remarks:</div>
+                        {typeof item.remarks === "object" ? (
+                          <div className="text-xs text-gray-700 space-y-1">
+                            {Object.entries(item.remarks).map(([key, value]) => (
+                              <div key={key} className="break-words">
+                                <span className="font-semibold capitalize">{key}: </span>
+                                <span>
+                                  {value === null || value === undefined ? "—" : value.toString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-700 break-words">{item.remarks}</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Submitted At */}
+                    {item.submittedAt && (
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <span className="font-semibold">Submitted:</span>
+                        <span>{new Date(item.submittedAt).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white border-2 rounded-2xl shadow-lg p-8 text-center">
+                  <p className="text-gray-500">No checks in this stage.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
-      {/* ADD CANDIDATE MODAL */}
+      {/* ENHANCED ADD CANDIDATE MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center p-4 overflow-y-auto">
-          <div className="bg-white p-4 rounded-xl w-full max-w-lg shadow-xl border relative mt-10 mb-10 max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Add Candidate
-              </h2>
-
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-500 hover:text-black"
-              >
-                <X />
-              </button>
-            </div>
-
-            {/* FORM */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* FIRST NAME */}
-              <div>
-                <input
-                  name="firstName"
-                  value={newCandidate.firstName}
-                  onChange={handleInputChange}
-                  placeholder="First Name *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.firstName ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.firstName && (
-                  <p className="text-red-500 text-xs">
-                    {fieldErrors.firstName}
-                  </p>
-                )}
-              </div>
-
-              {/* MIDDLE NAME */}
-              <input
-                name="middleName"
-                value={newCandidate.middleName}
-                onChange={handleInputChange}
-                placeholder="Middle Name"
-                className="border p-2 rounded w-full"
-              />
-
-              {/* LAST NAME */}
-              <div>
-                <input
-                  name="lastName"
-                  value={newCandidate.lastName}
-                  onChange={handleInputChange}
-                  placeholder="Last Name *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.lastName ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.lastName && (
-                  <p className="text-red-500 text-xs">{fieldErrors.lastName}</p>
-                )}
-              </div>
-
-              {/* FATHER NAME */}
-              <div>
-                <input
-                  name="fatherName"
-                  value={newCandidate.fatherName}
-                  onChange={handleInputChange}
-                  placeholder="Father Name *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.fatherName ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.fatherName && (
-                  <p className="text-red-500 text-xs">
-                    {fieldErrors.fatherName}
-                  </p>
-                )}
-              </div>
-
-              {/* DOB */}
-              <div>
-                <input
-                  name="dob"
-                  type="date"
-                  value={newCandidate.dob}
-                  onChange={handleInputChange}
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.dob ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.dob && (
-                  <p className="text-red-500 text-xs">{fieldErrors.dob}</p>
-                )}
-              </div>
-
-              {/* GENDER */}
-              <div>
-                <select
-                  name="gender"
-                  value={newCandidate.gender}
-                  onChange={handleInputChange}
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.gender ? "border-red-500" : ""
-                  }`}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border-2 border-gray-200 my-8 max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] text-white p-6 flex-shrink-0">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <UserPlus size={28} />
+                  <div>
+                    <h2 className="text-2xl font-bold">Add New Candidate</h2>
+                    <p className="text-white/90 text-sm">Fill in candidate information</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="text-white hover:bg-white/20 p-2 rounded-lg transition"
                 >
-                  <option value="">Select Gender *</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-                {fieldErrors.gender && (
-                  <p className="text-red-500 text-xs">{fieldErrors.gender}</p>
-                )}
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* Form Content - Scrollable */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Personal Information Section */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-blue-200">
+                  <User className="text-blue-600" size={20} />
+                  <h3 className="text-lg font-bold text-gray-900">Personal Information</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* FIRST NAME */}
+                  <div>
+                    <input
+                      name="firstName"
+                      value={newCandidate.firstName}
+                      onChange={handleInputChange}
+                      placeholder="First Name *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.firstName ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.firstName && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</p>
+                    )}
+                  </div>
+
+                  {/* MIDDLE NAME */}
+                  <input
+                    name="middleName"
+                    value={newCandidate.middleName}
+                    onChange={handleInputChange}
+                    placeholder="Middle Name"
+                    className="border-2 border-gray-300 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  />
+
+                  {/* LAST NAME */}
+                  <div>
+                    <input
+                      name="lastName"
+                      value={newCandidate.lastName}
+                      onChange={handleInputChange}
+                      placeholder="Last Name *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.lastName ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.lastName && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</p>
+                    )}
+                  </div>
+
+                  {/* FATHER NAME */}
+                  <div>
+                    <input
+                      name="fatherName"
+                      value={newCandidate.fatherName}
+                      onChange={handleInputChange}
+                      placeholder="Father Name *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.fatherName ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.fatherName && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.fatherName}</p>
+                    )}
+                  </div>
+
+                  {/* DOB */}
+                  <div>
+                    <input
+                      name="dob"
+                      type="date"
+                      value={newCandidate.dob}
+                      onChange={handleInputChange}
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.dob ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.dob && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.dob}</p>
+                    )}
+                  </div>
+
+                  {/* GENDER */}
+                  <div>
+                    <select
+                      name="gender"
+                      value={newCandidate.gender}
+                      onChange={handleInputChange}
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.gender ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="">Select Gender *</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {fieldErrors.gender && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.gender}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* PHONE */}
-              <div>
-                <input
-                  name="phone"
-                  value={newCandidate.phone}
-                  onChange={handleInputChange}
-                  placeholder="Phone *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.phone ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.phone && (
-                  <p className="text-red-500 text-xs">{fieldErrors.phone}</p>
-                )}
+              {/* Contact Information Section */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-green-200">
+                  <Mail className="text-green-600" size={20} />
+                  <h3 className="text-lg font-bold text-gray-900">Contact Information</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* PHONE */}
+                  <div>
+                    <input
+                      name="phone"
+                      value={newCandidate.phone}
+                      onChange={handleInputChange}
+                      placeholder="Phone *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition ${
+                        fieldErrors.phone ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.phone && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>
+                    )}
+                  </div>
+
+                  {/* EMAIL */}
+                  <div>
+                    <input
+                      name="email"
+                      value={newCandidate.email}
+                      onChange={handleInputChange}
+                      placeholder="Email *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition ${
+                        fieldErrors.email ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.email && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* EMAIL */}
-              <div className="sm:col-span-2">
-                <input
-                  name="email"
-                  value={newCandidate.email}
-                  onChange={handleInputChange}
-                  placeholder="Email *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.email ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.email && (
-                  <p className="text-red-500 text-xs">{fieldErrors.email}</p>
-                )}
+              {/* Documents Section */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-purple-200">
+                  <FileText className="text-purple-600" size={20} />
+                  <h3 className="text-lg font-bold text-gray-900">Documents</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* AADHAAR */}
+                  <div>
+                    <input
+                      name="aadhaarNumber"
+                      value={newCandidate.aadhaarNumber}
+                      onChange={handleInputChange}
+                      placeholder="Aadhaar Number *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition ${
+                        fieldErrors.aadhaarNumber ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.aadhaarNumber && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.aadhaarNumber}</p>
+                    )}
+                  </div>
+
+                  {/* PAN */}
+                  <div>
+                    <input
+                      name="panNumber"
+                      value={newCandidate.panNumber}
+                      onChange={handleInputChange}
+                      placeholder="PAN Number *"
+                      className={`border-2 p-3 rounded-lg w-full uppercase text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition ${
+                        fieldErrors.panNumber ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.panNumber && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.panNumber}</p>
+                    )}
+                  </div>
+
+                  {/* UAN */}
+                  <input
+                    name="uanNumber"
+                    value={newCandidate.uanNumber}
+                    onChange={handleInputChange}
+                    placeholder="UAN Number (optional)"
+                    className="border-2 border-gray-300 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
+                  />
+
+                  {/* PASSPORT */}
+                  <input
+                    name="passportNumber"
+                    value={newCandidate.passportNumber}
+                    onChange={handleInputChange}
+                    placeholder="Passport Number (optional)"
+                    className="border-2 border-gray-300 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
+                  />
+
+                  {/* BANK ACCOUNT */}
+                  <div className="sm:col-span-2">
+                    <input
+                      name="bankAccountNumber"
+                      value={newCandidate.bankAccountNumber}
+                      onChange={handleInputChange}
+                      placeholder="Bank Account Number (optional)"
+                      className="border-2 border-gray-300 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* AADHAAR */}
-              <div>
+              {/* Address Section */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
+                  <MapPin className="text-orange-600" size={20} />
+                  <h3 className="text-lg font-bold text-gray-900">Address</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* DISTRICT */}
+                  <div>
+                    <input
+                      name="district"
+                      value={newCandidate.district}
+                      onChange={handleInputChange}
+                      placeholder="District *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition ${
+                        fieldErrors.district ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.district && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.district}</p>
+                    )}
+                  </div>
+
+                  {/* STATE */}
+                  <div>
+                    <input
+                      name="state"
+                      value={newCandidate.state}
+                      onChange={handleInputChange}
+                      placeholder="State *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition ${
+                        fieldErrors.state ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.state && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.state}</p>
+                    )}
+                  </div>
+
+                  {/* PINCODE */}
+                  <div>
+                    <input
+                      name="pincode"
+                      value={newCandidate.pincode}
+                      onChange={handleInputChange}
+                      placeholder="Pincode *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition ${
+                        fieldErrors.pincode ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.pincode && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.pincode}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* ADDRESS */}
+                <div className="mt-4">
+                  <textarea
+                    name="address"
+                    value={newCandidate.address}
+                    onChange={handleInputChange}
+                    placeholder="Full Address *"
+                    className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition ${
+                      fieldErrors.address ? "border-red-500" : "border-gray-300"
+                    }`}
+                    rows={3}
+                  />
+                  {fieldErrors.address && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.address}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Resume Upload */}
+              <div className="mb-6">
+                <label className="text-sm font-bold text-gray-700 mb-2 block">Resume (Optional)</label>
                 <input
-                  name="aadhaarNumber"
-                  value={newCandidate.aadhaarNumber}
-                  onChange={handleInputChange}
-                  placeholder="Aadhaar Number *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.aadhaarNumber ? "border-red-500" : ""
-                  }`}
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) =>
+                    setNewCandidate((p) => ({ ...p, resume: e.target.files[0] }))
+                  }
+                  className="border-2 border-gray-300 p-2 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none transition"
                 />
-                {fieldErrors.aadhaarNumber && (
-                  <p className="text-red-500 text-xs">
-                    {fieldErrors.aadhaarNumber}
+                {newCandidate.resume && (
+                  <p className="text-sm text-gray-700 mt-2">
+                    Selected: <strong>{newCandidate.resume.name}</strong>
                   </p>
-                )}
-              </div>
-
-              {/* PAN */}
-              <div>
-                <input
-                  name="panNumber"
-                  value={newCandidate.panNumber}
-                  onChange={handleInputChange}
-                  placeholder="PAN Number *"
-                  className={`border p-2 rounded w-full uppercase ${
-                    fieldErrors.panNumber ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.panNumber && (
-                  <p className="text-red-500 text-xs">
-                    {fieldErrors.panNumber}
-                  </p>
-                )}
-              </div>
-
-              {/* UAN */}
-              <input
-                name="uanNumber"
-                value={newCandidate.uanNumber}
-                onChange={handleInputChange}
-                placeholder="UAN Number (optional)"
-                className="border p-2 rounded w-full"
-              />
-
-              {/* PASSPORT */}
-              <input
-                name="passportNumber"
-                value={newCandidate.passportNumber}
-                onChange={handleInputChange}
-                placeholder="Passport Number (optional)"
-                className="border p-2 rounded w-full"
-              />
-
-              {/* BANK ACCOUNT */}
-              <div className="sm:col-span-2">
-                <input
-                  name="bankAccountNumber"
-                  value={newCandidate.bankAccountNumber}
-                  onChange={handleInputChange}
-                  placeholder="Bank Account Number (optional)"
-                  className="border p-2 rounded w-full"
-                />
-              </div>
-
-              {/* DISTRICT */}
-              <div>
-                <input
-                  name="district"
-                  value={newCandidate.district}
-                  onChange={handleInputChange}
-                  placeholder="District *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.district ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.district && (
-                  <p className="text-red-500 text-xs">{fieldErrors.district}</p>
-                )}
-              </div>
-
-              {/* STATE */}
-              <div>
-                <input
-                  name="state"
-                  value={newCandidate.state}
-                  onChange={handleInputChange}
-                  placeholder="State *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.state ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.state && (
-                  <p className="text-red-500 text-xs">{fieldErrors.state}</p>
-                )}
-              </div>
-
-              {/* PINCODE */}
-              <div>
-                <input
-                  name="pincode"
-                  value={newCandidate.pincode}
-                  onChange={handleInputChange}
-                  placeholder="Pincode *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.pincode ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.pincode && (
-                  <p className="text-red-500 text-xs">{fieldErrors.pincode}</p>
                 )}
               </div>
             </div>
 
-            {/* ADDRESS */}
-            <textarea
-              name="address"
-              value={newCandidate.address}
-              onChange={handleInputChange}
-              placeholder="Full Address *"
-              className="border p-2 rounded w-full mt-4"
-              rows={3}
-            />
-            {fieldErrors.address && (
-              <p className="text-red-500 text-xs">{fieldErrors.address}</p>
-            )}
-
-            {/* ACTIONS */}
-            <div className="flex justify-end gap-3 mt-4">
+            {/* Footer with Actions */}
+            <div className="border-t-2 border-gray-200 p-6 bg-gray-50 flex-shrink-0 flex justify-end gap-3">
               <button
                 onClick={() => setShowConfirmClose(true)}
-                className="px-4 py-2 border rounded-md"
+                className="px-6 py-2 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition"
               >
                 Cancel
               </button>
-
               <button
                 onClick={handleAddCandidate}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center gap-2"
+                disabled={loading}
+                className="px-6 py-2 bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] text-white rounded-lg font-medium hover:shadow-lg transition disabled:opacity-50 flex items-center gap-2"
               >
-                <PlusCircle size={16} />
-                Add Candidate
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={16} />
+                    Add Candidate
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -2005,48 +2332,60 @@ export default function BGVInitiationPage() {
         </div>
       )}
 
-      {/* MODAL */}
+      {/* ENHANCED MODAL */}
       <AnimatePresence>
         {modal.open && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white p-6 rounded-xl max-w-lg w-full shadow-xl"
+              className={`bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border-2 ${
+                modal.type === "success" ? "border-green-300" : modal.type === "error" ? "border-red-300" : "border-blue-300"
+              }`}
             >
-              <div className="flex gap-4">
-                <div className="text-2xl">
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-full ${
+                  modal.type === "success" ? "bg-green-100" : modal.type === "error" ? "bg-red-100" : "bg-blue-100"
+                }`}>
                   {modal.type === "error" && (
-                    <span className="text-red-600">✖</span>
+                    <XCircle className="text-red-600" size={32} />
                   )}
                   {modal.type === "success" && (
-                    <span className="text-green-600">✓</span>
+                    <CheckCircle className="text-green-600" size={32} />
                   )}
                   {modal.type === "info" && (
-                    <span className="text-gray-700">i</span>
+                    <AlertCircle className="text-blue-600" size={32} />
                   )}
                 </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold">{modal.title}</h3>
-                  <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">
+                <div className="flex-1">
+                  <h3 className={`text-xl font-bold mb-2 ${
+                    modal.type === "success" ? "text-green-700" : modal.type === "error" ? "text-red-700" : "text-blue-700"
+                  }`}>
+                    {modal.title}
+                  </h3>
+                  <p className="text-gray-700 whitespace-pre-wrap text-sm">
                     {modal.message}
                   </p>
 
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      onClick={closeModal}
-                      className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-                    >
-                      OK
-                    </button>
-                  </div>
+                  <button
+                    onClick={closeModal}
+                    className={`mt-4 w-full py-2 rounded-lg text-white font-medium transition ${
+                      modal.type === "success"
+                        ? "bg-green-600 hover:bg-green-700"
+                        : modal.type === "error"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </motion.div>

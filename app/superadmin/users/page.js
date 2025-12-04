@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 
 /* -------------------- API -------------------- */
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 /* -------------------- ALL PERMISSIONS -------------------- */
 const allPermissions = [
@@ -238,8 +237,8 @@ export default function UsersPage() {
   const fetchAll = async () => {
     try {
       const [uRes, oRes] = await Promise.all([
-        fetch(`${API_BASE}/secure/getUsers`, { credentials: "include" }),
-        fetch(`${API_BASE}/secure/getOrganizations`, {
+        fetch(`/api/proxy/secure/getUsers`, { credentials: "include" }),
+        fetch(`/api/proxy/secure/getOrganizations`, {
           credentials: "include",
         }),
       ]);
@@ -271,7 +270,7 @@ export default function UsersPage() {
   /* Fetch users only */
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${API_BASE}/secure/getUsers`, {
+      const res = await fetch(`/api/proxy/secure/getUsers`, {
         credentials: "include",
       });
 
@@ -302,11 +301,11 @@ export default function UsersPage() {
     const { payload, mode, userId } = confirm;
 
     try {
-      let url = `${API_BASE}/secure/addHelper`;
+      let url = `/api/proxy/secure/addHelper`;
       let method = "POST";
 
       if (mode === "edit") {
-        url = `${API_BASE}/secure/updateUser/${userId}`;
+        url = `/api/proxy/secure/updateUser/${userId}`;
         method = "PUT";
       }
 

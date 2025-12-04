@@ -31,13 +31,18 @@ import {
 import StatsCard from "../../components/StatsCard";
 import PageHeader from "../../components/PageHeader";
 import Button from "../../components/ui/Button";
+import { useOrgState } from "../../context/OrgStateContext";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function OrgAdminDashboard() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    dashboardData: data,
+    setDashboardData: setData,
+    dashboardLoading: loading,
+    setDashboardLoading: setLoading,
+  } = useOrgState();
+
   const [error, setError] = useState("");
 
   const [recentActivities, setRecentActivities] = useState([]);
@@ -52,7 +57,7 @@ export default function OrgAdminDashboard() {
         setActivityLoading(true);
 
         const res = await fetch(
-          `${API_BASE}/secure/recentImportantActivity?noOfLogs=200`,
+          `/api/proxy/secure/recentImportantActivity?noOfLogs=200`,
           { credentials: "include" }
         );
 
@@ -89,9 +94,15 @@ export default function OrgAdminDashboard() {
   --------------------------------------------------- */
   useEffect(() => {
     const fetchDashboardData = async () => {
+      // Only fetch if we don't have cached data
+      if (data) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/dashboard`, {
+        const res = await fetch(`/api/proxy/dashboard`, {
           credentials: "include",
         });
 
@@ -345,7 +356,9 @@ export default function OrgAdminDashboard() {
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={16} className="text-[#ff004f]" />
-            <h2 className="text-base font-semibold">Status Overview</h2>
+            <h2 className="text-base text-black font-semibold">
+              Status Overview
+            </h2>
           </div>
 
           <div className="h-[260px] sm:h-[300px]">

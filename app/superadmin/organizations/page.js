@@ -15,9 +15,7 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+import { useSuperAdminState } from "../../context/SuperAdminStateContext";
 
 /* ----------------------------------------------------
    UPDATED SERVICES LIST (ALL REAL SERVICES)
@@ -34,15 +32,20 @@ const AVAILABLE_SERVICES = [
   "address_verification",
   "education_check_manual",
   "supervisory_check",
-  "resume_validation",
-  "education_check_ai",
+  "ai_cv_validation",
+  "ai_education_validation",
 ];
 
 export default function OrganizationsPage() {
-  const [orgs, setOrgs] = useState([]);
-  const [filteredOrgs, setFilteredOrgs] = useState([]);
+  const {
+    organizationsData: orgs,
+    setOrganizationsData: setOrgs,
+    organizationsFilters,
+    setOrganizationsFilters,
+  } = useSuperAdminState();
 
-  const [search, setSearch] = useState("");
+  const [filteredOrgs, setFilteredOrgs] = useState([]);
+  const [search, setSearch] = useState(organizationsFilters.search || "");
   const [sortAsc, setSortAsc] = useState(true);
 
   const [loading, setLoading] = useState(false);
@@ -63,24 +66,22 @@ export default function OrganizationsPage() {
     setModal({ show: true, type: "success", message: msg });
 
   /* ----------------------------------------------------
-     LOAD Cached then fetch fresh
+     LOAD Organizations
   ---------------------------------------------------- */
   useEffect(() => {
-    const cached = localStorage.getItem("orgs_cache");
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      setOrgs(parsed);
-      setFilteredOrgs(parsed);
+    // Only fetch if we don't have data
+    if (orgs.length === 0) {
+      fetchOrganizations();
+    } else {
+      setFilteredOrgs(orgs);
     }
-
-    fetchOrganizations();
   }, []);
 
   const fetchOrganizations = async () => {
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/secure/getOrganizations`, {
+      const res = await fetch(`/api/proxy/secure/getOrganizations`, {
         method: "GET",
         credentials: "include",
       });
@@ -93,7 +94,6 @@ export default function OrganizationsPage() {
       if (data.organizations) {
         setOrgs(data.organizations);
         setFilteredOrgs(data.organizations);
-        localStorage.setItem("orgs_cache", JSON.stringify(data.organizations));
       }
     } catch (err) {
       showError(err.message);
@@ -145,7 +145,7 @@ export default function OrganizationsPage() {
       setActionLoading(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/updateOrganization/${org._id || org.orgId}`,
+        `/api/proxy/secure/updateOrganization/${org._id || org.orgId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -275,7 +275,10 @@ export default function OrganizationsPage() {
           <input
             placeholder="Search organizations..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOrganizationsFilters({ search: e.target.value });
+            }}
             className="w-full pl-12 pr-4 py-3 
                rounded-full border border-gray-300 
                bg-white shadow-sm 
@@ -544,8 +547,8 @@ function OrganizationDrawer({
     "address_verification",
     "education_check_manual",
     "supervisory_check",
-    "resume_validation",
-    "education_check_ai",
+    "ai_cv_validation",
+    "ai_education_validation",
   ];
 
   const offeredServices = org.services.map((s) => s.serviceName);
@@ -622,7 +625,7 @@ function OrganizationDrawer({
         `${org.organizationName.replace(/\s+/g, "_").toLowerCase()}_logo`
       );
 
-      const res = await fetch(`${API_BASE}/secure/uploadLogo`, {
+      const res = await fetch(`/api/proxy/secure/uploadLogo`, {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -660,8 +663,8 @@ function OrganizationDrawer({
       const payload = { ...org, logoUrl: uploadedLogoUrl };
 
       const url = isEdit
-        ? `${API_BASE}/secure/updateOrganization/${org._id}`
-        : `${API_BASE}/secure/registerOrganization`;
+        ? `/api/proxy/secure/updateOrganization/${org._id}`
+        : `/api/proxy/secure/registerOrganization`;
 
       const method = isEdit ? "PUT" : "POST";
 

@@ -30,8 +30,9 @@ import {
 import StatsCard from "../../components/StatsCard";
 import PageHeader from "../../components/PageHeader";
 import Button from "../../components/ui/Button";
+import { useSuperAdminState } from "../../context/SuperAdminStateContext";
 
-const API_BASE = "https://maihoo.onrender.com";
+
 
 /* ================================================
    SEARCHABLE DROPDOWN
@@ -127,10 +128,16 @@ function SearchableDropdown({ orgs, selectedOrg, setSelectedOrg }) {
    MAIN DASHBOARD
 ================================================ */
 export default function SuperAdminDashboard() {
+  const {
+    selectedOrg,
+    setSelectedOrg,
+    dashboardData: stats,
+    setDashboardData: setStats,
+    dashboardLoading: loading,
+    setDashboardLoading: setLoading,
+  } = useSuperAdminState();
+
   const [orgs, setOrgs] = useState([]);
-  const [selectedOrg, setSelectedOrg] = useState("Global");
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [recentActivities, setRecentActivities] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
@@ -155,7 +162,7 @@ export default function SuperAdminDashboard() {
         setActivityLoading(true);
 
         const res = await fetch(
-          `${API_BASE}/secure/recentImportantActivity?noOfLogs=200`,
+          `/api/proxy/secure/recentImportantActivity?noOfLogs=200`,
           { credentials: "include" }
         );
 
@@ -190,7 +197,7 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     const loadOrgs = async () => {
       try {
-        const res = await fetch(`${API_BASE}/secure/getOrganizations`, {
+        const res = await fetch(`/api/proxy/secure/getOrganizations`, {
           credentials: "include",
         });
         const data = await res.json();
@@ -211,8 +218,8 @@ export default function SuperAdminDashboard() {
       setError("");
 
       const url = orgId
-        ? `${API_BASE}/dashboard?organizationId=${orgId}`
-        : `${API_BASE}/dashboard`;
+        ? `/api/proxy/dashboard?organizationId=${orgId}`
+        : `/api/proxy/dashboard`;
 
       const res = await fetch(url, { credentials: "include" });
       const data = await res.json();

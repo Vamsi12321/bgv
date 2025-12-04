@@ -17,28 +17,28 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSuperAdminState } from "../../context/SuperAdminStateContext";
 
 /* CONFIG */
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
 
 export default function LogsOptimizedPage() {
+  const {
+    logsData: allLogs,
+    setLogsData: setAllLogs,
+    logsFilters: filters,
+    setLogsFilters: setFilters,
+    logsPagination,
+    setLogsPagination,
+  } = useSuperAdminState();
+
   /* STATE */
-  const [allLogs, setAllLogs] = useState([]);
   const [totalCount, setTotalCount] = useState(null);
-
-  const [filters, setFilters] = useState({
-    role: "",
-    search: "",
-    fromDate: "",
-    toDate: "",
-  });
-
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
+  const [page, setPage] = useState(logsPagination.currentPage);
+  const [limit, setLimit] = useState(logsPagination.pageSize);
   const [loadingChunk, setLoadingChunk] = useState(false);
   const [error, setError] = useState("");
 
@@ -85,7 +85,7 @@ export default function LogsOptimizedPage() {
           limit,
         }).toString();
 
-        const res = await fetch(`${API_BASE}/secure/activityLogs?${qs}`, {
+        const res = await fetch(`/api/proxy/secure/activityLogs?${qs}`, {
           credentials: "include",
         });
 
@@ -113,12 +113,19 @@ export default function LogsOptimizedPage() {
     [limit]
   );
 
+  /* SYNC PAGINATION STATE */
+  useEffect(() => {
+    setLogsPagination({ currentPage: page, pageSize: limit });
+  }, [page, limit]);
+
   /* INITIAL LOAD */
   useEffect(() => {
-    loadedPagesRef.current.clear();
-    setAllLogs([]);
-    fetchPage(1);
-    setPage(1);
+    // Only clear and refetch if we don't have data
+    if (allLogs.length === 0) {
+      loadedPagesRef.current.clear();
+      fetchPage(1);
+      setPage(1);
+    }
   }, [limit]);
 
   /* INFINITE SCROLL */
@@ -144,7 +151,7 @@ export default function LogsOptimizedPage() {
 
   /* FILTERING LOGIC */
   const filteredLogs = allLogs.filter((log) => {
-    const search = filters.search.toLowerCase();
+    const search = (filters.search || "").toLowerCase();
 
     if (filters.role && log.userRole !== filters.role) return false;
 
@@ -247,7 +254,7 @@ export default function LogsOptimizedPage() {
         search: filters.search || "",
       }).toString();
 
-      const res = await fetch(`${API_BASE}/secure/activityLogs?${qs}`, {
+      const res = await fetch(`/api/proxy/secure/activityLogs?${qs}`, {
         credentials: "include",
       });
 

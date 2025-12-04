@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function ManageProfilePage() {
   const [user, setUser] = useState(null);
@@ -57,7 +56,7 @@ export default function ManageProfilePage() {
     setMessage({ type: "", text: "" });
 
     try {
-      const res = await fetch(`${API_BASE}/auth/resetPassword`, {
+      const res = await fetch(`/api/proxy/auth/resetPassword`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

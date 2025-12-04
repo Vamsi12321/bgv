@@ -2,8 +2,9 @@
 
 export const apiFetch = async (endpoint, options = {}) => {
   try {
-    // Base URL (works with your rewrite in next.config)
-    const url = endpoint.startsWith("/api") ? endpoint : `/api/${endpoint}`;
+    // Remove leading slash if present and route through proxy
+    const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
+    const url = `/api/proxy/${cleanEndpoint}`;
 
     // Get token from localStorage
     const token = localStorage.getItem("bgvToken");
@@ -19,6 +20,7 @@ export const apiFetch = async (endpoint, options = {}) => {
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: "include", // Important for cookies
     });
 
     // Handle non-OK responses

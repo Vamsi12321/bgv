@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 import { PlusCircle, Loader2 } from "lucide-react";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
-
 export default function ConsentSection({ candidateId }) {
   const [consentStatus, setConsentStatus] = useState(null);
   const [sendingConsent, setSendingConsent] = useState(false);
@@ -20,7 +17,7 @@ export default function ConsentSection({ candidateId }) {
     try {
       setCheckingConsent(true);
       const res = await fetch(
-        `${API_BASE}/secure/verification/${candidateId}/consent-status`,
+        `/api/proxy/secure/verification/${candidateId}/consent-status`,
         { credentials: "include" }
       );
 
@@ -46,7 +43,7 @@ export default function ConsentSection({ candidateId }) {
       setSendingConsent(true);
 
       const res = await fetch(
-        `${API_BASE}/secure/verification/${candidateId}/send-consent`,
+        `/api/proxy/secure/verification/${candidateId}/send-consent`,
         {
           method: "POST",
           credentials: "include",

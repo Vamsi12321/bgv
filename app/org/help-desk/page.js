@@ -14,8 +14,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function OrgHelpDeskPage() {
   const [tickets, setTickets] = useState([]);
@@ -57,7 +56,7 @@ export default function OrgHelpDeskPage() {
   // -------------------------------------------------
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE}/secure/ticket/categories`, {
+      const res = await fetch(`/api/proxy/secure/ticket/categories`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -81,7 +80,7 @@ export default function OrgHelpDeskPage() {
       if (filters.category !== "All")
         params.append("category", filters.category);
 
-      const res = await fetch(`${API_BASE}/secure/ticket/list?${params}`, {
+      const res = await fetch(`/api/proxy/secure/ticket/list?${params}`, {
         credentials: "include",
       });
 
@@ -111,7 +110,7 @@ export default function OrgHelpDeskPage() {
   // -------------------------------------------------
   const handleViewTicket = async (ticket) => {
     try {
-      const res = await fetch(`${API_BASE}/secure/ticket/${ticket.ticketId}`, {
+      const res = await fetch(`/api/proxy/secure/ticket/${ticket.ticketId}`, {
         credentials: "include",
       });
 
@@ -130,7 +129,7 @@ export default function OrgHelpDeskPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}`,
         { credentials: "include" }
       );
       const data = await res.json();
@@ -152,7 +151,7 @@ export default function OrgHelpDeskPage() {
     try {
       setCreating(true);
 
-      const res = await fetch(`${API_BASE}/secure/ticket/create`, {
+      const res = await fetch(`/api/proxy/secure/ticket/create`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -191,7 +190,7 @@ export default function OrgHelpDeskPage() {
       setCommenting(true);
 
       await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/comment`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}/comment`,
         {
           method: "POST",
           credentials: "include",
@@ -226,7 +225,7 @@ export default function OrgHelpDeskPage() {
   const handleReopenTicket = async () => {
     try {
       await fetch(
-        `${API_BASE}/secure/ticket/${selectedTicket.ticketId}/reopen`,
+        `/api/proxy/secure/ticket/${selectedTicket.ticketId}/reopen`,
         {
           method: "POST",
           credentials: "include",

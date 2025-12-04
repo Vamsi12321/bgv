@@ -4,8 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://maihoo.onrender.com";
+
 
 export default function ConsentClient() {
   const searchParams = useSearchParams();
@@ -42,7 +41,7 @@ export default function ConsentClient() {
     (async () => {
       try {
         const res = await fetch(
-          `${API_BASE}/public/verification-consent/${token}`
+          `/api/proxy/public/verification-consent/${token}`
         );
         const json = await res.json();
         setData(json);
@@ -56,7 +55,7 @@ export default function ConsentClient() {
     setSubmitting(true);
 
     const res = await fetch(
-      `${API_BASE}/public/verification-consent/${token}/submit`,
+      `/api/proxy/public/verification-consent/${token}/submit`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
