@@ -373,8 +373,8 @@ export default function AIResumeScreeningPage() {
     fd.append("top_n", topN);
     fd.append("must_have_requirements", mustHave);
     fd.append("nice_to_have", niceToHave);
-    fd.append("embedding_weight", "0.3");
-    fd.append("llm_weight", "0.7");
+    fd.append("min_embedding_score", "0.5");
+
 
     try {
       const res = await fetch(

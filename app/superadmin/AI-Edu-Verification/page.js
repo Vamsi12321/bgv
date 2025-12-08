@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   Loader2,
@@ -93,6 +94,8 @@ function ErrorModal({ isOpen, onClose, message, details }) {
 // MAIN PAGE
 // -------------------------------------------------
 export default function SuperAdminAIEducationValidationPage() {
+  const router = useRouter();
+  
   const [organizations, setOrganizations] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [selectedOrg, setSelectedOrg] = useState("");
@@ -109,6 +112,7 @@ export default function SuperAdminAIEducationValidationPage() {
   const [loadingValidation, setLoadingValidation] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
   const [submittingFinal, setSubmittingFinal] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   const [expanded, setExpanded] = useState({});
 
@@ -348,6 +352,13 @@ export default function SuperAdminAIEducationValidationPage() {
         isOpen: true,
         message: `Education Validation Marked as ${status}`,
       });
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        setNavigating(true);
+        router.push("/superadmin/bgv-requests");
+      }, 1500);
+      
     } catch (err) {
       setErrorModal({
         isOpen: true,
@@ -411,6 +422,17 @@ export default function SuperAdminAIEducationValidationPage() {
         details={errorModal.details}
       />
 
+      {/* NAVIGATING OVERLAY */}
+      {navigating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+            <Loader2 className="animate-spin text-[#ff004f]" size={48} />
+            <p className="text-lg font-semibold text-gray-900">Please wait...</p>
+            <p className="text-sm text-gray-600">Redirecting to BGV Requests</p>
+          </div>
+        </div>
+      )}
+
       {/* MAIN PAGE */}
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
@@ -449,14 +471,14 @@ export default function SuperAdminAIEducationValidationPage() {
                       setVerificationId("");
                       setDocumentFile(null);
                     }}
-                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#ff004f] focus:ring-2 focus:ring-[#ff004f]/20 transition"
+                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#ff004f] focus:ring-2 focus:ring-[#ff004f]/20 transition text-black bg-white"
                     disabled={loadingOrgs}
                   >
-                    <option value="">
+                    <option value="" className="text-gray-500">
                       {loadingOrgs ? "Loading..." : "-- Select Organization --"}
                     </option>
                     {organizations.map((org) => (
-                      <option key={org._id} value={org._id}>
+                      <option key={org._id} value={org._id} className="text-black">
                         {org.organizationName}
                       </option>
                     ))}
@@ -481,16 +503,16 @@ export default function SuperAdminAIEducationValidationPage() {
                       setDocumentFile(null);
                       if (c) fetchVerification(c._id);
                     }}
-                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#ff004f] focus:ring-2 focus:ring-[#ff004f]/20 transition"
+                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#ff004f] focus:ring-2 focus:ring-[#ff004f]/20 transition text-black bg-white"
                     disabled={!selectedOrg || loadingCandidates}
                   >
-                    <option value="">
+                    <option value="" className="text-gray-500">
                       {loadingCandidates
                         ? "Loading..."
                         : "-- Select Candidate --"}
                     </option>
                     {candidates.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c._id} value={c._id} className="text-black">
                         {c.firstName} {c.lastName}
                       </option>
                     ))}

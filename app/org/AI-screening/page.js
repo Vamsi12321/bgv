@@ -197,9 +197,13 @@ export default function OrgAIResumeScreeningPage() {
   const [resumeFiles, setResumeFiles] = useState([]);
   const [topN, setTopN] = useState(aiScreeningState.topN || 5);
   const [mustHave, setMustHave] = useState(aiScreeningState.mustHave || "");
-  const [niceToHave, setNiceToHave] = useState(aiScreeningState.niceToHave || "");
+  const [niceToHave, setNiceToHave] = useState(
+    aiScreeningState.niceToHave || ""
+  );
   const [results, setResults] = useState(aiScreeningState.results || []);
-  const [enhancedResults, setEnhancedResults] = useState(aiScreeningState.enhancedResults || []);
+  const [enhancedResults, setEnhancedResults] = useState(
+    aiScreeningState.enhancedResults || []
+  );
   const [expanded, setExpanded] = useState(null);
 
   // Loading states
@@ -219,8 +223,14 @@ export default function OrgAIResumeScreeningPage() {
   });
 
   // Use ref to always have latest values for cleanup
-  const stateRef = useRef({ topN, mustHave, niceToHave, results, enhancedResults });
-  
+  const stateRef = useRef({
+    topN,
+    mustHave,
+    niceToHave,
+    results,
+    enhancedResults,
+  });
+
   // Update ref whenever state changes
   useEffect(() => {
     stateRef.current = { topN, mustHave, niceToHave, results, enhancedResults };
@@ -373,8 +383,7 @@ export default function OrgAIResumeScreeningPage() {
     fd.append("top_n", topN);
     fd.append("must_have_requirements", mustHave);
     fd.append("nice_to_have", niceToHave);
-    fd.append("embedding_weight", "0.3");
-    fd.append("llm_weight", "0.7");
+    fd.append("min_embedding_score", "0.5");
 
     try {
       const res = await fetch(
@@ -782,7 +791,8 @@ export default function OrgAIResumeScreeningPage() {
               AI Resume Screening
             </h1>
             <p className="text-gray-600 text-sm mt-1">
-              Upload job descriptions and resumes to find the best candidates using AI-powered analysis
+              Upload job descriptions and resumes to find the best candidates
+              using AI-powered analysis
             </p>
           </div>
 

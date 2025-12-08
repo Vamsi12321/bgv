@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Filter, X, Loader2,CheckCircle2 } from "lucide-react";
+import { Filter, X, Loader2, CheckCircle2, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useOrgState } from "../../context/OrgStateContext";
-
-
 
 export default function OrgVerificationsPage() {
   const {
@@ -159,7 +157,8 @@ export default function OrgVerificationsPage() {
         ...(details || candidate),
         completionPercentage: summaryInfo?.completionPercentage || 0,
         overallStatus: summaryInfo?.overallStatus || details?.overallStatus,
-        initiatedByName: summaryInfo?.initiatedByName || details?.initiatedByName,
+        initiatedByName:
+          summaryInfo?.initiatedByName || details?.initiatedByName,
       });
       setLoadingCandidate(false);
     }, 300);
@@ -182,7 +181,7 @@ export default function OrgVerificationsPage() {
           onClick={fetchVerifications}
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md flex items-center gap-2"
         >
-          <Filter size={16} /> Refresh
+          <RefreshCw size={16} /> Refresh
         </button>
       </div>
 
@@ -190,32 +189,61 @@ export default function OrgVerificationsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-blue-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-blue-700 text-sm font-semibold">Total Verifications</p>
+            <p className="text-blue-700 text-sm font-semibold">
+              Total Verifications
+            </p>
             <div className="p-2 bg-blue-200 rounded-lg">
-              <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="w-5 h-5 text-blue-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-extrabold text-gray-700">{filteredCandidates.length}</p>
+          <p className="text-3xl font-extrabold text-gray-700">
+            {filteredCandidates.length}
+          </p>
         </div>
 
         <div className="p-6 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-orange-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-orange-700 text-sm font-semibold">Overall Completion</p>
+            <p className="text-orange-700 text-sm font-semibold">
+              Overall Completion
+            </p>
             <div className="p-2 bg-orange-200 rounded-lg">
-              <svg className="w-5 h-5 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg
+                className="w-5 h-5 text-orange-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
               </svg>
             </div>
           </div>
           <p className="text-3xl font-extrabold text-orange-600">
             {filteredCandidates.length > 0
               ? Math.round(
-                  filteredCandidates.reduce((sum, c) => sum + (c.completionPercentage || 0), 0) /
-                    filteredCandidates.length
+                  filteredCandidates.reduce(
+                    (sum, c) => sum + (c.completionPercentage || 0),
+                    0
+                  ) / filteredCandidates.length
                 )
-              : 0}%
+              : 0}
+            %
           </p>
         </div>
 
@@ -223,13 +251,27 @@ export default function OrgVerificationsPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-green-700 text-sm font-semibold">Completed</p>
             <div className="p-2 bg-green-200 rounded-lg">
-              <svg className="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5 text-green-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
           </div>
           <p className="text-3xl font-extrabold text-green-600">
-            {filteredCandidates.filter((c) => getDisplayStatus(c) === "COMPLETED").length}
+            {
+              filteredCandidates.filter(
+                (c) => getDisplayStatus(c) === "COMPLETED"
+              ).length
+            }
           </p>
         </div>
 
@@ -237,13 +279,26 @@ export default function OrgVerificationsPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-red-700 text-sm font-semibold">Failed</p>
             <div className="p-2 bg-red-200 rounded-lg">
-              <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5 text-red-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
           </div>
           <p className="text-3xl font-extrabold text-red-600">
-            {filteredCandidates.filter((c) => getDisplayStatus(c) === "FAILED").length}
+            {
+              filteredCandidates.filter((c) => getDisplayStatus(c) === "FAILED")
+                .length
+            }
           </p>
         </div>
       </div>
@@ -254,13 +309,15 @@ export default function OrgVerificationsPage() {
           <div className="p-2 bg-gradient-to-br from-[#ff004f]/10 to-[#ff3366]/10 rounded-lg">
             <Filter size={20} className="text-[#ff004f]" />
           </div>
-          <h3 className="text-lg font-bold text-gray-800">Filter Verifications</h3>
+          <h3 className="text-lg font-bold text-gray-800">
+            Filter Verifications
+          </h3>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
           {/* Status Filter */}
           <div className="min-w-[140px]">
             <select
-              value={filters.status}
+              value={filters.status || ""}
               onChange={(e) => {
                 setFilters({ ...filters, status: e.target.value });
                 setSelectedCandidate(null);
@@ -280,7 +337,7 @@ export default function OrgVerificationsPage() {
             <input
               type="text"
               placeholder="Search Candidate"
-              value={filters.name}
+              value={filters.name || ""}
               onChange={(e) => {
                 setFilters({ ...filters, name: e.target.value });
                 setSelectedCandidate(null);
@@ -292,7 +349,7 @@ export default function OrgVerificationsPage() {
           {/* Initiated By Filter (NEW) */}
           <div className="min-w-[160px]">
             <select
-              value={filters.initiatedByName}
+              value={filters.initiatedByName || ""}
               onChange={(e) => {
                 setFilters({ ...filters, initiatedByName: e.target.value });
                 setSelectedCandidate(null);
@@ -312,7 +369,7 @@ export default function OrgVerificationsPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <input
               type="date"
-              value={filters.fromDate}
+              value={filters.fromDate || ""}
               onChange={(e) => {
                 setFilters({ ...filters, fromDate: e.target.value });
                 setSelectedCandidate(null);
@@ -322,7 +379,7 @@ export default function OrgVerificationsPage() {
             <span className="text-gray-600 text-sm">to</span>
             <input
               type="date"
-              value={filters.toDate}
+              value={filters.toDate || ""}
               onChange={(e) => {
                 setFilters({ ...filters, toDate: e.target.value });
                 setSelectedCandidate(null);
@@ -345,12 +402,24 @@ export default function OrgVerificationsPage() {
             <table className="min-w-full text-sm text-gray-700">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
-                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">👤 Candidate</th>
-                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">📊 Stage</th>
-                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">👨‍💼 Initiated By</th>
-                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">✅ Status</th>
-                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">📈 Progress</th>
-                  <th className="px-4 py-4 text-right font-semibold tracking-wide text-gray-700">⚙️ Action</th>
+                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                    👤 Candidate
+                  </th>
+                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                    📊 Stage
+                  </th>
+                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                    👨‍💼 Initiated By
+                  </th>
+                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                    ✅ Status
+                  </th>
+                  <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                    📈 Progress
+                  </th>
+                  <th className="px-4 py-4 text-right font-semibold tracking-wide text-gray-700">
+                    ⚙️ Action
+                  </th>
                 </tr>
               </thead>
               <tbody>

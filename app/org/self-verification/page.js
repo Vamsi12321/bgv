@@ -47,7 +47,7 @@ export default function OrgCandidateSelfVerification() {
     "pan_aadhaar_seeding",
     "pan_verification",
     "employment_history",
-    "aadhaar_to_uan",
+    "verify_pan_to_uan",
     "credit_report",
     "court_record",
   ];
@@ -440,7 +440,9 @@ export default function OrgCandidateSelfVerification() {
     return (
       <div className="w-full relative">
         {label && (
-          <label className="text-sm font-bold text-gray-700 mb-2 block">{label}</label>
+          <label className="text-sm font-bold text-gray-700 mb-2 block">
+            {label}
+          </label>
         )}
 
         {/* Trigger Box - Enhanced */}
@@ -457,10 +459,19 @@ export default function OrgCandidateSelfVerification() {
         `}
           onClick={() => !disabled && setOpen(!open)}
         >
-          <span className={`text-sm font-medium truncate ${value ? "text-gray-900" : "text-gray-400"}`}>
+          <span
+            className={`text-sm font-medium truncate ${
+              value ? "text-gray-900" : "text-gray-400"
+            }`}
+          >
             {options.find((o) => o.value === value)?.label || "Select..."}
           </span>
-          <ChevronDown size={20} className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown
+            size={20}
+            className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
         </div>
 
         {/* Dropdown - Enhanced */}
@@ -545,10 +556,18 @@ export default function OrgCandidateSelfVerification() {
           <table className="w-full border-collapse">
             <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
               <tr>
-                <th className="p-4 text-left font-bold text-gray-900 border-b-2">Check</th>
-                <th className="p-4 text-left font-bold text-gray-900 border-b-2">Status</th>
-                <th className="p-4 text-left font-bold text-gray-900 border-b-2">Remarks</th>
-                <th className="p-4 text-left font-bold text-gray-900 border-b-2">Submitted At</th>
+                <th className="p-4 text-left font-bold text-gray-900 border-b-2">
+                  Check
+                </th>
+                <th className="p-4 text-left font-bold text-gray-900 border-b-2">
+                  Status
+                </th>
+                <th className="p-4 text-left font-bold text-gray-900 border-b-2">
+                  Remarks
+                </th>
+                <th className="p-4 text-left font-bold text-gray-900 border-b-2">
+                  Submitted At
+                </th>
               </tr>
             </thead>
 
@@ -561,7 +580,10 @@ export default function OrgCandidateSelfVerification() {
                 </tr>
               ) : (
                 data.map((item, idx) => (
-                  <tr key={idx} className="border-b hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors">
+                  <tr
+                    key={idx}
+                    className="border-b hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors"
+                  >
                     <td className="p-4 font-medium text-gray-900">
                       {getCheckTitle(item.check)}
                     </td>
@@ -593,15 +615,19 @@ export default function OrgCandidateSelfVerification() {
                           </div>
                         ) : (
                           <div className="space-y-1">
-                            {Object.entries(item.remarks).map(([key, value]) => (
-                              <div
-                                key={key}
-                                className="text-xs bg-gray-50 p-2 rounded-lg border break-words"
-                              >
-                                <span className="font-semibold capitalize">{key}: </span>
-                                {value === null ? "—" : String(value)}
-                              </div>
-                            ))}
+                            {Object.entries(item.remarks).map(
+                              ([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="text-xs bg-gray-50 p-2 rounded-lg border break-words"
+                                >
+                                  <span className="font-semibold capitalize">
+                                    {key}:{" "}
+                                  </span>
+                                  {value === null ? "—" : String(value)}
+                                </div>
+                              )
+                            )}
                           </div>
                         )
                       ) : (
@@ -629,7 +655,10 @@ export default function OrgCandidateSelfVerification() {
             </div>
           ) : (
             data.map((item, idx) => (
-              <div key={idx} className="bg-white border-2 rounded-xl shadow-md p-4 space-y-3">
+              <div
+                key={idx}
+                className="bg-white border-2 rounded-xl shadow-md p-4 space-y-3"
+              >
                 {/* Check Name */}
                 <div className="flex items-start justify-between gap-3">
                   <h4 className="font-bold text-gray-900 text-base flex-1">
@@ -656,7 +685,9 @@ export default function OrgCandidateSelfVerification() {
                 {/* Remarks */}
                 {item.remarks && (
                   <div className="bg-gray-50 p-3 rounded-lg border">
-                    <div className="font-semibold text-gray-700 text-xs mb-2">Remarks:</div>
+                    <div className="font-semibold text-gray-700 text-xs mb-2">
+                      Remarks:
+                    </div>
                     {typeof item.remarks === "string" ? (
                       <div className="text-xs text-gray-700 break-words whitespace-pre-wrap">
                         {item.remarks}
@@ -664,8 +695,13 @@ export default function OrgCandidateSelfVerification() {
                     ) : (
                       <div className="space-y-1">
                         {Object.entries(item.remarks).map(([key, value]) => (
-                          <div key={key} className="text-xs text-gray-700 break-words">
-                            <span className="font-semibold capitalize">{key}: </span>
+                          <div
+                            key={key}
+                            className="text-xs text-gray-700 break-words"
+                          >
+                            <span className="font-semibold capitalize">
+                              {key}:{" "}
+                            </span>
                             <span>{value === null ? "—" : String(value)}</span>
                           </div>
                         ))}
@@ -780,7 +816,8 @@ export default function OrgCandidateSelfVerification() {
                     Self Verification Services
                   </h1>
                   <p className="text-gray-600 text-sm md:text-base">
-                    Initiate candidate self-verification with automated API checks
+                    Initiate candidate self-verification with automated API
+                    checks
                   </p>
                 </div>
               </div>
@@ -795,23 +832,39 @@ export default function OrgCandidateSelfVerification() {
               <AlertCircle className="text-white" size={22} />
             </div>
             <div className="flex-1">
-              <h3 className="font-black text-blue-900 mb-3 text-lg">Self-Verification Information</h3>
+              <h3 className="font-black text-blue-900 mb-3 text-lg">
+                Self-Verification Information
+              </h3>
               <div className="text-sm text-blue-800 space-y-2">
                 <p className="flex items-center gap-2">
                   <span className="font-semibold">🔐 Candidate Initiated:</span>
-                  <span>Self-verification allows candidates to complete their own verification checks through a secure portal.</span>
+                  <span>
+                    Self-verification allows candidates to complete their own
+                    verification checks through a secure portal.
+                  </span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="font-semibold">⚡ API-Only Checks:</span>
-                  <span>Only automated API-based verification checks are available for self-verification (PAN, Aadhaar, Employment, etc.).</span>
+                  <span>
+                    Only automated API-based verification checks are available
+                    for self-verification (PAN, Aadhaar, Employment, etc.).
+                  </span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="font-semibold">📋 Stage-Based Process:</span>
-                  <span>Select checks for each stage (Primary, Secondary, Final) and initiate verification. Candidates will receive instructions to complete.</span>
+                  <span>
+                    Select checks for each stage (Primary, Secondary, Final) and
+                    initiate verification. Candidates will receive instructions
+                    to complete.
+                  </span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="font-semibold">✅ Automated Results:</span>
-                  <span>Results are automatically processed and displayed in the summary tables below once candidates complete their verification.</span>
+                  <span>
+                    Results are automatically processed and displayed in the
+                    summary tables below once candidates complete their
+                    verification.
+                  </span>
                 </p>
               </div>
             </div>
@@ -845,29 +898,36 @@ export default function OrgCandidateSelfVerification() {
         {/* STEPPER - ENHANCED */}
         <div className="bg-white border-2 p-6 rounded-2xl shadow-lg">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Verification Progress</h3>
+            <h3 className="text-lg font-bold text-gray-900">
+              Verification Progress
+            </h3>
             <span className="text-sm text-gray-600">
-              {getStageStatus("primary") === "COMPLETED" && getStageStatus("secondary") === "COMPLETED" && getStageStatus("final") === "COMPLETED"
-                ? "All Stages Complete ✓" 
+              {getStageStatus("primary") === "COMPLETED" &&
+              getStageStatus("secondary") === "COMPLETED" &&
+              getStageStatus("final") === "COMPLETED"
+                ? "All Stages Complete ✓"
                 : `Stage ${currentStep + 1} of 3`}
             </span>
           </div>
           <div className="flex justify-between relative">
             {/* Progress Line */}
             <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 -z-10">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-green-500 to-red-500 transition-all duration-500"
                 style={{ width: `${(currentStep / 2) * 100}%` }}
               />
             </div>
-            
+
             {steps.map((stageKey, idx) => {
               const active = idx === currentStep;
               const status = getStageStatus(stageKey);
               const done = status === "COMPLETED";
-              
+
               return (
-                <div key={stageKey} className="flex flex-col items-center gap-2 flex-1 relative">
+                <div
+                  key={stageKey}
+                  className="flex flex-col items-center gap-2 flex-1 relative"
+                >
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-lg transition-all duration-300 transform ${
                       done
@@ -882,13 +942,21 @@ export default function OrgCandidateSelfVerification() {
                   <div className="text-center">
                     <div
                       className={`font-bold text-sm ${
-                        active ? "text-[#ff004f]" : done ? "text-green-600" : "text-gray-600"
+                        active
+                          ? "text-[#ff004f]"
+                          : done
+                          ? "text-green-600"
+                          : "text-gray-600"
                       }`}
                     >
                       {stageKey.toUpperCase()}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 capitalize">
-                      {done ? "✓ Completed" : active ? "In Progress" : status.toLowerCase()}
+                      {done
+                        ? "✓ Completed"
+                        : active
+                        ? "In Progress"
+                        : status.toLowerCase()}
                     </div>
                   </div>
                 </div>
@@ -905,16 +973,22 @@ export default function OrgCandidateSelfVerification() {
                 <Shield size={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Selection Panel</h3>
-                <p className="text-xs text-gray-600">Choose candidate to begin self-verification</p>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Selection Panel
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Choose candidate to begin self-verification
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Organization</label>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Organization
+                </label>
                 <div className="border-2 border-gray-300 rounded-xl px-4 py-3 bg-gray-50">
                   <div className="font-bold text-sm text-gray-900">
                     {bgvUser?.organizationName || "Your Organization"}
@@ -945,7 +1019,9 @@ export default function OrgCandidateSelfVerification() {
               </div>
 
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Available API Checks</label>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Available API Checks
+                </label>
                 <div className="border-2 border-gray-300 rounded-xl px-4 py-3 bg-gray-50">
                   <div className="font-bold text-sm text-gray-900">
                     {availableChecks.length > 0
@@ -966,11 +1042,15 @@ export default function OrgCandidateSelfVerification() {
                 <Shield size={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Available Services</h3>
-                <p className="text-xs text-gray-600">Services offered by your organization</p>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Available Services
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Services offered by your organization
+                </p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {bgvUser.services.map((service, idx) => (
                 <div
@@ -986,7 +1066,7 @@ export default function OrgCandidateSelfVerification() {
                     </div>
                   </div>
                   <h4 className="font-bold text-gray-900 text-sm mb-1 capitalize">
-                    {service.serviceName.replace(/_/g, ' ')}
+                    {service.serviceName.replace(/_/g, " ")}
                   </h4>
                   <p className="text-xs text-gray-600">Per verification</p>
                 </div>
@@ -1082,7 +1162,9 @@ export default function OrgCandidateSelfVerification() {
                         >
                           <span className="font-medium text-gray-900 flex items-center gap-2">
                             <span>{check?.icon}</span>
-                            <span className="truncate">{check?.title || checkKey}</span>
+                            <span className="truncate">
+                              {check?.title || checkKey}
+                            </span>
                           </span>
 
                           <button
@@ -1170,7 +1252,7 @@ export default function OrgCandidateSelfVerification() {
                             Selected
                           </span>
                         )}
-                        
+
                         {locked && (
                           <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-bold shadow-md">
                             Initiated
@@ -1629,7 +1711,144 @@ export default function OrgCandidateSelfVerification() {
 
                 <button
                   onClick={async () => {
-                    // Validation already handled in your logic above
+                    // ENHANCED VALIDATION
+                    const errors = {};
+                    const {
+                      firstName,
+                      lastName,
+                      fatherName,
+                      dob,
+                      gender,
+                      phone,
+                      email,
+                      aadhaarNumber,
+                      panNumber,
+                      address,
+                      district,
+                      state,
+                      pincode,
+                      middleName,
+                      passportNumber,
+                      uanNumber,
+                      bankAccountNumber,
+                    } = newCandidate;
+
+                    // Required field checks
+                    if (!firstName) errors.firstName = "First Name is required";
+                    if (!lastName) errors.lastName = "Last Name is required";
+                    if (!fatherName)
+                      errors.fatherName = "Father's Name is required";
+                    if (!dob) errors.dob = "Date of Birth is required";
+                    if (!gender) errors.gender = "Gender is required";
+                    if (!phone) errors.phone = "Phone Number is required";
+                    if (!email) errors.email = "Email is required";
+                    if (!aadhaarNumber)
+                      errors.aadhaarNumber = "Aadhaar Number is required";
+                    if (!panNumber) errors.panNumber = "PAN Number is required";
+                    if (!address) errors.address = "Address is required";
+                    if (!district) errors.district = "District is required";
+                    if (!state) errors.state = "State is required";
+                    if (!pincode) errors.pincode = "Pincode is required";
+
+                    // Name validations - only letters and spaces, no numbers
+                    const nameRegex = /^[a-zA-Z\s]+$/;
+                    if (firstName && !nameRegex.test(firstName)) {
+                      errors.firstName =
+                        "First Name must contain only letters and spaces, no numbers allowed";
+                    }
+                    if (middleName && !nameRegex.test(middleName)) {
+                      errors.middleName =
+                        "Middle Name must contain only letters and spaces, no numbers allowed";
+                    }
+                    if (lastName && !nameRegex.test(lastName)) {
+                      errors.lastName =
+                        "Last Name must contain only letters and spaces, no numbers allowed";
+                    }
+                    if (fatherName && !nameRegex.test(fatherName)) {
+                      errors.fatherName =
+                        "Father's Name must contain only letters and spaces, no numbers allowed";
+                    }
+
+                    // Email validation
+                    const emailRegex =
+                      /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                    if (email && !emailRegex.test(email)) {
+                      errors.email =
+                        "Invalid email format. Please enter a valid email address (e.g., user@example.com)";
+                    } else if (
+                      email &&
+                      (!email.includes("@") ||
+                        !email.split("@")[1]?.includes("."))
+                    ) {
+                      errors.email =
+                        "Email must include @ symbol and a valid domain (e.g., user@gmail.com)";
+                    }
+
+                    // Aadhaar validation
+                    if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
+                      errors.aadhaarNumber =
+                        "Invalid Aadhaar number. Must be exactly 12 digits";
+                    }
+
+                    // PAN validation
+                    if (
+                      panNumber &&
+                      !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)
+                    ) {
+                      errors.panNumber =
+                        "Invalid PAN format. Must be in format: ABCDE1234F (5 letters, 4 digits, 1 letter)";
+                    }
+
+                    // Phone validation
+                    if (phone && !/^\d{10}$/.test(phone)) {
+                      errors.phone =
+                        "Invalid phone number. Must be exactly 10 digits";
+                    }
+
+                    // District and State validation - only letters and spaces
+                    if (district && !nameRegex.test(district)) {
+                      errors.district =
+                        "District must contain only letters and spaces, no numbers or special characters allowed";
+                    }
+
+                    if (state && !nameRegex.test(state)) {
+                      errors.state =
+                        "State must contain only letters and spaces, no numbers or special characters allowed";
+                    }
+
+                    // Pincode validation
+                    if (pincode && !/^[1-9][0-9]{5}$/.test(pincode)) {
+                      errors.pincode =
+                        "Invalid Pincode. Must be exactly 6 digits and cannot start with 0";
+                    }
+
+                    // Optional field validations
+                    if (
+                      passportNumber &&
+                      !/^[A-PR-WY][1-9]\d{6}$/.test(passportNumber)
+                    ) {
+                      errors.passportNumber =
+                        "Invalid Passport Number. Must be in format: A1234567 (1 letter followed by 7 digits)";
+                    }
+
+                    if (uanNumber && !/^[0-9]{10,12}$/.test(uanNumber)) {
+                      errors.uanNumber =
+                        "Invalid UAN Number. Must be 10-12 digits";
+                    }
+
+                    if (
+                      bankAccountNumber &&
+                      !/^[0-9]{9,18}$/.test(bankAccountNumber)
+                    ) {
+                      errors.bankAccountNumber =
+                        "Invalid Bank Account Number. Must be 9-18 digits";
+                    }
+
+                    if (Object.keys(errors).length > 0) {
+                      setFieldErrors(errors);
+                      return;
+                    }
+
                     setSubmitting(true);
 
                     try {

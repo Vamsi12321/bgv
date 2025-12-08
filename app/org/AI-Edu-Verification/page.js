@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   Loader2,
@@ -93,6 +94,7 @@ function ErrorModal({ isOpen, onClose, message, details }) {
 // MAIN PAGE
 // -------------------------------------------------
 export default function OrgAIEducationValidationPage() {
+  const router = useRouter();
   const { aiEduVerificationState = {}, setAiEduVerificationState = () => {} } = useOrgState();
 
   const [candidates, setCandidates] = useState([]);
@@ -108,6 +110,7 @@ export default function OrgAIEducationValidationPage() {
   const [loadingValidation, setLoadingValidation] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
   const [submittingFinal, setSubmittingFinal] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   const [expanded, setExpanded] = useState({});
 
@@ -324,6 +327,13 @@ export default function OrgAIEducationValidationPage() {
         isOpen: true,
         message: `Education Validation Marked as ${status}`,
       });
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        setNavigating(true);
+        router.push("/org/bgv-requests");
+      }, 1500);
+      
     } catch (err) {
       setErrorModal({
         isOpen: true,
@@ -382,6 +392,17 @@ export default function OrgAIEducationValidationPage() {
         details={errorModal.details}
       />
 
+      {/* NAVIGATING OVERLAY */}
+      {navigating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+            <Loader2 className="animate-spin text-[#ff004f]" size={48} />
+            <p className="text-lg font-semibold text-gray-900">Please wait...</p>
+            <p className="text-sm text-gray-600">Redirecting to BGV Requests</p>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="mb-6">
@@ -419,16 +440,16 @@ export default function OrgAIEducationValidationPage() {
                       setDocumentFile(null);
                       if (c) fetchVerification(c._id);
                     }}
-                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#ff004f] focus:ring-2 focus:ring-[#ff004f]/20 transition"
+                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#ff004f] focus:ring-2 focus:ring-[#ff004f]/20 transition text-black bg-white"
                     disabled={loadingCandidates}
                   >
-                    <option value="">
+                    <option value="" className="text-gray-500">
                       {loadingCandidates
                         ? "Loading..."
                         : "-- Select Candidate --"}
                     </option>
                     {candidates.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c._id} value={c._id} className="text-black">
                         {c.firstName} {c.lastName}
                       </option>
                     ))}

@@ -142,6 +142,8 @@ export default function SuperAdminDashboard() {
   const [error, setError] = useState("");
   const [recentActivities, setRecentActivities] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [navigating, setNavigating] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   const COLORS = {
     total: "#5B6C8F",
@@ -226,7 +228,30 @@ export default function SuperAdminDashboard() {
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.detail);
-      setStats(data.stats);
+      
+      // Handle different response structures
+      // For SUPER_ADMIN_HELPER: data has role, stats nested inside
+      // For others: data.stats directly
+      console.log("Dashboard API Response:", data);
+      
+      // Capture user role if present
+      if (data.role) {
+        setUserRole(data.role);
+      }
+      
+      if (data.role === "SUPER_ADMIN_HELPER" && data.stats) {
+        console.log("Setting stats for SUPER_ADMIN_HELPER:", data.stats);
+        setStats(data.stats);
+      } else if (data.stats) {
+        console.log("Setting stats from data.stats:", data.stats);
+        setStats(data.stats);
+      } else {
+        // Fallback: if data itself contains the stats properties
+        console.log("Setting stats from data directly:", data);
+        setStats(data);
+      }
+      
+      console.log("Stats state after setting:", stats);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -338,8 +363,12 @@ export default function SuperAdminDashboard() {
     ...(selectedOrg === "Global"
       ? [
           {
-            label: "Total Organizations",
-            value: stats?.totalOrganizations || 0,
+            label: userRole === "SUPER_ADMIN_HELPER" 
+              ? "Accessible Organizations" 
+              : "Total Organizations",
+            value: userRole === "SUPER_ADMIN_HELPER"
+              ? stats?.accessibleOrganizations || 0
+              : stats?.totalOrganizations || 0,
             color: "#ff004f",
             icon: Building2,
           },
@@ -442,9 +471,22 @@ export default function SuperAdminDashboard() {
           </div>
 
           <Link href="/superadmin/verifications">
-            <button className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold w-full sm:w-auto shadow transition-all hover:shadow-lg bg-[#ff004f] hover:bg-[#e60047]">
-              View All
-              <ArrowRight size={18} />
+            <button 
+              onClick={() => setNavigating(true)}
+              disabled={navigating}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold w-full sm:w-auto shadow transition-all hover:shadow-lg bg-[#ff004f] hover:bg-[#e60047] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {navigating ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Please wait...
+                </>
+              ) : (
+                <>
+                  View All
+                  <ArrowRight size={18} />
+                </>
+              )}
             </button>
           </Link>
         </div>

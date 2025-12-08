@@ -140,7 +140,7 @@ export default function OrgAdminLayout({ children }) {
 
     { name: "Support & Help Desk", href: "/org/help-desk", icon: Headset },
     { name: "Reports", href: "/org/reports", icon: FileText },
-    { name: "Invoices", href: "/org/invoices", icon: Receipt },
+    // { name: "Invoices", href: "/org/invoices", icon: Receipt },
     { name: "Logs", href: "/org/logs", icon: FileBarChart },
   ];
 
@@ -272,9 +272,9 @@ export default function OrgAdminLayout({ children }) {
               </button>
 
               <div className="flex items-center gap-3">
-                <UserCircle2 
-                  size={32} 
-                  className="hidden sm:block text-[#ff004f] flex-shrink-0" 
+                <UserCircle2
+                  size={32}
+                  className="hidden sm:block text-[#ff004f] flex-shrink-0"
                   strokeWidth={2}
                 />
                 <div>
@@ -285,7 +285,9 @@ export default function OrgAdminLayout({ children }) {
                     </span>
                     ! 👋
                   </h1>
-                  <p className="text-xs text-gray-500 hidden sm:block font-medium">Have a productive day</p>
+                  <p className="text-xs text-gray-500 hidden sm:block font-medium">
+                    Have a productive day
+                  </p>
                 </div>
               </div>
             </div>
@@ -308,7 +310,9 @@ export default function OrgAdminLayout({ children }) {
                 <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-gray-100 rounded-xl shadow-2xl py-2 z-50 animate-in slide-in-from-top-2 duration-200">
                   <div className="px-4 py-3 border-b-2 border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                     <p className="font-bold text-gray-800">{displayName}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{user?.email}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      {user?.email}
+                    </p>
                     <span className="inline-block mt-2 px-2 py-1 bg-gradient-to-r from-[#ff004f] to-[#ff3366] text-white text-xs font-bold rounded-full">
                       {user?.role || "Admin"}
                     </span>
@@ -338,26 +342,34 @@ export default function OrgAdminLayout({ children }) {
             </div>
           )}
 
-          {/* Logout Modal */}
+          {/* Logout Modal - SUPERB UI */}
           {showLogoutModal && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
-              <div className="bg-white p-6 rounded-xl shadow-lg w-80 text-center">
-                <h2 className="text-lg font-semibold mb-3">Are you sure?</h2>
-                <p className="text-sm text-gray-600 mb-6">
-                  Do you really want to logout from your account?
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[999] animate-in fade-in duration-200">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-[90%] text-center transform animate-in slide-in-from-bottom-4 duration-300">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
+                  <LogOut size={40} className="text-red-600" />
+                </div>
+
+                <h2 className="text-2xl font-bold mb-3 text-gray-900">
+                  Confirm Logout
+                </h2>
+                <p className="text-gray-600 mb-8 leading-relaxed">
+                  Are you sure you want to logout from your account?
+                  <br />
+                  You'll need to sign in again to access your dashboard.
                 </p>
 
-                <div className="flex justify-center gap-4">
+                <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setShowLogoutModal(false)}
-                    className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300"
+                    className="px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-sm"
                   >
                     Cancel
                   </button>
 
                   <button
                     onClick={handleConfirmLogout}
-                    className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold hover:from-red-600 hover:to-red-700 transition-all transform hover:scale-105 active:scale-95 shadow-lg"
                   >
                     Yes, Logout
                   </button>

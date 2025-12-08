@@ -153,6 +153,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [filterRole, setFilterRole] = useState("All");
   const [filterOrgId, setFilterOrgId] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All"); // Active/Inactive filter
+  const [searchUsername, setSearchUsername] = useState(""); // Username search
 
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
@@ -364,10 +366,23 @@ export default function UsersPage() {
           ? true
           : u.organizationId === filterOrgId ||
             (u.accessibleOrganizations || []).includes(filterOrgId);
+      
+      const byStatus = 
+        filterStatus === "All" 
+          ? true 
+          : filterStatus === "Active" 
+            ? u.isActive === true 
+            : u.isActive === false;
 
-      return byRole && byOrg;
+      const byUsername = 
+        searchUsername.trim() === ""
+          ? true
+          : (u.userName || "").toLowerCase().includes(searchUsername.toLowerCase()) ||
+            (u.email || "").toLowerCase().includes(searchUsername.toLowerCase());
+
+      return byRole && byOrg && byStatus && byUsername;
     });
-  }, [users, filterRole, filterOrgId]);
+  }, [users, filterRole, filterOrgId, filterStatus, searchUsername]);
 
   /* Lock scroll when modal open */
   useEffect(() => {
@@ -416,6 +431,22 @@ export default function UsersPage() {
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+          {/* 🔥 Username Search */}
+          <div className="w-full sm:flex-1">
+            <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
+              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+              Search by Username/Email
+            </label>
+            <input
+              type="text"
+              placeholder="🔍 Search username or email..."
+              value={searchUsername}
+              onChange={(e) => setSearchUsername(e.target.value)}
+              className="border-2 border-gray-200 px-4 py-3 rounded-xl bg-white text-sm w-full shadow-sm 
+    focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition-all hover:border-[#ff004f]/50"
+            />
+          </div>
+
           {/* 🔥 Improved Role Dropdown */}
           <div className="w-full sm:w-64">
             <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
@@ -434,6 +465,24 @@ export default function UsersPage() {
               <option value="SUPER_ADMIN_HELPER">⚡ Super Admin Helper</option>
               <option value="SUPER_ADMIN">🔐 Super Admin</option>
               <option value="SUPER_SPOC">👑 Super SPOC</option>
+            </select>
+          </div>
+
+          {/* 🔥 Status Filter (Active/Inactive) */}
+          <div className="w-full sm:w-48">
+            <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              Filter by Status
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="border-2 border-gray-200 px-4 py-3 rounded-xl bg-white text-sm w-full shadow-sm 
+    focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition-all hover:border-[#ff004f]/50"
+            >
+              <option value="All">🌐 All Status</option>
+              <option value="Active">✅ Active</option>
+              <option value="Inactive">❌ Inactive</option>
             </select>
           </div>
 
@@ -530,6 +579,7 @@ export default function UsersPage() {
                   <th className="p-4 text-left font-semibold text-gray-700">✉️ Email</th>
                   <th className="p-4 text-left font-semibold text-gray-700">🎭 Role</th>
                   <th className="p-4 text-left font-semibold text-gray-700">🏢 Organization</th>
+                  <th className="p-4 text-center font-semibold text-gray-700">📊 Status</th>
                   <th className="p-4 text-center font-semibold text-gray-700">⚙️ Actions</th>
                 </tr>
               </thead>
@@ -590,6 +640,18 @@ export default function UsersPage() {
 
                       <td className="p-4">
                         <div className="flex justify-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                            u.isActive 
+                              ? "bg-green-100 text-green-700" 
+                              : "bg-red-100 text-red-700"
+                          }`}>
+                            {u.isActive ? "✅ Active" : "❌ Inactive"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="p-4">
+                        <div className="flex justify-center">
                           {/* Show locked if user is editing themselves */}
                           {u._id === currentUserId && (
                             <span className="text-blue-400 text-xs font-medium px-3 py-1 bg-blue-50 rounded-full">
@@ -599,8 +661,7 @@ export default function UsersPage() {
                           
                           {/* Show edit button if not editing self and has permission */}
                           {u._id !== currentUserId &&
-                            ((currentUserRole === "SUPER_SPOC") ||
-                             (currentUserRole === "SUPER_ADMIN" && u.role !== "SUPER_SPOC")) && (
+                            (currentUserRole === "SUPER_SPOC" || currentUserRole === "SUPER_ADMIN") && (
                               <button
                                 onClick={() => {
                                   setEditUser(u);
@@ -615,8 +676,7 @@ export default function UsersPage() {
                           
                           {/* Show locked for users who cannot edit */}
                           {u._id !== currentUserId &&
-                            ((currentUserRole !== "SUPER_ADMIN" && currentUserRole !== "SUPER_SPOC") ||
-                             (currentUserRole === "SUPER_ADMIN" && u.role === "SUPER_SPOC")) && (
+                            (currentUserRole !== "SUPER_ADMIN" && currentUserRole !== "SUPER_SPOC") && (
                             <span className="text-gray-400 text-xs font-medium px-3 py-1 bg-gray-100 rounded-full">
                               🔒 Locked
                             </span>
@@ -665,8 +725,7 @@ export default function UsersPage() {
 
                     {/* SUPER_SPOC can edit all, SUPER_ADMIN can edit all except SUPER_SPOC */}
                     {u._id !== currentUserId && 
-                     ((currentUserRole === "SUPER_SPOC") ||
-                      (currentUserRole === "SUPER_ADMIN" && u.role !== "SUPER_SPOC")) && (
+                     (currentUserRole === "SUPER_SPOC" || currentUserRole === "SUPER_ADMIN") && (
                       <button
                         onClick={() => {
                           setEditUser(u);
@@ -680,8 +739,7 @@ export default function UsersPage() {
 
                     {/* Show locked for users who cannot edit */}
                     {u._id !== currentUserId && 
-                     ((currentUserRole !== "SUPER_ADMIN" && currentUserRole !== "SUPER_SPOC") ||
-                      (currentUserRole === "SUPER_ADMIN" && u.role === "SUPER_SPOC")) && (
+                     (currentUserRole !== "SUPER_ADMIN" && currentUserRole !== "SUPER_SPOC") && (
                       <span className="text-gray-400 text-xs font-medium px-3 py-1.5 bg-gray-100 rounded-full">
                         🔒 Locked
                       </span>
@@ -723,6 +781,17 @@ export default function UsersPage() {
                       <span className="text-sm font-medium text-gray-800">
                         {u.organizationName ||
                           (u.role === "SUPER_ADMIN_HELPER" ? "🌐 Multiple" : "—")}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-600">Status:</span>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                        u.isActive 
+                          ? "bg-green-100 text-green-700" 
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {u.isActive ? "✅ Active" : "❌ Inactive"}
                       </span>
                     </div>
                   </div>
@@ -834,9 +903,15 @@ function AddEditUserModal({
   const isOrgHR = form.role === "ORG_HR";
   const isSuperHelper = form.role === "SUPER_ADMIN_HELPER";
 
-  /* -------------------- AUTO-SELECT ALL FOR SUPER_ADMIN AND SUPER_SPOC -------------------- */
+  /* -------------------- AUTO-SELECT ALL FOR SUPER_ADMIN AND SUPER_SPOC (ONLY ON ROLE CHANGE, NOT ON EDIT) -------------------- */
   useEffect(() => {
+    // Only auto-select if role changed and not in edit mode with existing permissions
     if (form.role === "SUPER_ADMIN" || form.role === "SUPER_SPOC") {
+      // Skip auto-selection if we're editing and already have permissions
+      if (isEdit && editData?.permissions?.length > 0 && form.role === editData.role) {
+        return; // Don't override existing permissions when editing
+      }
+      
       // Pre-check all organizations
       const allOrgIds = organizations.map(o => o.organizationId);
       // Pre-check all permissions
@@ -847,7 +922,7 @@ function AddEditUserModal({
         permissions: allPerms,
       });
     }
-  }, [form.role, organizations]);
+  }, [form.role]);
 
   /* -------------------- PERMISSION TOGGLE -------------------- */
   const togglePermission = (perm) => {

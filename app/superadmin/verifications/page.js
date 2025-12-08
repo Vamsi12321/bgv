@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Filter, X, Loader2,CheckCheck ,UserCircle2} from "lucide-react";
+import {
+  Filter,
+  X,
+  Loader2,
+  CheckCheck,
+  UserCircle2,
+  RefreshCw,
+} from "lucide-react";
 import { useSuperAdminState } from "../../context/SuperAdminStateContext";
-
-
 
 export default function SuperAdminVerificationsPage() {
   const {
@@ -181,14 +186,16 @@ export default function SuperAdminVerificationsPage() {
             <CheckCheck size={24} className="text-[#ff004f]" />
             Verifications Summary
           </h1>
-          <p className="text-gray-600 text-sm mt-1">Track verification progress across organizations</p>
+          <p className="text-gray-600 text-sm mt-1">
+            Track verification progress across organizations
+          </p>
         </div>
 
         <button
           onClick={fetchData}
           className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold w-full sm:w-auto shadow transition-all hover:shadow-lg bg-[#ff004f] hover:bg-[#e60047]"
         >
-          <Filter size={18} /> Refresh
+          <RefreshCw size={18} /> Refresh
         </button>
       </div>
 
@@ -196,10 +203,22 @@ export default function SuperAdminVerificationsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="p-6 rounded-2xl bg-gradient-to-br from-white to-gray-50 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-gray-100">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-gray-600 text-sm font-semibold">Total Verifications</p>
+            <p className="text-gray-600 text-sm font-semibold">
+              Total Verifications
+            </p>
             <div className="p-2 bg-gray-100 rounded-lg">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </div>
           </div>
@@ -208,10 +227,22 @@ export default function SuperAdminVerificationsPage() {
 
         <div className="p-6 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-orange-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-orange-700 text-sm font-semibold">Overall Completion</p>
+            <p className="text-orange-700 text-sm font-semibold">
+              Overall Completion
+            </p>
             <div className="p-2 bg-orange-200 rounded-lg">
-              <svg className="w-5 h-5 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg
+                className="w-5 h-5 text-orange-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
               </svg>
             </div>
           </div>
@@ -224,22 +255,40 @@ export default function SuperAdminVerificationsPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-green-700 text-sm font-semibold">Completed</p>
             <div className="p-2 bg-green-200 rounded-lg">
-              <svg className="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5 text-green-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-extrabold text-green-600">
-            {completed}
-          </p>
+          <p className="text-3xl font-extrabold text-green-600">{completed}</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-gradient-to-br from-red-50 to-red-100 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-red-200">
           <div className="flex items-center justify-between mb-2">
             <p className="text-red-700 text-sm font-semibold">Failed</p>
             <div className="p-2 bg-red-200 rounded-lg">
-              <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5 text-red-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
           </div>
@@ -251,13 +300,25 @@ export default function SuperAdminVerificationsPage() {
       <div className="bg-gradient-to-br from-white via-gray-50 to-white rounded-2xl shadow-xl p-6 mb-8 border-2 border-gray-100">
         <div className="flex items-center gap-2 mb-4">
           <div className="p-2 bg-gradient-to-br from-[#ff004f]/10 to-[#ff3366]/10 rounded-lg">
-            <svg className="w-5 h-5 text-[#ff004f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            <svg
+              className="w-5 h-5 text-[#ff004f]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
             </svg>
           </div>
-          <h3 className="text-lg font-bold text-gray-800">Filter Verifications</h3>
+          <h3 className="text-lg font-bold text-gray-800">
+            Filter Verifications
+          </h3>
         </div>
-        
+
         <div className="flex flex-wrap gap-4 items-end">
           {/* ORG DROPDOWN */}
           <div className="relative w-full sm:min-w-[220px]">
@@ -335,7 +396,7 @@ export default function SuperAdminVerificationsPage() {
 
           {/* SEARCH FIELD */}
           <input
-            value={filters.name}
+            value={filters.name || ""}
             onChange={(e) => {
               setFilters({ ...filters, name: e.target.value });
               setSelectedCandidate(null);
@@ -367,19 +428,36 @@ export default function SuperAdminVerificationsPage() {
       <div className="hidden md:block bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-gray-100">
         {loading ? (
           <div className="p-16 text-center">
-            <Loader2 className="animate-spin mx-auto text-[#ff004f] mb-4" size={40} />
-            <p className="text-gray-600 font-medium text-lg">Loading verifications...</p>
+            <Loader2
+              className="animate-spin mx-auto text-[#ff004f] mb-4"
+              size={40}
+            />
+            <p className="text-gray-600 font-medium text-lg">
+              Loading verifications...
+            </p>
           </div>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
-                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">👤 Candidate</th>
-                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">🏢 Organization</th>
-                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">📊 Stage</th>
-                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">✅ Status</th>
-                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">📈 Progress</th>
-                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">👨‍💼 Initiated By</th>
+                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                  👤 Candidate
+                </th>
+                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                  🏢 Organization
+                </th>
+                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                  📊 Stage
+                </th>
+                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                  ✅ Status
+                </th>
+                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                  📈 Progress
+                </th>
+                <th className="px-4 py-4 text-left font-semibold tracking-wide text-gray-700">
+                  👨‍💼 Initiated By
+                </th>
               </tr>
             </thead>
 
@@ -400,7 +478,9 @@ export default function SuperAdminVerificationsPage() {
                     <td className="px-4 py-4 font-semibold text-gray-800 group-hover:text-[#ff004f] transition-colors">
                       {c.candidateName}
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{c.organizationName}</td>
+                    <td className="px-4 py-4 text-gray-600">
+                      {c.organizationName}
+                    </td>
                     <td className="px-4 py-4">
                       <span className="capitalize px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                         {c.currentStage || "-"}
@@ -460,33 +540,55 @@ export default function SuperAdminVerificationsPage() {
               >
                 <div className="flex items-center gap-3 mb-4 pb-4 border-b-2 border-gray-100">
                   <div className="p-3 bg-gradient-to-br from-[#ff004f] to-[#ff3366] rounded-xl shadow-md">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <svg
+                      className="w-6 h-6 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold text-lg text-gray-800">{c.candidateName}</h3>
-                    <p className="text-sm text-gray-600 mt-0.5">🏢 {c.organizationName}</p>
+                    <h3 className="font-bold text-lg text-gray-800">
+                      {c.candidateName}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      🏢 {c.organizationName}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-gray-600">Stage:</span>
+                    <span className="text-sm font-semibold text-gray-600">
+                      Stage:
+                    </span>
                     <span className="capitalize px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
                       {c.currentStage}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-gray-600">Status:</span>
+                    <span className="text-sm font-semibold text-gray-600">
+                      Status:
+                    </span>
                     {getStatusBadge(c.overallStatus)}
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold text-gray-600">Progress:</span>
-                      <span className="text-sm font-bold text-gray-700">{c.completionPercentage}%</span>
+                      <span className="text-sm font-semibold text-gray-600">
+                        Progress:
+                      </span>
+                      <span className="text-sm font-bold text-gray-700">
+                        {c.completionPercentage}%
+                      </span>
                     </div>
                     <div className="bg-gray-200 h-3 rounded-full overflow-hidden shadow-inner">
                       <div
@@ -498,7 +600,10 @@ export default function SuperAdminVerificationsPage() {
 
                   <div className="pt-3 border-t border-gray-200">
                     <p className="text-xs text-gray-500 font-medium">
-                      👨‍💼 Initiated By: <span className="text-gray-700 font-semibold">{v?.initiatedByName || v?.initiatedBy || "-"}</span>
+                      👨‍💼 Initiated By:{" "}
+                      <span className="text-gray-700 font-semibold">
+                        {v?.initiatedByName || v?.initiatedBy || "-"}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -547,132 +652,135 @@ export default function SuperAdminVerificationsPage() {
                 <X size={24} />
               </button>
             </div>
-            
+
             {/* Scrollable Content */}
             <div className="overflow-y-auto h-full pb-6">
+              <div className="p-6 space-y-6">
+                {/* Candidate Details Card */}
+                <div className="bg-[#fff5f8] border border-[#ffd1de] rounded-xl p-4 shadow-sm">
+                  <p className="text-sm text-gray-600">Verification Overview</p>
 
-            <div className="p-6 space-y-6">
-              {/* Candidate Details Card */}
-              <div className="bg-[#fff5f8] border border-[#ffd1de] rounded-xl p-4 shadow-sm">
-                <p className="text-sm text-gray-600">Verification Overview</p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <p>
+                      <span className="font-semibold text-gray-700">
+                        Organization:
+                      </span>{" "}
+                      {selectedCandidate.organizationName}
+                    </p>
 
-                <div className="mt-3 space-y-2 text-sm">
-                  <p>
-                    <span className="font-semibold text-gray-700">
-                      Organization:
-                    </span>{" "}
-                    {selectedCandidate.organizationName}
-                  </p>
+                    <p>
+                      <span className="font-semibold text-gray-700">
+                        Stage:
+                      </span>{" "}
+                      <span className="capitalize">
+                        {selectedCandidate.currentStage}
+                      </span>
+                    </p>
 
-                  <p>
-                    <span className="font-semibold text-gray-700">Stage:</span>{" "}
-                    <span className="capitalize">
-                      {selectedCandidate.currentStage}
-                    </span>
-                  </p>
+                    <p className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-700">
+                        Status:
+                      </span>
+                      {getStatusBadge(selectedCandidate.overallStatus)}
+                    </p>
 
-                  <p className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-700">Status:</span>
-                    {getStatusBadge(selectedCandidate.overallStatus)}
-                  </p>
+                    <p>
+                      <span className="font-semibold text-gray-700">
+                        Initiated By:
+                      </span>{" "}
+                      {selectedCandidate.initiatedByName ||
+                        selectedCandidate.initiatedBy ||
+                        "-"}
+                    </p>
 
-                  <p>
-                    <span className="font-semibold text-gray-700">
-                      Initiated By:
-                    </span>{" "}
-                    {selectedCandidate.initiatedByName ||
-                      selectedCandidate.initiatedBy ||
-                      "-"}
-                  </p>
-
-                  <p>
-                    <span className="font-semibold text-gray-700">
-                      Initiated At:
-                    </span>{" "}
-                    {formatDate(selectedCandidate.initiatedAt)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Progress Card */}
-              <div className="bg-white border shadow rounded-xl p-4">
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  Completion Progress
-                </h3>
-
-                <div className="h-3 w-full bg-gray-200 rounded-full">
-                  <div
-                    className="h-3 rounded-full bg-[#ff004f]"
-                    style={{
-                      width: `${
-                        selectedCandidate.progress?.completionPercentage ||
-                        selectedCandidate.completionPercentage ||
-                        0
-                      }%`,
-                    }}
-                  />
+                    <p>
+                      <span className="font-semibold text-gray-700">
+                        Initiated At:
+                      </span>{" "}
+                      {formatDate(selectedCandidate.initiatedAt)}
+                    </p>
+                  </div>
                 </div>
 
-                <p className="text-xs text-gray-500 mt-1">
-                  {selectedCandidate.progress?.completionPercentage ||
-                    selectedCandidate.completionPercentage ||
-                    0}
-                  % completed
-                </p>
-              </div>
+                {/* Progress Card */}
+                <div className="bg-white border shadow rounded-xl p-4">
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Completion Progress
+                  </h3>
 
-              {/* Stages Section */}
-              <div>
-                <h3 className="font-semibold text-xl text-[#ff004f] mb-3">
-                  Verification Stages
-                </h3>
+                  <div className="h-3 w-full bg-gray-200 rounded-full">
+                    <div
+                      className="h-3 rounded-full bg-[#ff004f]"
+                      style={{
+                        width: `${
+                          selectedCandidate.progress?.completionPercentage ||
+                          selectedCandidate.completionPercentage ||
+                          0
+                        }%`,
+                      }}
+                    />
+                  </div>
 
-                {selectedCandidate.stages &&
-                  Object.entries(selectedCandidate.stages).map(
-                    ([stage, list], idx) => (
-                      <div
-                        key={idx}
-                        className="bg-white border rounded-xl p-4 mb-4 shadow-sm"
-                      >
-                        <h4 className="font-semibold text-gray-800 text-lg capitalize mb-3">
-                          {stage} Stage
-                        </h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedCandidate.progress?.completionPercentage ||
+                      selectedCandidate.completionPercentage ||
+                      0}
+                    % completed
+                  </p>
+                </div>
 
-                        {Array.isArray(list) && list.length > 0 ? (
-                          <div className="space-y-2">
-                            {list.map((chk, i) => (
-                              <div
-                                key={i}
-                                className="flex justify-between items-center border-b pb-2"
-                              >
-                                <span className="text-gray-700 capitalize text-sm">
-                                  {chk.check}
-                                </span>
-                                {getStatusBadge(chk.status)}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500 text-sm italic">
-                            No checks available
-                          </p>
-                        )}
-                      </div>
-                    )
-                  )}
-              </div>
+                {/* Stages Section */}
+                <div>
+                  <h3 className="font-semibold text-xl text-[#ff004f] mb-3">
+                    Verification Stages
+                  </h3>
 
-              {/* Close Button */}
-              <div className="flex justify-end pt-4">
-                <button
-                  onClick={() => setSelectedCandidate(null)}
-                  className="px-5 py-2 bg-[#ff004f] text-white rounded-lg shadow hover:bg-[#e60047] transition"
-                >
-                  Close
-                </button>
+                  {selectedCandidate.stages &&
+                    Object.entries(selectedCandidate.stages).map(
+                      ([stage, list], idx) => (
+                        <div
+                          key={idx}
+                          className="bg-white border rounded-xl p-4 mb-4 shadow-sm"
+                        >
+                          <h4 className="font-semibold text-gray-800 text-lg capitalize mb-3">
+                            {stage} Stage
+                          </h4>
+
+                          {Array.isArray(list) && list.length > 0 ? (
+                            <div className="space-y-2">
+                              {list.map((chk, i) => (
+                                <div
+                                  key={i}
+                                  className="flex justify-between items-center border-b pb-2"
+                                >
+                                  <span className="text-gray-700 capitalize text-sm">
+                                    {chk.check}
+                                  </span>
+                                  {getStatusBadge(chk.status)}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm italic">
+                              No checks available
+                            </p>
+                          )}
+                        </div>
+                      )
+                    )}
+                </div>
+
+                {/* Close Button */}
+                <div className="flex justify-end pt-4">
+                  <button
+                    onClick={() => setSelectedCandidate(null)}
+                    className="px-5 py-2 bg-[#ff004f] text-white rounded-lg shadow hover:bg-[#e60047] transition"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
           </div>
         </>
       )}

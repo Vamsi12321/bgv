@@ -15,6 +15,11 @@ import {
   Info,
   UserCheck,
   FileText,
+  User,
+  Phone,
+  CreditCard,
+  MapPin,
+  Upload,
 } from "lucide-react";
 
 export default function SelfVerificationPage() {
@@ -194,45 +199,84 @@ export default function SelfVerificationPage() {
     } = newCandidate;
 
     // REQUIRED FIELDS
-    if (!firstName) errors.firstName = "First name is required";
-    if (!lastName) errors.lastName = "Last name is required";
-    if (!fatherName) errors.fatherName = "Father name is required";
-    if (!dob) errors.dob = "Date of birth is required";
+    if (!firstName) errors.firstName = "First Name is required";
+    if (!lastName) errors.lastName = "Last Name is required";
+    if (!fatherName) errors.fatherName = "Father's Name is required";
+    if (!dob) errors.dob = "Date of Birth is required";
     if (!gender) errors.gender = "Gender is required";
-    if (!phone) errors.phone = "Phone number is required";
+    if (!phone) errors.phone = "Phone Number is required";
     if (!email) errors.email = "Email is required";
-    if (!aadhaarNumber) errors.aadhaarNumber = "Aadhaar number is required";
-    if (!panNumber) errors.panNumber = "PAN number is required";
-    if (!address) errors.address = "Full address is required";
+    if (!aadhaarNumber) errors.aadhaarNumber = "Aadhaar Number is required";
+    if (!panNumber) errors.panNumber = "PAN Number is required";
+    if (!address) errors.address = "Address is required";
     if (!district) errors.district = "District is required";
     if (!state) errors.state = "State is required";
     if (!pincode) errors.pincode = "Pincode is required";
 
-    // FORMAT VALIDATIONS
-    if (phone && !validatePhone(phone))
-      errors.phone = "Phone must be 10 digits";
+    // Name validations - only letters and spaces, no numbers
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (firstName && !nameRegex.test(firstName)) {
+      errors.firstName = "First Name must contain only letters and spaces, no numbers allowed";
+    }
+    if (newCandidate.middleName && !nameRegex.test(newCandidate.middleName)) {
+      errors.middleName = "Middle Name must contain only letters and spaces, no numbers allowed";
+    }
+    if (lastName && !nameRegex.test(lastName)) {
+      errors.lastName = "Last Name must contain only letters and spaces, no numbers allowed";
+    }
+    if (fatherName && !nameRegex.test(fatherName)) {
+      errors.fatherName = "Father's Name must contain only letters and spaces, no numbers allowed";
+    }
 
-    if (email && !validateEmail(email)) errors.email = "Invalid email address";
+    // Email validation
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (email && !emailRegex.test(email)) {
+      errors.email = "Invalid email format. Please enter a valid email address (e.g., user@example.com)";
+    } else if (email && (!email.includes('@') || !email.split('@')[1]?.includes('.'))) {
+      errors.email = "Email must include @ symbol and a valid domain (e.g., user@gmail.com)";
+    }
 
-    if (aadhaarNumber && !validateAadhaar(aadhaarNumber))
-      errors.aadhaarNumber = "Aadhaar must be 12 digits";
+    // Phone validation
+    if (phone && !/^\d{10}$/.test(phone)) {
+      errors.phone = "Invalid phone number. Must be exactly 10 digits";
+    }
 
-    if (panNumber && !validatePAN(panNumber))
-      errors.panNumber = "Format must be ABCDE1234F";
+    // Aadhaar validation
+    if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
+      errors.aadhaarNumber = "Invalid Aadhaar number. Must be exactly 12 digits";
+    }
 
-    if (dob && !validateDOB(dob)) errors.dob = "Use YYYY-MM-DD format";
+    // PAN validation
+    if (panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)) {
+      errors.panNumber = "Invalid PAN format. Must be in format: ABCDE1234F (5 letters, 4 digits, 1 letter)";
+    }
 
-    if (pincode && !validatePincode(pincode))
-      errors.pincode = "Pincode must be 6 digits";
+    // District and State validation - only letters and spaces
+    if (district && !nameRegex.test(district)) {
+      errors.district = "District must contain only letters and spaces, no numbers or special characters allowed";
+    }
 
-    if (passportNumber && !validatePassport(passportNumber))
-      errors.passportNumber = "Invalid passport format";
+    if (state && !nameRegex.test(state)) {
+      errors.state = "State must contain only letters and spaces, no numbers or special characters allowed";
+    }
 
-    if (uanNumber && !validateUAN(uanNumber))
-      errors.uanNumber = "UAN must be 12 digits";
+    // Pincode validation
+    if (pincode && !/^[1-9][0-9]{5}$/.test(pincode)) {
+      errors.pincode = "Invalid Pincode. Must be exactly 6 digits and cannot start with 0";
+    }
 
-    if (bankAccountNumber && !validateAccount(bankAccountNumber))
-      errors.bankAccountNumber = "Account must be 6–18 digits";
+    // Optional field validations
+    if (passportNumber && !/^[A-PR-WY][1-9]\d{6}$/.test(passportNumber)) {
+      errors.passportNumber = "Invalid Passport Number. Must be in format: A1234567 (1 letter followed by 7 digits)";
+    }
+
+    if (uanNumber && !/^[0-9]{10,12}$/.test(uanNumber)) {
+      errors.uanNumber = "Invalid UAN Number. Must be 10-12 digits";
+    }
+
+    if (bankAccountNumber && !/^[0-9]{9,18}$/.test(bankAccountNumber)) {
+      errors.bankAccountNumber = "Invalid Bank Account Number. Must be 9-18 digits";
+    }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -1527,10 +1571,10 @@ export default function SelfVerificationPage() {
           </div>
         )}
 
-        {/* ADD CANDIDATE MODAL */}
+        {/* ADD CANDIDATE MODAL - ENHANCED UI */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center p-4 overflow-y-auto">
-            <div className="bg-white p-4 rounded-xl w-full max-w-lg shadow-xl border relative mt-10 mb-10 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center p-4 overflow-y-auto">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl w-full max-w-3xl shadow-2xl border-2 border-gray-200 relative my-8 max-h-[90vh] overflow-y-auto">
               {/* Confirm Close */}
               {modal.open && modal.type === "confirmClose" && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999] p-4">
@@ -1565,75 +1609,95 @@ export default function SelfVerificationPage() {
                 </div>
               )}
 
-              {/* HEADER */}
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Add Candidate
-                </h2>
-
-                <button
-                  onClick={() => setModal({ open: true, type: "confirmClose" })}
-                  className="text-gray-500 hover:text-black"
-                >
-                  <X />
-                </button>
+              {/* ENHANCED HEADER */}
+              <div className="bg-gradient-to-r from-[#ff004f] to-[#ff3366] px-6 py-5 sticky top-0 z-10 rounded-t-2xl">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                      <UserCheck className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Add Candidate</h2>
+                      <p className="text-white/80 text-sm">Fill in candidate information</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setModal({ open: true, type: "confirmClose" })}
+                    className="text-white hover:bg-white/20 rounded-lg p-2 transition-all"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
               </div>
 
-              {/* FORM GRID — VALIDATION + MOB RESPONSIVE FIXES */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* FIRST NAME */}
-                <div>
-                  <input
-                    name="firstName"
-                    value={newCandidate.firstName}
-                    onChange={handleInputChange}
-                    placeholder="First Name *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.firstName ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.firstName && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.firstName}
-                    </p>
-                  )}
-                </div>
+              {/* SCROLLABLE CONTENT */}
+              <div className="p-6 space-y-6">
 
-                {/* MIDDLE NAME */}
-                <div>
-                  <input
-                    name="middleName"
-                    value={newCandidate.middleName}
-                    onChange={handleInputChange}
-                    placeholder="Middle Name (optional)"
-                    className="border p-2 rounded w-full"
-                  />
+              {/* PERSONAL DETAILS SECTION */}
+              <div className="bg-white rounded-xl p-5 shadow-md border-2 border-blue-100">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-blue-200">
+                  <User className="text-blue-600" size={20} />
+                  <h3 className="text-lg font-bold text-gray-900">Personal Details</h3>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* FIRST NAME */}
+                  <div>
+                    <input
+                      name="firstName"
+                      value={newCandidate.firstName}
+                      onChange={handleInputChange}
+                      placeholder="First Name *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.firstName ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.firstName && (
+                      <p className="text-red-500 text-xs mt-1 font-medium">
+                        {fieldErrors.firstName}
+                      </p>
+                    )}
+                  </div>
 
-                {/* LAST NAME */}
-                <div>
-                  <input
-                    name="lastName"
-                    value={newCandidate.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Last Name *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.lastName ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.lastName && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.lastName}
-                    </p>
-                  )}
-                </div>
+                  {/* MIDDLE NAME */}
+                  <div>
+                    <input
+                      name="middleName"
+                      value={newCandidate.middleName}
+                      onChange={handleInputChange}
+                      placeholder="Middle Name (optional)"
+                      className="border-2 border-gray-300 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    />
+                    {fieldErrors.middleName && (
+                      <p className="text-red-500 text-xs mt-1 font-medium">
+                        {fieldErrors.middleName}
+                      </p>
+                    )}
+                  </div>
 
-                {/* FATHER NAME */}
-                <div>
-                  <input
-                    name="fatherName"
-                    value={newCandidate.fatherName}
-                    onChange={handleInputChange}
+                  {/* LAST NAME */}
+                  <div>
+                    <input
+                      name="lastName"
+                      value={newCandidate.lastName}
+                      onChange={handleInputChange}
+                      placeholder="Last Name *"
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.lastName ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.lastName && (
+                      <p className="text-red-500 text-xs mt-1 font-medium">
+                        {fieldErrors.lastName}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* FATHER NAME */}
+                  <div>
+                    <input
+                      name="fatherName"
+                      value={newCandidate.fatherName}
+                      onChange={handleInputChange}
                     placeholder="Father Name *"
                     className={`border p-2 rounded w-full ${
                       fieldErrors.fatherName ? "border-red-500" : ""
@@ -1664,45 +1728,68 @@ export default function SelfVerificationPage() {
                   )}
                 </div>
 
-                {/* GENDER */}
-                <div>
-                  <select
-                    name="gender"
-                    value={newCandidate.gender}
-                    onChange={handleInputChange}
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.gender ? "border-red-500" : ""
-                    }`}
-                  >
-                    <option value="">Select Gender *</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {fieldErrors.gender && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.gender}
-                    </p>
-                  )}
-                </div>
+                  {/* GENDER */}
+                  <div>
+                    <select
+                      name="gender"
+                      value={newCandidate.gender}
+                      onChange={handleInputChange}
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.gender ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="">Select Gender *</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {fieldErrors.gender && (
+                      <p className="text-red-500 text-xs mt-1 font-medium">
+                        {fieldErrors.gender}
+                      </p>
+                    )}
+                  </div>
 
-                {/* PHONE */}
-                <div>
-                  <input
-                    name="phone"
-                    value={newCandidate.phone}
-                    onChange={handleInputChange}
-                    placeholder="Phone *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.phone ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.phone && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.phone}
-                    </p>
-                  )}
+                  {/* DOB */}
+                  <div>
+                    <input
+                      name="dob"
+                      type="date"
+                      value={newCandidate.dob}
+                      onChange={handleInputChange}
+                      className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+                        fieldErrors.dob ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {fieldErrors.dob && (
+                      <p className="text-red-500 text-xs mt-1 font-medium">
+                        {fieldErrors.dob}
+                      </p>
+                    )}
+                  </div>
                 </div>
+              </div>
+
+              {/* CONTACT & IDENTITY SECTION */}
+              <div className="bg-white rounded-xl p-5 shadow-md border-2 border-gray-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* PHONE */}
+                  <div>
+                    <input
+                      name="phone"
+                      value={newCandidate.phone}
+                      onChange={handleInputChange}
+                      placeholder="Phone *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.phone ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.phone && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.phone}
+                      </p>
+                    )}
+                  </div>
 
                 {/* EMAIL */}
                 <div className="sm:col-span-2">
@@ -1867,26 +1954,31 @@ export default function SelfVerificationPage() {
                 </div>
               </div>
 
-              {/* ADDRESS */}
-              <textarea
-                name="address"
-                value={newCandidate.address}
-                onChange={handleInputChange}
-                placeholder="Full Address *"
-                className="border p-2 rounded w-full mt-4"
-                rows={3}
-              />
-              {fieldErrors.address && (
-                <p className="text-red-500 text-xs mt-1">
-                  {fieldErrors.address}
-                </p>
-              )}
+                  {/* ADDRESS */}
+                  <div className="sm:col-span-2">
+                    <textarea
+                      name="address"
+                      value={newCandidate.address}
+                      onChange={handleInputChange}
+                      placeholder="Full Address *"
+                      className="border p-2 rounded w-full"
+                      rows={3}
+                    />
+                    {fieldErrors.address && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.address}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               {/* RESUME UPLOAD */}
-              <div className="mt-4">
-                <label className="text-sm font-medium">
-                  Resume (PDF/DOC/DOCX)
-                </label>
+              <div className="bg-white rounded-xl p-5 shadow-md border-2 border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <Upload className="text-gray-600" size={20} />
+                  <h3 className="text-lg font-bold text-gray-900">Resume Upload (Optional)</h3>
+                </div>
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx"
@@ -1896,21 +1988,20 @@ export default function SelfVerificationPage() {
                       resume: e.target.files?.[0] || null,
                     }))
                   }
-                  className="border p-2 rounded w-full mt-1"
+                  className="border-2 border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-gray-500 focus:border-gray-500 outline-none transition"
                 />
-
                 {newCandidate.resume && (
-                  <p className="text-xs text-gray-600 mt-1">
-                    Selected: <strong>{newCandidate.resume.name}</strong>
+                  <p className="text-xs text-gray-600 mt-2">
+                    ✅ Selected: <strong>{newCandidate.resume.name}</strong>
                   </p>
                 )}
               </div>
 
               {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200">
                 <button
                   onClick={() => setModal({ open: true, type: "confirmClose" })}
-                  className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100"
+                  className="px-6 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-100 transition-all"
                 >
                   Cancel
                 </button>
@@ -1918,14 +2009,19 @@ export default function SelfVerificationPage() {
                 <button
                   onClick={handleAddCandidate}
                   disabled={submitting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                  className="px-6 py-3 bg-gradient-to-r from-[#ff004f] to-[#ff3366] text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
-                    <Loader2 className="animate-spin" />
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Adding...
+                    </>
                   ) : (
-                    <PlusCircle size={16} />
+                    <>
+                      <PlusCircle size={18} />
+                      Add Candidate
+                    </>
                   )}
-                  Add Candidate
                 </button>
               </div>
             </div>

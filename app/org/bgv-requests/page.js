@@ -27,7 +27,7 @@ import {
   Mail,
   MapPin,
   Building,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ConsentSection from "@/app/components/ConsentSection";
@@ -38,12 +38,14 @@ export default function OrgBGVRequestsPage() {
       STATE
   --------------------------------------------------------------------- */
   const router = useRouter();
-  
+
   // State management context
   const { bgvState = {}, setBgvState = () => {} } = useOrgState();
 
   const [candidates, setCandidates] = useState([]);
-  const [selectedCandidate, setSelectedCandidate] = useState(bgvState.selectedCandidate || "");
+  const [selectedCandidate, setSelectedCandidate] = useState(
+    bgvState.selectedCandidate || ""
+  );
   const [candidateVerification, setCandidateVerification] = useState(null);
 
   const [userOrgId, setUserOrgId] = useState("");
@@ -63,7 +65,9 @@ export default function OrgBGVRequestsPage() {
 
   const stepNames = ["Primary", "Secondary", "Final"];
   const [currentStep, setCurrentStep] = useState(bgvState.currentStep || 0);
-  const [visibleStage, setVisibleStage] = useState(bgvState.visibleStage || "primary");
+  const [visibleStage, setVisibleStage] = useState(
+    bgvState.visibleStage || "primary"
+  );
   const [manualVerifyModal, setManualVerifyModal] = useState({
     open: false,
     check: "",
@@ -75,7 +79,7 @@ export default function OrgBGVRequestsPage() {
     "pan_aadhaar_seeding",
     "pan_verification",
     "employment_history",
-    "aadhaar_to_uan",
+    "verify_pan_to_uan",
     "credit_report",
     "court_record",
   ];
@@ -137,8 +141,13 @@ export default function OrgBGVRequestsPage() {
   const [lastRunStage, setLastRunStage] = useState(null);
 
   // Use ref to always have latest values for state persistence
-  const stateRef = useRef({ selectedCandidate, stages, currentStep, visibleStage });
-  
+  const stateRef = useRef({
+    selectedCandidate,
+    stages,
+    currentStep,
+    visibleStage,
+  });
+
   // Update ref whenever state changes
   useEffect(() => {
     stateRef.current = { selectedCandidate, stages, currentStep, visibleStage };
@@ -600,7 +609,9 @@ export default function OrgBGVRequestsPage() {
     return (
       <div className="w-full relative">
         {label && (
-          <label className="text-sm font-bold text-gray-700 mb-2 block">{label}</label>
+          <label className="text-sm font-bold text-gray-700 mb-2 block">
+            {label}
+          </label>
         )}
 
         {/* Input Box - Enhanced */}
@@ -617,10 +628,19 @@ export default function OrgBGVRequestsPage() {
         `}
           onClick={() => !disabled && setOpen(!open)}
         >
-          <span className={`text-sm font-medium truncate ${value ? "text-gray-900" : "text-gray-400"}`}>
+          <span
+            className={`text-sm font-medium truncate ${
+              value ? "text-gray-900" : "text-gray-400"
+            }`}
+          >
             {options.find((o) => o.value === value)?.label || "Select..."}
           </span>
-          <ChevronDown size={20} className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown
+            size={20}
+            className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
         </div>
 
         {/* DROPDOWN - Enhanced */}
@@ -686,12 +706,11 @@ export default function OrgBGVRequestsPage() {
         ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300"
         : "bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300";
 
-    const cardGradient =
-      selected
-        ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
-        : completed
-        ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
-        : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
+    const cardGradient = selected
+      ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
+      : completed
+      ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
+      : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
 
     return (
       <motion.div
@@ -706,9 +725,7 @@ export default function OrgBGVRequestsPage() {
         {/* TOP ROW — ICON + TITLE */}
         <div className="flex justify-between items-start mb-3">
           <div className="flex gap-3 items-start flex-1">
-            <div className="p-2 bg-white rounded-lg shadow-sm">
-              {icon}
-            </div>
+            <div className="p-2 bg-white rounded-lg shadow-sm">{icon}</div>
             <div className="flex-1">
               <div className="text-base font-bold capitalize text-gray-900 leading-tight">
                 {label}
@@ -743,18 +760,24 @@ export default function OrgBGVRequestsPage() {
 
         {/* TYPE BADGE */}
         <div className="flex items-center gap-2 mb-3">
-          <span className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-bold ${typeBadge}`}>
+          <span
+            className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-bold ${typeBadge}`}
+          >
             {type === "api" && "⚡"}
             {type === "manual" && "✍️"}
             {type === "ai" && "🤖"}
             {type.toUpperCase()} Check
           </span>
           {status && (
-            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
-              status === "COMPLETED" ? "bg-green-200 text-green-800" :
-              status === "FAILED" ? "bg-red-200 text-red-800" :
-              "bg-yellow-200 text-yellow-800"
-            }`}>
+            <span
+              className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                status === "COMPLETED"
+                  ? "bg-green-200 text-green-800"
+                  : status === "FAILED"
+                  ? "bg-red-200 text-red-800"
+                  : "bg-yellow-200 text-yellow-800"
+              }`}
+            >
               {status}
             </span>
           )}
@@ -822,7 +845,9 @@ export default function OrgBGVRequestsPage() {
             ) : (
               <>
                 <ExternalLink size={16} />
-                {key === "ai_cv_validation" ? "Go to CV Verification" : "Go to Education Verification"}
+                {key === "ai_cv_validation"
+                  ? "Go to CV Verification"
+                  : "Go to Education Verification"}
               </>
             )}
           </button>
@@ -844,8 +869,12 @@ export default function OrgBGVRequestsPage() {
             <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-[#ff004f]" size={48} />
               <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Loading Candidate Status</h3>
-                <p className="text-sm text-gray-600">Please wait while we fetch verification details...</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                  Loading Candidate Status
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Please wait while we fetch verification details...
+                </p>
               </div>
             </div>
           </div>
@@ -860,7 +889,9 @@ export default function OrgBGVRequestsPage() {
             <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-purple-600" size={48} />
               <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Navigating</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                  Navigating
+                </h3>
                 <p className="text-sm text-gray-600">Please wait...</p>
               </div>
             </div>
@@ -916,32 +947,48 @@ export default function OrgBGVRequestsPage() {
             <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <FileText size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-blue-900 mb-2 text-sm">Manual Verification</h4>
-            <p className="text-xs text-blue-700">Click "Verify Manually" on check cards for validation</p>
+            <h4 className="font-bold text-blue-900 mb-2 text-sm">
+              Manual Verification
+            </h4>
+            <p className="text-xs text-blue-700">
+              Click "Verify Manually" on check cards for validation
+            </p>
           </div>
-          
+
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
             <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <Brain size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-purple-900 mb-2 text-sm">AI Validation</h4>
-            <p className="text-xs text-purple-700">Automated CV and education analysis available</p>
+            <h4 className="font-bold text-purple-900 mb-2 text-sm">
+              AI Validation
+            </h4>
+            <p className="text-xs text-purple-700">
+              Automated CV and education analysis available
+            </p>
           </div>
-          
+
           <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
             <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <Building size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-green-900 mb-2 text-sm">Employment Check</h4>
-            <p className="text-xs text-green-700">API-based and manual verification with supervisory validation</p>
+            <h4 className="font-bold text-green-900 mb-2 text-sm">
+              Employment Check
+            </h4>
+            <p className="text-xs text-green-700">
+              API-based and manual verification with supervisory validation
+            </p>
           </div>
-          
+
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
             <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <Cpu size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-orange-900 mb-2 text-sm">API Services</h4>
-            <p className="text-xs text-orange-700">Automated checks for PAN, Aadhaar, and more</p>
+            <h4 className="font-bold text-orange-900 mb-2 text-sm">
+              API Services
+            </h4>
+            <p className="text-xs text-orange-700">
+              Automated checks for PAN, Aadhaar, and more
+            </p>
           </div>
         </div>
 
@@ -953,14 +1000,20 @@ export default function OrgBGVRequestsPage() {
                 <CheckCircle size={24} className="text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Verification Workflow</h3>
-                <p className="text-sm text-gray-500">Track progress through all verification stages</p>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Verification Workflow
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Track progress through all verification stages
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-700 px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                {isStageCompleted("primary") && isStageCompleted("secondary") && isStageCompleted("final") 
-                  ? "✓ All Stages Complete" 
+                {isStageCompleted("primary") &&
+                isStageCompleted("secondary") &&
+                isStageCompleted("final")
+                  ? "✓ All Stages Complete"
                   : `Stage ${currentStep + 1} / 3`}
               </span>
             </div>
@@ -968,17 +1021,20 @@ export default function OrgBGVRequestsPage() {
           <div className="flex justify-between relative">
             {/* Progress Line */}
             <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 -z-10">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-[#ff004f] to-purple-600 transition-all duration-500"
                 style={{ width: `${(currentStep / 2) * 100}%` }}
               />
             </div>
-            
+
             {stepNames.map((name, i) => {
               const active = i === currentStep;
               const done = isStageCompleted(name.toLowerCase());
               return (
-                <div key={i} className="flex flex-col items-center gap-2 flex-1 relative">
+                <div
+                  key={i}
+                  className="flex flex-col items-center gap-2 flex-1 relative"
+                >
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-lg transition-all duration-300 transform ${
                       done
@@ -993,13 +1049,21 @@ export default function OrgBGVRequestsPage() {
                   <div className="text-center">
                     <div
                       className={`font-bold text-sm ${
-                        active ? "text-[#ff004f]" : done ? "text-green-600" : "text-gray-600"
+                        active
+                          ? "text-[#ff004f]"
+                          : done
+                          ? "text-green-600"
+                          : "text-gray-600"
                       }`}
                     >
                       {name}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {done ? "✓ Completed" : active ? "In Progress" : "Pending"}
+                      {done
+                        ? "✓ Completed"
+                        : active
+                        ? "In Progress"
+                        : "Pending"}
                     </div>
                   </div>
                 </div>
@@ -1020,43 +1084,54 @@ export default function OrgBGVRequestsPage() {
                 <User size={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Candidate Selection</h3>
-                <p className="text-xs text-gray-600">Choose candidate to begin verification</p>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Candidate Selection
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Choose candidate to begin verification
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-            {/* CANDIDATE */}
-            <div>
-              <SearchableDropdown
-                label="Candidate"
-                loading={candidateLoading}
-                options={candidates.map((c) => ({
-                  label: c.firstName + " " + c.lastName,
-                  value: c._id,
-                }))}
-                value={selectedCandidate}
-                onChange={(v) => handleCandidateSelect(v)}
-              />
-            </div>
+              {/* CANDIDATE */}
+              <div>
+                <SearchableDropdown
+                  label="Candidate"
+                  loading={candidateLoading}
+                  options={candidates.map((c) => ({
+                    label: c.firstName + " " + c.lastName,
+                    value: c._id,
+                  }))}
+                  value={selectedCandidate}
+                  onChange={(v) => handleCandidateSelect(v)}
+                />
+              </div>
 
-            {/* STATUS */}
-            <div>
-              <label className="text-sm font-bold text-gray-700 mb-2 block">Verification Status</label>
-              <div className="border-2 border-gray-300 rounded-xl px-4 py-3 bg-gray-50">
-                <div className={`font-bold text-sm ${
-                  candidateVerification?.overallStatus === "COMPLETED" ? "text-green-600" :
-                  candidateVerification?.overallStatus === "IN_PROGRESS" ? "text-yellow-600" :
-                  candidateVerification?.overallStatus === "FAILED" ? "text-red-600" :
-                  "text-gray-600"
-                }`}>
-                  {candidateVerification?.overallStatus || "Not Initiated"}
+              {/* STATUS */}
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Verification Status
+                </label>
+                <div className="border-2 border-gray-300 rounded-xl px-4 py-3 bg-gray-50">
+                  <div
+                    className={`font-bold text-sm ${
+                      candidateVerification?.overallStatus === "COMPLETED"
+                        ? "text-green-600"
+                        : candidateVerification?.overallStatus === "IN_PROGRESS"
+                        ? "text-yellow-600"
+                        : candidateVerification?.overallStatus === "FAILED"
+                        ? "text-red-600"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {candidateVerification?.overallStatus || "Not Initiated"}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
 
@@ -1068,11 +1143,15 @@ export default function OrgBGVRequestsPage() {
                 <Shield size={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Available Services</h3>
-                <p className="text-xs text-gray-600">Services offered by your organization</p>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Available Services
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Services offered by your organization
+                </p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {userServices.map((service, idx) => (
                 <div
@@ -1088,7 +1167,7 @@ export default function OrgBGVRequestsPage() {
                     </div>
                   </div>
                   <h4 className="font-bold text-gray-900 text-sm mb-1 capitalize">
-                    {service.serviceName.replace(/_/g, ' ')}
+                    {service.serviceName.replace(/_/g, " ")}
                   </h4>
                   <p className="text-xs text-gray-600">Per verification</p>
                 </div>
@@ -1113,14 +1192,15 @@ export default function OrgBGVRequestsPage() {
                   "Choose initial verification checks for primary stage."}
                 {currentStep === 1 &&
                   "Select from remaining checks not used in Primary."}
-                {currentStep === 2 &&
-                  "Final stage with all remaining checks."}
+                {currentStep === 2 && "Final stage with all remaining checks."}
               </p>
             </div>
 
             {/* Selected Checks */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
-              <div className="text-xs font-bold text-blue-900 mb-2">Selected Checks</div>
+              <div className="text-xs font-bold text-blue-900 mb-2">
+                Selected Checks
+              </div>
               <div className="text-sm font-medium text-gray-900 break-words">
                 {[
                   ...new Set([
@@ -1137,7 +1217,10 @@ export default function OrgBGVRequestsPage() {
                         ...stages.final,
                       ]),
                     ].map((check, i) => (
-                      <span key={i} className="px-2 py-1 bg-blue-200 text-blue-900 rounded-md text-xs font-semibold">
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-blue-200 text-blue-900 rounded-md text-xs font-semibold"
+                      >
                         {check.replace(/_/g, " ")}
                       </span>
                     ))}
@@ -1391,8 +1474,12 @@ export default function OrgBGVRequestsPage() {
                       <Cpu className="text-blue-600" size={24} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">API-Based Checks</h3>
-                      <p className="text-xs text-gray-600">Automated verification through external APIs</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        API-Based Checks
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Automated verification through external APIs
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1416,8 +1503,13 @@ export default function OrgBGVRequestsPage() {
                       <FileSearch className="text-orange-600" size={24} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">Manual Verification Checks</h3>
-                      <p className="text-xs text-gray-600">Requires manual verification on this page - Click "Verify Manually Here" button</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        Manual Verification Checks
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Requires manual verification on this page - Click
+                        "Verify Manually Here" button
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1439,8 +1531,12 @@ export default function OrgBGVRequestsPage() {
                       <Brain className="text-purple-600" size={24} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">AI-Powered Validation</h3>
-                      <p className="text-xs text-gray-600">Advanced AI analysis for CV and education verification</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        AI-Powered Validation
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Advanced AI analysis for CV and education verification
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1468,9 +1564,12 @@ export default function OrgBGVRequestsPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {visibleStage.charAt(0).toUpperCase() + visibleStage.slice(1)} Stage Summary
+                  {visibleStage.charAt(0).toUpperCase() + visibleStage.slice(1)}{" "}
+                  Stage Summary
                 </h2>
-                <p className="text-sm text-gray-600">Detailed verification results</p>
+                <p className="text-sm text-gray-600">
+                  Detailed verification results
+                </p>
               </div>
             </div>
 
@@ -1479,11 +1578,21 @@ export default function OrgBGVRequestsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
                   <tr>
-                    <th className="p-4 text-left font-bold text-gray-900">Check</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Status</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Remarks</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Submitted At</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Stage</th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Check
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Status
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Remarks
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Submitted At
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Stage
+                    </th>
                   </tr>
                 </thead>
 
@@ -1491,8 +1600,13 @@ export default function OrgBGVRequestsPage() {
                   {candidateVerification.stages?.[visibleStage]?.length ? (
                     candidateVerification.stages[visibleStage].map(
                       (item, i) => (
-                        <tr key={i} className="border-t hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors">
-                          <td className="p-4 capitalize font-medium text-gray-900">{item.check.replace(/_/g, " ")}</td>
+                        <tr
+                          key={i}
+                          className="border-t hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors"
+                        >
+                          <td className="p-4 capitalize font-medium text-gray-900">
+                            {item.check.replace(/_/g, " ")}
+                          </td>
                           <td className="p-4">
                             <span
                               className={`px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
@@ -1531,7 +1645,9 @@ export default function OrgBGVRequestsPage() {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-gray-700 break-words">{item.remarks || "—"}</span>
+                              <span className="text-gray-700 break-words">
+                                {item.remarks || "—"}
+                              </span>
                             )}
                           </td>
 
@@ -1540,7 +1656,9 @@ export default function OrgBGVRequestsPage() {
                               ? new Date(item.submittedAt).toLocaleString()
                               : "—"}
                           </td>
-                          <td className="p-4 capitalize font-medium text-gray-900">{visibleStage}</td>
+                          <td className="p-4 capitalize font-medium text-gray-900">
+                            {visibleStage}
+                          </td>
                         </tr>
                       )
                     )
@@ -1559,7 +1677,10 @@ export default function OrgBGVRequestsPage() {
             <div className="lg:hidden space-y-4">
               {candidateVerification.stages?.[visibleStage]?.length ? (
                 candidateVerification.stages[visibleStage].map((item, i) => (
-                  <div key={i} className="bg-white border-2 rounded-2xl shadow-lg p-5 space-y-3">
+                  <div
+                    key={i}
+                    className="bg-white border-2 rounded-2xl shadow-lg p-5 space-y-3"
+                  >
                     {/* Check Name */}
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="font-bold text-gray-900 capitalize text-base flex-1">
@@ -1585,7 +1706,9 @@ export default function OrgBGVRequestsPage() {
 
                     {/* Stage */}
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-gray-600">Stage:</span>
+                      <span className="font-semibold text-gray-600">
+                        Stage:
+                      </span>
                       <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-medium capitalize">
                         {visibleStage}
                       </span>
@@ -1594,20 +1717,30 @@ export default function OrgBGVRequestsPage() {
                     {/* Remarks */}
                     {item.remarks && (
                       <div className="bg-gray-50 p-3 rounded-lg border">
-                        <div className="font-semibold text-gray-700 text-xs mb-2">Remarks:</div>
+                        <div className="font-semibold text-gray-700 text-xs mb-2">
+                          Remarks:
+                        </div>
                         {typeof item.remarks === "object" ? (
                           <div className="text-xs text-gray-700 space-y-1">
-                            {Object.entries(item.remarks).map(([key, value]) => (
-                              <div key={key} className="break-words">
-                                <span className="font-semibold capitalize">{key}: </span>
-                                <span>
-                                  {value === null || value === undefined ? "—" : value.toString()}
-                                </span>
-                              </div>
-                            ))}
+                            {Object.entries(item.remarks).map(
+                              ([key, value]) => (
+                                <div key={key} className="break-words">
+                                  <span className="font-semibold capitalize">
+                                    {key}:{" "}
+                                  </span>
+                                  <span>
+                                    {value === null || value === undefined
+                                      ? "—"
+                                      : value.toString()}
+                                  </span>
+                                </div>
+                              )
+                            )}
                           </div>
                         ) : (
-                          <div className="text-xs text-gray-700 break-words">{item.remarks}</div>
+                          <div className="text-xs text-gray-700 break-words">
+                            {item.remarks}
+                          </div>
                         )}
                       </div>
                     )}
@@ -1616,7 +1749,9 @@ export default function OrgBGVRequestsPage() {
                     {item.submittedAt && (
                       <div className="flex items-center gap-2 text-xs text-gray-600">
                         <span className="font-semibold">Submitted:</span>
-                        <span>{new Date(item.submittedAt).toLocaleString()}</span>
+                        <span>
+                          {new Date(item.submittedAt).toLocaleString()}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1642,7 +1777,9 @@ export default function OrgBGVRequestsPage() {
                   <UserPlus size={28} />
                   <div>
                     <h2 className="text-2xl font-bold">Add New Candidate</h2>
-                    <p className="text-white/90 text-sm">Fill in candidate information</p>
+                    <p className="text-white/90 text-sm">
+                      Fill in candidate information
+                    </p>
                   </div>
                 </div>
                 <button
@@ -1660,7 +1797,9 @@ export default function OrgBGVRequestsPage() {
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-blue-200">
                   <User className="text-blue-600" size={20} />
-                  <h3 className="text-lg font-bold text-gray-900">Personal Information</h3>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Personal Information
+                  </h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* FIRST NAME */}
@@ -1676,454 +1815,617 @@ export default function OrgBGVRequestsPage() {
                       }
                       placeholder="First Name *"
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
-                        fieldErrors.firstName ? "border-red-500" : "border-gray-300"
+                        fieldErrors.firstName
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.firstName && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.firstName}
+                      </p>
                     )}
                   </div>
 
-              {/* MIDDLE NAME */}
-              <input
-                name="middleName"
-                value={newCandidate.middleName}
-                onChange={(e) =>
-                  setNewCandidate((p) => ({ ...p, middleName: e.target.value }))
-                }
-                placeholder="Middle Name"
-                className="border p-2 rounded w-full"
-              />
+                  {/* MIDDLE NAME */}
+                  <input
+                    name="middleName"
+                    value={newCandidate.middleName}
+                    onChange={(e) =>
+                      setNewCandidate((p) => ({
+                        ...p,
+                        middleName: e.target.value,
+                      }))
+                    }
+                    placeholder="Middle Name"
+                    className="border p-2 rounded w-full"
+                  />
 
-              {/* LAST NAME */}
-              <div>
-                <input
-                  name="lastName"
-                  value={newCandidate.lastName}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, lastName: e.target.value }))
-                  }
-                  placeholder="Last Name *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.lastName ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.lastName && (
-                  <p className="text-red-500 text-xs">{fieldErrors.lastName}</p>
-                )}
+                  {/* LAST NAME */}
+                  <div>
+                    <input
+                      name="lastName"
+                      value={newCandidate.lastName}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          lastName: e.target.value,
+                        }))
+                      }
+                      placeholder="Last Name *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.lastName ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.lastName && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.lastName}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* FATHER NAME */}
+                  <div>
+                    <input
+                      name="fatherName"
+                      value={newCandidate.fatherName}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          fatherName: e.target.value,
+                        }))
+                      }
+                      placeholder="Father Name *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.fatherName ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.fatherName && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.fatherName}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* DOB */}
+                  <div>
+                    <input
+                      name="dob"
+                      type="date"
+                      value={newCandidate.dob}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({ ...p, dob: e.target.value }))
+                      }
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.dob ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.dob && (
+                      <p className="text-red-500 text-xs">{fieldErrors.dob}</p>
+                    )}
+                  </div>
+
+                  {/* GENDER */}
+                  <div>
+                    <select
+                      name="gender"
+                      value={newCandidate.gender}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          gender: e.target.value,
+                        }))
+                      }
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.gender ? "border-red-500" : ""
+                      }`}
+                    >
+                      <option value="">Select Gender *</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {fieldErrors.gender && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.gender}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* PHONE */}
+                  <div>
+                    <input
+                      name="phone"
+                      value={newCandidate.phone}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          phone: e.target.value,
+                        }))
+                      }
+                      placeholder="Phone *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.phone ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.phone && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* EMAIL */}
+                  <div className="sm:col-span-2">
+                    <input
+                      name="email"
+                      value={newCandidate.email}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          email: e.target.value,
+                        }))
+                      }
+                      placeholder="Email *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.email ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.email && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.email}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* AADHAAR */}
+                  <div>
+                    <input
+                      name="aadhaarNumber"
+                      value={newCandidate.aadhaarNumber}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          aadhaarNumber: e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 12),
+                        }))
+                      }
+                      placeholder="Aadhaar Number *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.aadhaarNumber ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.aadhaarNumber && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.aadhaarNumber}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* PAN */}
+                  <div>
+                    <input
+                      name="panNumber"
+                      value={newCandidate.panNumber}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          panNumber: e.target.value.toUpperCase().slice(0, 10),
+                        }))
+                      }
+                      placeholder="PAN Number *"
+                      className={`border p-2 rounded w-full uppercase ${
+                        fieldErrors.panNumber ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.panNumber && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.panNumber}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* UAN (optional) */}
+                  <input
+                    name="uanNumber"
+                    value={newCandidate.uanNumber}
+                    onChange={(e) =>
+                      setNewCandidate((p) => ({
+                        ...p,
+                        uanNumber: e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 12),
+                      }))
+                    }
+                    placeholder="UAN Number (optional)"
+                    className="border p-2 rounded w-full"
+                  />
+
+                  {/* PASSPORT (optional) */}
+                  <input
+                    name="passportNumber"
+                    value={newCandidate.passportNumber}
+                    onChange={(e) =>
+                      setNewCandidate((p) => ({
+                        ...p,
+                        passportNumber: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="Passport Number (optional)"
+                    className="border p-2 rounded w-full"
+                  />
+
+                  {/* BANK ACCOUNT (optional) */}
+                  <div className="sm:col-span-2">
+                    <input
+                      name="bankAccountNumber"
+                      value={newCandidate.bankAccountNumber}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          bankAccountNumber: e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 18),
+                        }))
+                      }
+                      placeholder="Bank Account Number (optional)"
+                      className="border p-2 rounded w-full"
+                    />
+                  </div>
+
+                  {/* DISTRICT */}
+                  <div>
+                    <input
+                      name="district"
+                      value={newCandidate.district}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          district: e.target.value,
+                        }))
+                      }
+                      placeholder="District *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.district ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.district && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.district}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* STATE */}
+                  <div>
+                    <input
+                      name="state"
+                      value={newCandidate.state}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          state: e.target.value,
+                        }))
+                      }
+                      placeholder="State *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.state ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.state && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.state}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* PINCODE */}
+                  <div>
+                    <input
+                      name="pincode"
+                      value={newCandidate.pincode}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          pincode: e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 6),
+                        }))
+                      }
+                      placeholder="Pincode *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.pincode ? "border-red-500" : ""
+                      }`}
+                    />
+                    {fieldErrors.pincode && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.pincode}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ADDRESS */}
+                  <div className="sm:col-span-2">
+                    <textarea
+                      name="address"
+                      value={newCandidate.address}
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          address: e.target.value,
+                        }))
+                      }
+                      placeholder="Full Address *"
+                      className={`border p-2 rounded w-full ${
+                        fieldErrors.address ? "border-red-500" : ""
+                      }`}
+                      rows={3}
+                    />
+                    {fieldErrors.address && (
+                      <p className="text-red-500 text-xs">
+                        {fieldErrors.address}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* RESUME UPLOAD (Optional) */}
+                  <div className="sm:col-span-2">
+                    <label className="text-sm font-medium">
+                      Resume (PDF/DOC/DOCX)
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) =>
+                        setNewCandidate((p) => ({
+                          ...p,
+                          resume: e.target.files[0],
+                        }))
+                      }
+                      className="border p-2 rounded w-full mt-1"
+                    />
+
+                    {newCandidate.resume && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Selected: <strong>{newCandidate.resume.name}</strong>
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* FATHER NAME */}
-              <div>
-                <input
-                  name="fatherName"
-                  value={newCandidate.fatherName}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({
-                      ...p,
-                      fatherName: e.target.value,
-                    }))
-                  }
-                  placeholder="Father Name *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.fatherName ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.fatherName && (
-                  <p className="text-red-500 text-xs">
-                    {fieldErrors.fatherName}
-                  </p>
-                )}
-              </div>
-
-              {/* DOB */}
-              <div>
-                <input
-                  name="dob"
-                  type="date"
-                  value={newCandidate.dob}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, dob: e.target.value }))
-                  }
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.dob ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.dob && (
-                  <p className="text-red-500 text-xs">{fieldErrors.dob}</p>
-                )}
-              </div>
-
-              {/* GENDER */}
-              <div>
-                <select
-                  name="gender"
-                  value={newCandidate.gender}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, gender: e.target.value }))
-                  }
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.gender ? "border-red-500" : ""
-                  }`}
+              {/* ACTION BUTTONS */}
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowConfirmClose(true)}
+                  className="px-4 py-2 border rounded-md"
                 >
-                  <option value="">Select Gender *</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-                {fieldErrors.gender && (
-                  <p className="text-red-500 text-xs">{fieldErrors.gender}</p>
-                )}
-              </div>
+                  Cancel
+                </button>
 
-              {/* PHONE */}
-              <div>
-                <input
-                  name="phone"
-                  value={newCandidate.phone}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, phone: e.target.value }))
-                  }
-                  placeholder="Phone *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.phone ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.phone && (
-                  <p className="text-red-500 text-xs">{fieldErrors.phone}</p>
-                )}
-              </div>
+                <button
+                  onClick={async () => {
+                    // ENHANCED VALIDATION
+                    const errors = {};
 
-              {/* EMAIL */}
-              <div className="sm:col-span-2">
-                <input
-                  name="email"
-                  value={newCandidate.email}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, email: e.target.value }))
-                  }
-                  placeholder="Email *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.email ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.email && (
-                  <p className="text-red-500 text-xs">{fieldErrors.email}</p>
-                )}
-              </div>
+                    const {
+                      firstName,
+                      lastName,
+                      fatherName,
+                      dob,
+                      gender,
+                      phone,
+                      email,
+                      aadhaarNumber,
+                      panNumber,
+                      district,
+                      state,
+                      pincode,
+                      address,
+                      middleName,
+                      passportNumber,
+                      uanNumber,
+                      bankAccountNumber,
+                    } = newCandidate;
 
-              {/* AADHAAR */}
-              <div>
-                <input
-                  name="aadhaarNumber"
-                  value={newCandidate.aadhaarNumber}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({
-                      ...p,
-                      aadhaarNumber: e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 12),
-                    }))
-                  }
-                  placeholder="Aadhaar Number *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.aadhaarNumber ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.aadhaarNumber && (
-                  <p className="text-red-500 text-xs">
-                    {fieldErrors.aadhaarNumber}
-                  </p>
-                )}
-              </div>
+                    // Required field checks
+                    if (!firstName) errors.firstName = "First Name is required";
+                    if (!lastName) errors.lastName = "Last Name is required";
+                    if (!fatherName)
+                      errors.fatherName = "Father's Name is required";
+                    if (!dob) errors.dob = "Date of Birth is required";
+                    if (!gender) errors.gender = "Gender is required";
+                    if (!phone) errors.phone = "Phone Number is required";
+                    if (!email) errors.email = "Email is required";
+                    if (!aadhaarNumber)
+                      errors.aadhaarNumber = "Aadhaar Number is required";
+                    if (!panNumber) errors.panNumber = "PAN Number is required";
+                    if (!address) errors.address = "Address is required";
+                    if (!district) errors.district = "District is required";
+                    if (!state) errors.state = "State is required";
+                    if (!pincode) errors.pincode = "Pincode is required";
 
-              {/* PAN */}
-              <div>
-                <input
-                  name="panNumber"
-                  value={newCandidate.panNumber}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({
-                      ...p,
-                      panNumber: e.target.value.toUpperCase().slice(0, 10),
-                    }))
-                  }
-                  placeholder="PAN Number *"
-                  className={`border p-2 rounded w-full uppercase ${
-                    fieldErrors.panNumber ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.panNumber && (
-                  <p className="text-red-500 text-xs">
-                    {fieldErrors.panNumber}
-                  </p>
-                )}
-              </div>
-
-              {/* UAN (optional) */}
-              <input
-                name="uanNumber"
-                value={newCandidate.uanNumber}
-                onChange={(e) =>
-                  setNewCandidate((p) => ({
-                    ...p,
-                    uanNumber: e.target.value.replace(/\D/g, "").slice(0, 12),
-                  }))
-                }
-                placeholder="UAN Number (optional)"
-                className="border p-2 rounded w-full"
-              />
-
-              {/* PASSPORT (optional) */}
-              <input
-                name="passportNumber"
-                value={newCandidate.passportNumber}
-                onChange={(e) =>
-                  setNewCandidate((p) => ({
-                    ...p,
-                    passportNumber: e.target.value.toUpperCase(),
-                  }))
-                }
-                placeholder="Passport Number (optional)"
-                className="border p-2 rounded w-full"
-              />
-
-              {/* BANK ACCOUNT (optional) */}
-              <div className="sm:col-span-2">
-                <input
-                  name="bankAccountNumber"
-                  value={newCandidate.bankAccountNumber}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({
-                      ...p,
-                      bankAccountNumber: e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 18),
-                    }))
-                  }
-                  placeholder="Bank Account Number (optional)"
-                  className="border p-2 rounded w-full"
-                />
-              </div>
-
-              {/* DISTRICT */}
-              <div>
-                <input
-                  name="district"
-                  value={newCandidate.district}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, district: e.target.value }))
-                  }
-                  placeholder="District *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.district ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.district && (
-                  <p className="text-red-500 text-xs">{fieldErrors.district}</p>
-                )}
-              </div>
-
-              {/* STATE */}
-              <div>
-                <input
-                  name="state"
-                  value={newCandidate.state}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, state: e.target.value }))
-                  }
-                  placeholder="State *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.state ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.state && (
-                  <p className="text-red-500 text-xs">{fieldErrors.state}</p>
-                )}
-              </div>
-
-              {/* PINCODE */}
-              <div>
-                <input
-                  name="pincode"
-                  value={newCandidate.pincode}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({
-                      ...p,
-                      pincode: e.target.value.replace(/\D/g, "").slice(0, 6),
-                    }))
-                  }
-                  placeholder="Pincode *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.pincode ? "border-red-500" : ""
-                  }`}
-                />
-                {fieldErrors.pincode && (
-                  <p className="text-red-500 text-xs">{fieldErrors.pincode}</p>
-                )}
-              </div>
-
-              {/* ADDRESS */}
-              <div className="sm:col-span-2">
-                <textarea
-                  name="address"
-                  value={newCandidate.address}
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, address: e.target.value }))
-                  }
-                  placeholder="Full Address *"
-                  className={`border p-2 rounded w-full ${
-                    fieldErrors.address ? "border-red-500" : ""
-                  }`}
-                  rows={3}
-                />
-                {fieldErrors.address && (
-                  <p className="text-red-500 text-xs">{fieldErrors.address}</p>
-                )}
-              </div>
-
-              {/* RESUME UPLOAD (Optional) */}
-              <div className="sm:col-span-2">
-                <label className="text-sm font-medium">
-                  Resume (PDF/DOC/DOCX)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, resume: e.target.files[0] }))
-                  }
-                  className="border p-2 rounded w-full mt-1"
-                />
-
-                {newCandidate.resume && (
-                  <p className="text-xs text-gray-600 mt-1">
-                    Selected: <strong>{newCandidate.resume.name}</strong>
-                  </p>
-                )}
-              </div>
-            </div>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowConfirmClose(true)}
-                className="px-4 py-2 border rounded-md"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={async () => {
-                  // VALIDATION
-                  const errors = {};
-
-                  const required = [
-                    "firstName",
-                    "lastName",
-                    "fatherName",
-                    "dob",
-                    "gender",
-                    "phone",
-                    "email",
-                    "aadhaarNumber",
-                    "panNumber",
-                    "district",
-                    "state",
-                    "pincode",
-                    "address",
-                  ];
-
-                  required.forEach((field) => {
-                    if (!newCandidate[field]) {
-                      errors[field] = "Required";
+                    // Name validations - only letters and spaces, no numbers
+                    const nameRegex = /^[a-zA-Z\s]+$/;
+                    if (firstName && !nameRegex.test(firstName)) {
+                      errors.firstName =
+                        "First Name must contain only letters and spaces, no numbers allowed";
                     }
-                  });
-
-                  if (Object.keys(errors).length > 0) {
-                    setFieldErrors(errors);
-                    return;
-                  }
-
-                  try {
-                    setLoading(true);
-
-                    const formData = new FormData();
-
-                    formData.append("organizationId", userOrgId);
-                    formData.append("firstName", newCandidate.firstName);
-                    formData.append("middleName", newCandidate.middleName);
-                    formData.append("lastName", newCandidate.lastName);
-                    formData.append("fatherName", newCandidate.fatherName);
-                    formData.append("dob", newCandidate.dob);
-                    formData.append("gender", newCandidate.gender);
-                    formData.append("phone", newCandidate.phone);
-                    formData.append("email", newCandidate.email);
-                    formData.append(
-                      "aadhaarNumber",
-                      newCandidate.aadhaarNumber
-                    );
-                    formData.append("panNumber", newCandidate.panNumber);
-                    formData.append("uanNumber", newCandidate.uanNumber);
-                    formData.append(
-                      "passportNumber",
-                      newCandidate.passportNumber
-                    );
-                    formData.append(
-                      "bankAccountNumber",
-                      newCandidate.bankAccountNumber
-                    );
-                    formData.append("district", newCandidate.district);
-                    formData.append("state", newCandidate.state);
-                    formData.append("pincode", newCandidate.pincode);
-                    formData.append("address", newCandidate.address);
-
-                    // Optional Resume
-                    if (newCandidate.resume) {
-                      formData.append("resume", newCandidate.resume);
+                    if (middleName && !nameRegex.test(middleName)) {
+                      errors.middleName =
+                        "Middle Name must contain only letters and spaces, no numbers allowed";
+                    }
+                    if (lastName && !nameRegex.test(lastName)) {
+                      errors.lastName =
+                        "Last Name must contain only letters and spaces, no numbers allowed";
+                    }
+                    if (fatherName && !nameRegex.test(fatherName)) {
+                      errors.fatherName =
+                        "Father's Name must contain only letters and spaces, no numbers allowed";
                     }
 
-                    const res = await fetch(`/api/proxy/secure/addCandidate`, {
-                      method: "POST",
-                      credentials: "include",
-                      body: formData, // 👈 IMPORTANT: No headers
-                    });
+                    // Email validation
+                    const emailRegex =
+                      /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                    if (email && !emailRegex.test(email)) {
+                      errors.email =
+                        "Invalid email format. Please enter a valid email address (e.g., user@example.com)";
+                    } else if (
+                      email &&
+                      (!email.includes("@") ||
+                        !email.split("@")[1]?.includes("."))
+                    ) {
+                      errors.email =
+                        "Email must include @ symbol and a valid domain (e.g., user@gmail.com)";
+                    }
 
-                    const data = await res.json();
+                    // Aadhaar validation
+                    if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
+                      errors.aadhaarNumber =
+                        "Invalid Aadhaar number. Must be exactly 12 digits";
+                    }
 
-                    if (!res.ok)
-                      throw new Error(
-                        data.detail || data.message || "Failed to add"
+                    // PAN validation
+                    if (
+                      panNumber &&
+                      !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)
+                    ) {
+                      errors.panNumber =
+                        "Invalid PAN format. Must be in format: ABCDE1234F (5 letters, 4 digits, 1 letter)";
+                    }
+
+                    // Phone validation
+                    if (phone && !/^\d{10}$/.test(phone)) {
+                      errors.phone =
+                        "Invalid phone number. Must be exactly 10 digits";
+                    }
+
+                    // District and State validation - only letters and spaces
+                    if (district && !nameRegex.test(district)) {
+                      errors.district =
+                        "District must contain only letters and spaces, no numbers or special characters allowed";
+                    }
+
+                    if (state && !nameRegex.test(state)) {
+                      errors.state =
+                        "State must contain only letters and spaces, no numbers or special characters allowed";
+                    }
+
+                    // Pincode validation
+                    if (pincode && !/^[1-9][0-9]{5}$/.test(pincode)) {
+                      errors.pincode =
+                        "Invalid Pincode. Must be exactly 6 digits and cannot start with 0";
+                    }
+
+                    // Optional field validations
+                    if (
+                      passportNumber &&
+                      !/^[A-PR-WY][1-9]\d{6}$/.test(passportNumber)
+                    ) {
+                      errors.passportNumber =
+                        "Invalid Passport Number. Must be in format: A1234567 (1 letter followed by 7 digits)";
+                    }
+
+                    if (uanNumber && !/^[0-9]{10,12}$/.test(uanNumber)) {
+                      errors.uanNumber =
+                        "Invalid UAN Number. Must be 10-12 digits";
+                    }
+
+                    if (
+                      bankAccountNumber &&
+                      !/^[0-9]{9,18}$/.test(bankAccountNumber)
+                    ) {
+                      errors.bankAccountNumber =
+                        "Invalid Bank Account Number. Must be 9-18 digits";
+                    }
+
+                    if (Object.keys(errors).length > 0) {
+                      setFieldErrors(errors);
+                      return;
+                    }
+
+                    try {
+                      setLoading(true);
+
+                      const formData = new FormData();
+
+                      formData.append("organizationId", userOrgId);
+                      formData.append("firstName", newCandidate.firstName);
+                      formData.append("middleName", newCandidate.middleName);
+                      formData.append("lastName", newCandidate.lastName);
+                      formData.append("fatherName", newCandidate.fatherName);
+                      formData.append("dob", newCandidate.dob);
+                      formData.append("gender", newCandidate.gender);
+                      formData.append("phone", newCandidate.phone);
+                      formData.append("email", newCandidate.email);
+                      formData.append(
+                        "aadhaarNumber",
+                        newCandidate.aadhaarNumber
+                      );
+                      formData.append("panNumber", newCandidate.panNumber);
+                      formData.append("uanNumber", newCandidate.uanNumber);
+                      formData.append(
+                        "passportNumber",
+                        newCandidate.passportNumber
+                      );
+                      formData.append(
+                        "bankAccountNumber",
+                        newCandidate.bankAccountNumber
+                      );
+                      formData.append("district", newCandidate.district);
+                      formData.append("state", newCandidate.state);
+                      formData.append("pincode", newCandidate.pincode);
+                      formData.append("address", newCandidate.address);
+
+                      // Optional Resume
+                      if (newCandidate.resume) {
+                        formData.append("resume", newCandidate.resume);
+                      }
+
+                      const res = await fetch(
+                        `/api/proxy/secure/addCandidate`,
+                        {
+                          method: "POST",
+                          credentials: "include",
+                          body: formData, // 👈 IMPORTANT: No headers
+                        }
                       );
 
-                    showModal({
-                      title: "Success",
-                      message: "Candidate added successfully.",
-                      type: "success",
-                    });
+                      const data = await res.json();
 
-                    setShowAddModal(false);
-                    setNewCandidate(emptyCandidate);
-                    setFieldErrors({});
+                      if (!res.ok)
+                        throw new Error(
+                          data.detail || data.message || "Failed to add"
+                        );
 
-                    fetchCandidates(userOrgId);
-                  } catch (err) {
-                    showModal({
-                      title: "Error",
-                      message: err.message,
-                      type: "error",
-                    });
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center gap-2"
-              >
-                <PlusCircle size={16} />
-                Add Candidate
-              </button>
-            </div>
+                      showModal({
+                        title: "Success",
+                        message: "Candidate added successfully.",
+                        type: "success",
+                      });
+
+                      setShowAddModal(false);
+                      setNewCandidate(emptyCandidate);
+                      setFieldErrors({});
+
+                      fetchCandidates(userOrgId);
+                    } catch (err) {
+                      showModal({
+                        title: "Error",
+                        message: err.message,
+                        type: "error",
+                      });
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center gap-2"
+                >
+                  <PlusCircle size={16} />
+                  Add Candidate
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -25,7 +25,7 @@ const AVAILABLE_SERVICES = [
   "pan_aadhaar_seeding",
   "pan_verification",
   "employment_history",
-  "aadhaar_to_uan",
+  "verify_pan_to_uan",
   "credit_report",
   "court_record",
 
@@ -203,22 +203,24 @@ export default function OrganizationsPage() {
 
   return (
     <div className="text-gray-900 bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 overflow-x-hidden">
-        {/* ----------------------------------------------------
+      {/* ----------------------------------------------------
            ENHANCED MODAL WITH ANIMATIONS
         ---------------------------------------------------- */}
-        {modal.show && (
+      {modal.show && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999] animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-[90%] text-center transform animate-in slide-in-from-bottom-4 duration-300">
-            <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
-              modal.type === "error" ? "bg-red-100" : "bg-green-100"
-            }`}>
+            <div
+              className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                modal.type === "error" ? "bg-red-100" : "bg-green-100"
+              }`}
+            >
               {modal.type === "error" ? (
-                <AlertCircle
-                  size={40}
-                  className="text-red-600 animate-pulse"
-                />
+                <AlertCircle size={40} className="text-red-600 animate-pulse" />
               ) : (
-                <CheckCircle size={40} className="text-green-600 animate-bounce" />
+                <CheckCircle
+                  size={40}
+                  className="text-green-600 animate-bounce"
+                />
               )}
             </div>
 
@@ -256,7 +258,9 @@ export default function OrganizationsPage() {
             <Building2 size={24} className="text-[#ff004f]" />
             Organizations
           </h1>
-          <p className="text-gray-600 text-sm mt-1">Manage registered organizations</p>
+          <p className="text-gray-600 text-sm mt-1">
+            Manage registered organizations
+          </p>
         </div>
 
         <button
@@ -281,9 +285,11 @@ export default function OrganizationsPage() {
           <div className="p-2 bg-gradient-to-br from-[#ff004f]/10 to-[#ff3366]/10 rounded-lg">
             <Search size={20} className="text-[#ff004f]" />
           </div>
-          <h3 className="text-base sm:text-lg font-bold text-gray-800">Search & Filter</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-800">
+            Search & Filter
+          </h3>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-end">
           <div className="relative w-full flex-1">
             <input
@@ -311,7 +317,9 @@ export default function OrganizationsPage() {
             ) : (
               <SortDesc size={18} className="text-[#ff004f]" />
             )}
-            <span className="text-sm font-semibold">{sortAsc ? "A → Z" : "Z → A"}</span>
+            <span className="text-sm font-semibold">
+              {sortAsc ? "A → Z" : "Z → A"}
+            </span>
           </button>
         </div>
       </div>
@@ -329,120 +337,123 @@ export default function OrganizationsPage() {
           <div className="hidden md:block bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[900px]">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                <tr className="text-sm text-gray-700">
-                  {[
-                    { label: "Logo", icon: "🖼️" },
-                    { label: "Organization", icon: "🏢" },
-                    { label: "SPOC", icon: "👤" },
-                    { label: "Email", icon: "✉️" },
-                    { label: "Domain", icon: "🌐" },
-                    { label: "Status", icon: "✅" },
-                    { label: "Actions", icon: "⚙️" },
-                  ].map((header) => (
-                    <th
-                      key={header.label}
-                      className="p-4 text-left font-bold tracking-wide"
-                    >
-                      {header.icon} {header.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr className="text-sm text-gray-700">
+                    {[
+                      { label: "Logo", icon: "🖼️" },
+                      { label: "Organization", icon: "🏢" },
+                      { label: "SPOC", icon: "👤" },
+                      { label: "Email", icon: "✉️" },
+                      { label: "Domain", icon: "🌐" },
+                      { label: "Status", icon: "✅" },
+                      { label: "Actions", icon: "⚙️" },
+                    ].map((header) => (
+                      <th
+                        key={header.label}
+                        className="p-4 text-left font-bold tracking-wide"
+                      >
+                        {header.icon} {header.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
 
-              <tbody>
-                {filteredOrgs.length ? (
-                  filteredOrgs.map((org, i) => (
-                    <tr
-                      key={org._id}
-                      className={`transition-all group hover:bg-gradient-to-r hover:from-[#fff5f8] hover:to-[#fff0f5] hover:shadow-md ${
-                        i % 2 === 0 ? "bg-white" : "bg-gray-50/30"
-                      } text-gray-800`}
-                    >
-                      <td className="p-3">
-                        <img
-                          src={getLogoSrc(org.logoUrl)}
-                          alt="logo"
-                          className="w-10 h-10 rounded-full border object-cover"
-                        />
-                      </td>
+                <tbody>
+                  {filteredOrgs.length ? (
+                    filteredOrgs.map((org, i) => (
+                      <tr
+                        key={org._id}
+                        className={`transition-all group hover:bg-gradient-to-r hover:from-[#fff5f8] hover:to-[#fff0f5] hover:shadow-md ${
+                          i % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+                        } text-gray-800`}
+                      >
+                        <td className="p-3">
+                          <img
+                            src={getLogoSrc(org.logoUrl)}
+                            alt="logo"
+                            className="w-10 h-10 rounded-full border object-cover"
+                          />
+                        </td>
 
-                      <td className="p-3 font-semibold truncate max-w-[200px]">
-                        {org.organizationName}
-                      </td>
+                        <td className="p-3 font-semibold truncate max-w-[200px]">
+                          {org.organizationName}
+                        </td>
 
-                      <td className="p-3">{org.spocName || "—"}</td>
+                        <td className="p-3">{org.spocName || "—"}</td>
 
-                      <td className="p-3 truncate max-w-[180px]">
-                        {org.email}
-                      </td>
+                        <td className="p-3 truncate max-w-[180px]">
+                          {org.email}
+                        </td>
 
-                      <td className="p-3">{org.subDomain}</td>
+                        <td className="p-3">{org.subDomain}</td>
 
-                      {/* STATUS TOGGLE RESTORED */}
-                      <td className="p-3">
-                        <button
-                          onClick={() => handleStatusToggle(org)}
-                          className="flex items-center gap-2"
-                        >
-                          {org.isActive ? (
-                            <>
-                              <ToggleRight
-                                size={28}
-                                className="text-green-600"
-                              />
-                              <span className="text-green-700 font-medium">
-                                Active
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <ToggleLeft size={28} className="text-red-500" />
-                              <span className="text-red-600 font-medium">
-                                Inactive
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      </td>
+                        {/* STATUS TOGGLE RESTORED */}
+                        <td className="p-3">
+                          <button
+                            onClick={() => handleStatusToggle(org)}
+                            className="flex items-center gap-2"
+                          >
+                            {org.isActive ? (
+                              <>
+                                <ToggleRight
+                                  size={28}
+                                  className="text-green-600"
+                                />
+                                <span className="text-green-700 font-medium">
+                                  Active
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <ToggleLeft
+                                  size={28}
+                                  className="text-red-500"
+                                />
+                                <span className="text-red-600 font-medium">
+                                  Inactive
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        </td>
 
-                      <td className="p-3 flex items-center gap-4">
-                        <button
-                          onClick={() =>
-                            setDrawer({ show: true, org, mode: "view" })
-                          }
-                          className="text-gray-700 hover:text-[#ff004f] transition"
-                        >
-                          <Info size={18} />
-                        </button>
+                        <td className="p-3 flex items-center gap-4">
+                          <button
+                            onClick={() =>
+                              setDrawer({ show: true, org, mode: "view" })
+                            }
+                            className="text-gray-700 hover:text-[#ff004f] transition"
+                          >
+                            <Info size={18} />
+                          </button>
 
-                        <button
-                          onClick={() =>
-                            setDrawer({
-                              show: true,
-                              org,
-                              mode: "edit",
-                            })
-                          }
-                          className="text-[#ff004f] hover:text-[#d90044] transition"
-                        >
-                          <Edit2 size={18} />
-                        </button>
+                          <button
+                            onClick={() =>
+                              setDrawer({
+                                show: true,
+                                org,
+                                mode: "edit",
+                              })
+                            }
+                            className="text-[#ff004f] hover:text-[#d90044] transition"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="text-center p-4 text-gray-500 italic"
+                      >
+                        No matching organizations found
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="text-center p-4 text-gray-500 italic"
-                    >
-                      No matching organizations found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -468,11 +479,13 @@ export default function OrganizationsPage() {
                         <p className="font-bold text-base sm:text-lg text-gray-900 truncate">
                           {org.organizationName}
                         </p>
-                        <p className="text-xs sm:text-sm text-gray-600 truncate">{org.email}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">
+                          {org.email}
+                        </p>
                       </div>
                     </div>
 
-                    <button 
+                    <button
                       onClick={() => handleStatusToggle(org)}
                       className="flex-shrink-0"
                     >
@@ -490,24 +503,38 @@ export default function OrganizationsPage() {
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-gray-700 min-w-[70px]">Domain:</span>
-                      <span className="text-gray-600 truncate">{org.subDomain || "—"}</span>
+                      <span className="font-semibold text-gray-700 min-w-[70px]">
+                        Domain:
+                      </span>
+                      <span className="text-gray-600 truncate">
+                        {org.subDomain || "—"}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-gray-700 min-w-[70px]">SPOC:</span>
-                      <span className="text-gray-600 truncate">{org.spocName || "—"}</span>
+                      <span className="font-semibold text-gray-700 min-w-[70px]">
+                        SPOC:
+                      </span>
+                      <span className="text-gray-600 truncate">
+                        {org.spocName || "—"}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-gray-700 min-w-[70px]">Services:</span>
-                      <span className="text-gray-600">{org.services?.length || 0}</span>
+                      <span className="font-semibold text-gray-700 min-w-[70px]">
+                        Services:
+                      </span>
+                      <span className="text-gray-600">
+                        {org.services?.length || 0}
+                      </span>
                     </div>
                   </div>
 
                   <div className="flex justify-end gap-3 pt-3 border-t border-gray-200">
                     <button
-                      onClick={() => setDrawer({ show: true, org, mode: "view" })}
+                      onClick={() =>
+                        setDrawer({ show: true, org, mode: "view" })
+                      }
                       className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium"
                     >
                       <Info size={16} />
@@ -515,7 +542,9 @@ export default function OrganizationsPage() {
                     </button>
 
                     <button
-                      onClick={() => setDrawer({ show: true, org, mode: "edit" })}
+                      onClick={() =>
+                        setDrawer({ show: true, org, mode: "edit" })
+                      }
                       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#ff004f] to-[#ff3366] text-white rounded-lg hover:shadow-lg transition-all font-medium"
                     >
                       <Edit2 size={16} />
@@ -534,19 +563,19 @@ export default function OrganizationsPage() {
         </>
       )}
 
-        {/* Drawer Component */}
-        {drawer.show && (
-          <OrganizationDrawer
-            drawer={drawer}
-            setDrawer={setDrawer}
-            showError={showError}
-            showSuccess={showSuccess}
-            fetchOrganizations={fetchOrganizations}
-            actionLoading={actionLoading}
-            setActionLoading={setActionLoading}
-          />
-        )}
-      </div>
+      {/* Drawer Component */}
+      {drawer.show && (
+        <OrganizationDrawer
+          drawer={drawer}
+          setDrawer={setDrawer}
+          showError={showError}
+          showSuccess={showSuccess}
+          fetchOrganizations={fetchOrganizations}
+          actionLoading={actionLoading}
+          setActionLoading={setActionLoading}
+        />
+      )}
+    </div>
   );
 }
 
@@ -578,7 +607,7 @@ function OrganizationDrawer({
     "pan_aadhaar_seeding",
     "pan_verification",
     "employment_history",
-    "aadhaar_to_uan",
+    "verify_pan_to_uan",
     "credit_report",
     "court_record",
     "address_verification",
@@ -594,25 +623,63 @@ function OrganizationDrawer({
   );
 
   /* ----------------------------------------
-      Validation Rules (unchanged)
+      Enhanced Validation Rules
   ---------------------------------------- */
   const validators = {
-    organizationName: (v) =>
-      v.trim().length < 3 ? "Must be at least 3 characters" : "",
+    organizationName: (v) => {
+      if (!v || v.trim().length < 3) return "Must be at least 3 characters";
+      // Must start with a letter
+      if (!/^[A-Za-z]/.test(v.trim()))
+        return "Organization name must start with a letter";
+      // Only letters, numbers, spaces, and basic punctuation allowed
+      if (!/^[A-Za-z0-9\s.,&()-]+$/.test(v))
+        return "Only letters, numbers, spaces, and basic punctuation (.,&()-) allowed";
+      return "";
+    },
 
-    spocName: (v) =>
-      v && !/^[A-Za-z\s]+$/.test(v) ? "Only alphabets allowed" : "",
+    spocName: (v) => {
+      if (!v || v.trim().length === 0) return "SPOC name is required";
+      // Only letters and spaces allowed, no numbers or special characters
+      if (!/^[A-Za-z\s]+$/.test(v))
+        return "SPOC name must contain only letters and spaces, no numbers or special characters";
+      return "";
+    },
 
-    email: (v) =>
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "Invalid email" : "",
+    email: (v) => {
+      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(v))
+        return "Invalid email format. Please enter a valid email address (e.g., user@example.com)";
+      if (!v.includes("@") || !v.split("@")[1]?.includes("."))
+        return "Email must include @ symbol and a valid domain";
+      return "";
+    },
 
     gstNumber: (v) =>
       v && !/^[A-Za-z0-9]{4,15}$/.test(v)
         ? "GST must be 4-15 alphanumeric characters"
         : "",
 
-    subDomain: (v) =>
-      v && !/^[A-Za-z0-9.-]+$/.test(v) ? "Invalid domain" : "",
+    subDomain: (v) => {
+      if (!v || v.trim().length === 0) return "";
+      // Must start with a letter or number
+      if (!/^[A-Za-z0-9]/.test(v))
+        return "Subdomain must start with a letter or number";
+      // Only letters, numbers, hyphens, and dots allowed
+      if (!/^[A-Za-z0-9.-]+$/.test(v))
+        return "Subdomain can only contain letters, numbers, hyphens, and dots";
+      return "";
+    },
+
+    mainDomain: (v) => {
+      if (!v || v.trim().length === 0) return "";
+      // Must start with a letter or number
+      if (!/^[A-Za-z0-9]/.test(v))
+        return "Main domain must start with a letter or number";
+      // Only letters, numbers, hyphens, and dots allowed
+      if (!/^[A-Za-z0-9.-]+$/.test(v))
+        return "Main domain can only contain letters, numbers, hyphens, and dots";
+      return "";
+    },
   };
 
   const validatePrice = (price) => {
@@ -643,6 +710,16 @@ function OrganizationDrawer({
       if (msg) hasError = true;
       newErrors[`price_${i}`] = msg;
     });
+
+    // Validate totalAllowed
+    const totalAllowed = org.credentials?.totalAllowed;
+    if (!totalAllowed || totalAllowed < 1) {
+      newErrors.totalAllowed = "At least 1 user is required";
+      hasError = true;
+    } else if (totalAllowed > 20) {
+      newErrors.totalAllowed = "Maximum 20 users allowed";
+      hasError = true;
+    }
 
     setErrors(newErrors);
     return !hasError;
@@ -770,7 +847,9 @@ function OrganizationDrawer({
                   ? "✏️ Edit Organization"
                   : "➕ Add Organization"}
               </h2>
-              <p className="text-white/80 text-sm">Manage organization details</p>
+              <p className="text-white/80 text-sm">
+                Manage organization details
+              </p>
             </div>
           </div>
           <button
@@ -780,172 +859,234 @@ function OrganizationDrawer({
             <X size={24} />
           </button>
         </div>
-        
+
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6" style={{ maxHeight: "calc(100vh - 180px)" }}>
-
-        {/* Logo */}
-        <div className="flex justify-center mb-4">
-          <img
-            src={org.logoUrl || "/default-logo.png"}
-            className="w-24 h-24 rounded-full border object-cover shadow"
-          />
-        </div>
-
-        {!isView && (
-          <div className="mb-5">
-            <label className="block font-semibold text-gray-700 mb-1">
-              Upload Logo
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setLogoFile(e.target.files[0])}
-              className="border p-2 rounded-lg w-full"
+        <div
+          className="flex-1 overflow-y-auto p-6"
+          style={{ maxHeight: "calc(100vh - 180px)" }}
+        >
+          {/* Logo */}
+          <div className="flex justify-center mb-4">
+            <img
+              src={org.logoUrl || "/default-logo.png"}
+              className="w-24 h-24 rounded-full border object-cover shadow"
             />
           </div>
-        )}
 
-        {/* Inputs */}
-        {[
-          ["Organization Name", "organizationName"],
-          ["SPOC Name", "spocName"],
-          ["Email", "email"],
-          ["Sub Domain", "subDomain"],
-          ["Main Domain", "mainDomain"],
-          ["GST Number", "gstNumber"],
-        ].map(([label, key]) => (
-          <div key={key} className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">
-              {label}
-            </label>
+          {!isView && (
+            <div className="mb-5">
+              <label className="block font-semibold text-gray-700 mb-1">
+                Upload Logo
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files[0])}
+                className="border p-2 rounded-lg w-full"
+              />
+            </div>
+          )}
 
-            <input
-              disabled={isView}
-              value={org[key] || ""}
-              onChange={(e) => {
-                let value = e.target.value;
-                setOrg((prev) => ({ ...prev, [key]: value }));
-                validateField(key, value);
-              }}
-              className={`border rounded-lg p-2 w-full ${
-                errors[key]
-                  ? "border-red-500 bg-red-50"
-                  : "focus:ring-2 focus:ring-[#ff004f]"
-              } ${isView ? "bg-gray-100" : ""}`}
-            />
+          {/* Inputs */}
+          {[
+            ["Organization Name", "organizationName"],
+            ["SPOC Name", "spocName"],
+            ["Email", "email"],
+            ["Sub Domain", "subDomain"],
+            ["Main Domain", "mainDomain"],
+            ["GST Number", "gstNumber"],
+          ].map(([label, key]) => (
+            <div key={key} className="mb-4">
+              <label className="block text-gray-700 font-medium mb-1">
+                {label}
+              </label>
 
-            {errors[key] && (
-              <p className="text-red-500 text-sm mt-1">{errors[key]}</p>
-            )}
-          </div>
-        ))}
+              <input
+                disabled={isView}
+                value={org[key] || ""}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  setOrg((prev) => ({ ...prev, [key]: value }));
+                  validateField(key, value);
+                }}
+                className={`border rounded-lg p-2 w-full ${
+                  errors[key]
+                    ? "border-red-500 bg-red-50"
+                    : "focus:ring-2 focus:ring-[#ff004f]"
+                } ${isView ? "bg-gray-100" : ""}`}
+              />
 
-        {/* Services */}
-        <div className="mt-4 border-t pt-4">
-          <h3 className="font-semibold mb-2">Offered Services</h3>
-
-          {org.services.map((s, i) => (
-            <div key={i} className="flex items-center gap-3 mb-3">
-              {!isView && (
-                <input
-                  type="checkbox"
-                  checked
-                  onChange={() => toggleService(s.serviceName)}
-                  className="accent-[#ff004f]"
-                />
-              )}
-
-              <span className="capitalize flex-1">{s.serviceName}</span>
-
-              {!isView ? (
-                <div className="flex flex-col">
-                  <input
-                    type="number"
-                    value={s.price}
-                    placeholder="Price"
-                    onChange={(e) => {
-                      const updated = [...org.services];
-                      updated[i].price = e.target.value;
-                      setOrg((prev) => ({ ...prev, services: updated }));
-                      const msg = validatePrice(e.target.value);
-                      setErrors((prev) => ({
-                        ...prev,
-                        [`price_${i}`]: msg,
-                      }));
-                    }}
-                    className={`border p-1 rounded w-24 ${
-                      errors[`price_${i}`] ? "border-red-500 bg-red-50" : ""
-                    }`}
-                  />
-                  {errors[`price_${i}`] && (
-                    <p className="text-red-500 text-xs">
-                      {errors[`price_${i}`]}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <span>₹{s.price}</span>
+              {errors[key] && (
+                <p className="text-red-500 text-sm mt-1">{errors[key]}</p>
               )}
             </div>
           ))}
 
-          {!isView && (
-            <>
-              <h3 className="font-semibold mt-4 mb-2">Available Services</h3>
-              {unusedServices.map((s) => (
-                <label key={s} className="flex items-center gap-2 mb-1">
+          {/* Services */}
+          <div className="mt-4 border-t pt-4">
+            <h3 className="font-semibold mb-2">Offered Services</h3>
+
+            {org.services.map((s, i) => (
+              <div key={i} className="flex items-center gap-3 mb-3">
+                {!isView && (
                   <input
                     type="checkbox"
-                    onChange={() => toggleService(s)}
+                    checked
+                    onChange={() => toggleService(s.serviceName)}
                     className="accent-[#ff004f]"
                   />
-                  <span className="capitalize">{s}</span>
+                )}
+
+                <span className="capitalize flex-1">{s.serviceName}</span>
+
+                {!isView ? (
+                  <div className="flex flex-col">
+                    <input
+                      type="number"
+                      value={s.price}
+                      placeholder="Price"
+                      onChange={(e) => {
+                        const updated = [...org.services];
+                        updated[i].price = e.target.value;
+                        setOrg((prev) => ({ ...prev, services: updated }));
+                        const msg = validatePrice(e.target.value);
+                        setErrors((prev) => ({
+                          ...prev,
+                          [`price_${i}`]: msg,
+                        }));
+                      }}
+                      className={`border p-1 rounded w-24 ${
+                        errors[`price_${i}`] ? "border-red-500 bg-red-50" : ""
+                      }`}
+                    />
+                    {errors[`price_${i}`] && (
+                      <p className="text-red-500 text-xs">
+                        {errors[`price_${i}`]}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <span>₹{s.price}</span>
+                )}
+              </div>
+            ))}
+
+            {!isView && (
+              <>
+                <h3 className="font-semibold mt-4 mb-2">Available Services</h3>
+                {unusedServices.map((s) => (
+                  <label key={s} className="flex items-center gap-2 mb-1">
+                    <input
+                      type="checkbox"
+                      onChange={() => toggleService(s)}
+                      className="accent-[#ff004f]"
+                    />
+                    <span className="capitalize">{s}</span>
+                  </label>
+                ))}
+              </>
+            )}
+          </div>
+
+          {/* Credentials */}
+          <div className="border-t mt-5 pt-4">
+            <h3 className="font-semibold mb-2">Credentials (User Limits)</h3>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-gray-700 font-medium mb-1">
+                  Total Allowed Users <span className="text-red-500">*</span>
                 </label>
-              ))}
-            </>
-          )}
-        </div>
+                <input
+                  disabled={isView}
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={org.credentials.totalAllowed}
+                  onChange={(e) => {
+                    let value = e.target.value;
 
-        {/* Credentials */}
-        <div className="border-t mt-5 pt-4">
-          <h3 className="font-semibold mb-2">Credentials</h3>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label>Total Allowed</label>
-              <input
-                disabled={isView}
-                type="number"
-                value={org.credentials.totalAllowed}
-                onChange={(e) =>
-                  setOrg((prev) => ({
-                    ...prev,
-                    credentials: {
-                      ...prev.credentials,
-                      totalAllowed: Number(e.target.value),
-                    },
-                  }))
-                }
-                className={`border p-2 rounded-lg w-full ${
-                  isView ? "bg-gray-100" : ""
-                }`}
-              />
-            </div>
+                    // Don't allow empty or 0
+                    if (value === "" || value === "0") {
+                      setErrors((prev) => ({
+                        ...prev,
+                        totalAllowed: "At least 1 user is required",
+                      }));
+                      setOrg((prev) => ({
+                        ...prev,
+                        credentials: {
+                          ...prev.credentials,
+                          totalAllowed: value === "" ? "" : 0,
+                        },
+                      }));
+                      return;
+                    }
 
-            <div className="flex-1">
-              <label>Used</label>
-              <input
-                disabled
-                value={org.credentials.used}
-                className="border p-2 rounded-lg w-full bg-gray-100"
-              />
+                    const numValue = Number(value);
+
+                    // Validate range
+                    if (numValue < 1) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        totalAllowed: "Minimum 1 user required",
+                      }));
+                      return;
+                    }
+
+                    if (numValue > 20) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        totalAllowed: "Maximum 20 users allowed",
+                      }));
+                      return;
+                    }
+
+                    // Clear error if valid
+                    setErrors((prev) => ({ ...prev, totalAllowed: "" }));
+
+                    setOrg((prev) => ({
+                      ...prev,
+                      credentials: {
+                        ...prev.credentials,
+                        totalAllowed: numValue,
+                      },
+                    }));
+                  }}
+                  className={`border rounded-lg p-2 w-full ${
+                    errors.totalAllowed
+                      ? "border-red-500 bg-red-50"
+                      : "focus:ring-2 focus:ring-[#ff004f]"
+                  } ${isView ? "bg-gray-100" : ""}`}
+                  placeholder="Enter 1-20"
+                />
+                {errors.totalAllowed && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.totalAllowed}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Enter number of users (1-20)
+                </p>
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-gray-700 font-medium mb-1">
+                  Used
+                </label>
+                <input
+                  disabled
+                  value={org.credentials.used}
+                  className="border p-2 rounded-lg w-full bg-gray-100"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  📊 Currently used slots
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* ACTIONS - FIXED STICKY FOOTER */}
         </div>
 
-        {/* ACTIONS - FIXED STICKY FOOTER */}
-        </div>
-        
         {/* Sticky Action Footer */}
         <div className="flex-shrink-0 bg-white border-t-2 border-gray-200 p-4 shadow-lg">
           <div className="flex gap-3">

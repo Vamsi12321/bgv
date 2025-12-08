@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   Loader2,
@@ -206,6 +207,8 @@ function CertificateBase({ id, candidate, orgName, ai }) {
    MAIN PAGE
 ------------------------------------------------------------- */
 export default function OrgAICVVerificationPage() {
+  const router = useRouter();
+  
   // State management context
   const {
     aiCvVerificationState = {},
@@ -226,6 +229,7 @@ export default function OrgAICVVerificationPage() {
   const [loadingValidation, setLoadingValidation] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
   const [submittingFinal, setSubmittingFinal] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   
   // UI states
   const [expanded, setExpanded] = useState({});
@@ -463,6 +467,13 @@ export default function OrgAICVVerificationPage() {
         isOpen: true,
         message: `Decision Submitted: ${status}`,
       });
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        setNavigating(true);
+        router.push("/org/bgv-requests");
+      }, 1500);
+      
     } catch (error) {
       setErrorModal({
         isOpen: true,
@@ -534,6 +545,17 @@ export default function OrgAICVVerificationPage() {
         details={errorModal.details}
       />
 
+      {/* NAVIGATING OVERLAY */}
+      {navigating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+            <Loader2 className="animate-spin text-[#ff004f]" size={48} />
+            <p className="text-lg font-semibold text-gray-900">Please wait...</p>
+            <p className="text-sm text-gray-600">Redirecting to BGV Requests</p>
+          </div>
+        </div>
+      )}
+
       {/* Hidden PDF element */}
       {analysis && selectedCandidate && (
         <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
@@ -578,7 +600,7 @@ export default function OrgAICVVerificationPage() {
                     Candidate <span className="text-red-500">*</span>
                   </label>
                   <select
-                    className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-[#ff004f] focus:outline-none transition text-gray-900"
+                    className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-[#ff004f] focus:outline-none transition text-black bg-white"
                     value={selectedCandidate?._id || ""}
                     onChange={(e) => {
                       const cand = candidates.find((c) => c._id === e.target.value);
@@ -592,9 +614,9 @@ export default function OrgAICVVerificationPage() {
                     }}
                     disabled={loadingCandidates}
                   >
-                    <option value="">-- Select Candidate --</option>
+                    <option value="" className="text-gray-500">-- Select Candidate --</option>
                     {candidates.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c._id} value={c._id} className="text-black">
                         {c.firstName} {c.lastName}
                       </option>
                     ))}

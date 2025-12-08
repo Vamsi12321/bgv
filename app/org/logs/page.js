@@ -21,7 +21,7 @@ import { useOrgState } from "../../context/OrgStateContext";
 /* CONFIG */
 
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
 
 export default function OrgLogsPage() {
@@ -38,15 +38,13 @@ export default function OrgLogsPage() {
   const [orgId, setOrgId] = useState("");
   const [totalCount, setTotalCount] = useState(null);
 
-  const [page, setPage] = useState(logsPagination.currentPage);
-  const [limit, setLimit] = useState(logsPagination.pageSize);
+  const [page, setPage] = useState(logsPagination.currentPage || 1);
+  const [limit, setLimit] = useState(logsPagination.pageSize || DEFAULT_PAGE_SIZE);
   const [loadingChunk, setLoadingChunk] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(false);
   const [error, setError] = useState("");
 
   const loadedPagesRef = useRef(new Set());
-  const sentinelRef = useRef(null);
-
   const router = useRouter();
 
   /* Drawer State */
@@ -145,28 +143,8 @@ export default function OrgLogsPage() {
     }
   }, [orgId, limit]);
 
-  /* INFINITE SCROLL */
-  useEffect(() => {
-    const target = sentinelRef.current;
-    if (!target) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0].isIntersecting || loadingChunk) return;
-
-        const nextPage = loadedPagesRef.current.size + 1;
-
-        if (totalCount !== null && allLogs.length >= totalCount) return;
-
-        fetchPage(nextPage);
-      },
-      { rootMargin: "200px" }
-    );
-
-    observer.observe(target);
-
-    return () => observer.disconnect();
-  }, [allLogs, loadingChunk]);
+  /* INFINITE SCROLL - DISABLED (using pagination instead) */
+  // Removed to prevent continuous loading with pagination
 
   /* FILTER LOGS */
   const filteredLogs = allLogs.filter((log) => {
@@ -265,28 +243,35 @@ export default function OrgLogsPage() {
     <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-gray-900">
       {/* HEADER */}
       <div className="max-w-[1200px] mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileBarChart size={24} /> Organization Logs
-          </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <FileBarChart size={24} className="text-[#ff004f]" />
+              Activity Logs
+            </h1>
+            <p className="text-gray-600 text-sm mt-1">Track system activities and user actions</p>
+          </div>
 
           <button
             onClick={downloadVisibleCSV}
-            className="flex items-center gap-2 bg-[#ff004f] text-white px-4 py-2 rounded-lg shadow hover:bg-[#e60047] transition"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold w-full sm:w-auto shadow transition-all hover:shadow-lg bg-[#ff004f] hover:bg-[#e60047]"
           >
             <Download size={18} />
-            Download Page
+            Download
           </button>
         </div>
 
-        {/* Enhanced Filter Panel */}
+        {/* SUPERB FILTER PANEL */}
         <div className="bg-gradient-to-br from-white via-gray-50 to-white rounded-2xl shadow-xl p-6 mb-8 border-2 border-gray-100">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-gradient-to-br from-[#ff004f]/10 to-[#ff3366]/10 rounded-lg">
-              <FileBarChart size={20} className="text-[#ff004f]" />
+              <svg className="w-5 h-5 text-[#ff004f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
             </div>
             <h3 className="text-lg font-bold text-gray-800">Filter Logs</h3>
           </div>
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
             {/* ROLE */}
             <div>
@@ -298,12 +283,11 @@ export default function OrgLogsPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, role: e.target.value })
                 }
-                className="border border-gray-300 rounded-md w-full p-2 text-sm"
+                className="border border-gray-300 rounded-md w-full p-2 text-sm focus:ring-2 focus:ring-[#ff004f] transition md:p-2.5 text-[13px] md:text-sm"
               >
                 <option value="">All Roles</option>
-                <option value="ORG_ADMIN">ORG_ADMIN</option>
-                <option value="ORG_HR">ORG_HR</option>
-                <option value="HELPER">HELPER</option>
+                <option value="ORG_HR">Org HR</option>
+                <option value="HELPER">Helper</option>
               </select>
             </div>
 
@@ -361,8 +345,8 @@ export default function OrgLogsPage() {
 
         {/* TABLE WRAPPER */}
         <div className="overflow-hidden">
-          {/* DESKTOP TABLE */}
-          <div className="hidden md:block overflow-x-auto">
+          {/* SUPERB DESKTOP TABLE */}
+          <div className="hidden md:block overflow-x-auto bg-white rounded-2xl shadow-xl border-2 border-gray-100">
             <table className="w-full table-fixed text-sm">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
@@ -374,102 +358,111 @@ export default function OrgLogsPage() {
                   <th className="px-4 py-4 text-left w-[160px] font-semibold text-gray-700">🕐 Timestamp</th>
                 </tr>
               </thead>
-
               <tbody>
-                {loadingInitial && (
+                {loadingInitial ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-4 text-gray-600">
-                      <Loader2 className="animate-spin inline mr-2 text-[#ff004f]" />
-                      Loading logs...
+                    <td colSpan="6" className="text-center py-8 text-gray-600">
+                      <Loader2 className="animate-spin inline mr-2 text-[#ff004f]" size={32} />
+                      <p className="mt-2">Loading logs...</p>
                     </td>
                   </tr>
-                )}
-
-                {visibleLogs.map((log, i) => {
-                  const idx = (page - 1) * limit + i + 1;
-
-                  return (
-                    <tr
-                      key={log._id}
-                      onClick={() => openDrawer(log)}
-                      className="border-t hover:bg-gray-50 cursor-pointer"
-                    >
-                      <td className="px-3 py-2">{idx}</td>
-                      <td className="px-3 py-2 truncate flex items-center gap-2">
-                        {getIcon(log.action)}
-                        <span className="truncate">{log.action}</span>
-                      </td>
-                      <td className="px-3 py-2 truncate">{log.userEmail}</td>
-                      <td className="px-3 py-2 truncate">{log.userRole}</td>
-                      <td className="px-3 py-2 truncate">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                            log.status
-                          )}`}
-                        >
-                          {log.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 truncate">
-                        {formatDate(log.timestamp)}
-                      </td>
-                    </tr>
-                  );
-                })}
-
-                {loadingChunk && (
+                ) : visibleLogs.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-4 text-gray-600">
-                      <Loader2 className="animate-spin inline mr-2 text-[#ff004f]" />
-                      Loading more logs...
+                    <td colSpan="6" className="text-center py-8 text-gray-500">
+                      No logs found
                     </td>
                   </tr>
+                ) : (
+                  visibleLogs.map((log, i) => {
+                    const idx = (page - 1) * limit + i + 1;
+
+                    return (
+                      <tr
+                        key={log._id}
+                        onClick={() => openDrawer(log)}
+                        className={`transition-all cursor-pointer group hover:bg-gradient-to-r hover:from-[#fff5f8] hover:to-[#fff0f5] hover:shadow-md ${
+                          idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+                        }`}
+                      >
+                        <td className="px-4 py-4 font-semibold text-gray-700">{idx}</td>
+                        <td className="px-4 py-4 truncate flex items-center gap-2 group-hover:text-[#ff004f] transition-colors">
+                          {getIcon(log.action)}
+                          <span className="truncate font-medium">{log.action}</span>
+                        </td>
+                        <td className="px-4 py-4 truncate text-gray-600">{log.userEmail}</td>
+                        <td className="px-4 py-4 truncate text-gray-600">{log.userRole}</td>
+                        <td className="px-4 py-4 truncate">
+                          <span
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold ${getStatusColor(
+                              log.status
+                            )}`}
+                          >
+                            {log.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 truncate text-gray-600 text-xs">
+                          {formatDate(log.timestamp)}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* MOBILE CARDS */}
+          {/* MOBILE LIST (MODERN CLEAN CARD – FULL WIDTH) */}
           <div className="md:hidden space-y-4 px-0">
-            {visibleLogs.map((log) => (
-              <div
-                key={log._id}
-                className="bg-white shadow-md rounded-xl p-4 w-full border border-gray-200"
-                onClick={() => openDrawer(log)}
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <span
-                    className={`px-3 py-1 rounded-full text-[12px] font-semibold ${getStatusColor(
-                      log.status
-                    )}`}
-                  >
-                    {log.status}
-                  </span>
-
-                  <span className="text-[12px] text-gray-500">
-                    {formatDate(log.timestamp)}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-[#ff004f] font-bold text-sm mb-1">
-                  {getIcon(log.action)}
-                  <span className="truncate">{log.action}</span>
-                </div>
-
-                <p className="text-[13px] text-gray-700 mb-3 line-clamp-2">
-                  {log.description || "—"}
-                </p>
-
-                <div className="text-[13px] text-gray-700 space-y-0.5">
-                  <p>
-                    <b>Email:</b> {log.userEmail}
-                  </p>
-                  <p>
-                    <b>Role:</b> {log.userRole}
-                  </p>
-                </div>
+            {loadingInitial ? (
+              <div className="text-center py-8 text-gray-600">
+                <Loader2 className="animate-spin inline mr-2 text-[#ff004f]" size={32} />
+                <p className="mt-2">Loading logs...</p>
               </div>
-            ))}
+            ) : visibleLogs.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No logs found
+              </div>
+            ) : (
+              visibleLogs.map((log) => (
+                <div
+                  key={log._id}
+                  className="bg-white shadow-md rounded-xl p-4 w-full border border-gray-200"
+                  onClick={() => openDrawer(log)}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-[12px] font-semibold ${getStatusColor(
+                        log.status
+                      )}`}
+                    >
+                      {log.status}
+                    </span>
+
+                    <span className="text-[12px] text-gray-500">
+                      {formatDate(log.timestamp)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[#ff004f] font-bold text-sm mb-1">
+                    {getIcon(log.action)}
+                    <span className="truncate">{log.action}</span>
+                  </div>
+
+                  <p className="text-[13px] text-gray-700 mb-3 line-clamp-2">
+                    {log.description || "—"}
+                  </p>
+
+                  <div className="text-[13px] text-gray-700 space-y-0.5">
+                    <p>
+                      <b>Email:</b> {log.userEmail}
+                    </p>
+                    <p>
+                      <b>Role:</b> {log.userRole}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -531,8 +524,6 @@ export default function OrgLogsPage() {
           </div>
         )}
 
-        {/* INFINITE SCROLL TARGET */}
-        <div ref={sentinelRef} className="h-10"></div>
       </div>
 
       {/* DRAWER */}

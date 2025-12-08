@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [orgName, setOrgName] = useState("Maihoo");
-  const [logoSrc, setLogoSrc] = useState("/logos/maihoo.png");
+  const [logoSrc, setLogoSrc] = useState("/logos/maihooMain.png");
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
@@ -286,6 +286,16 @@ export default function LoginPage() {
                     {passwordVisible ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 )}
+              </div>
+              {/* Forgot Password Link */}
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => router.push("/forgot-password")}
+                  className="text-sm font-medium text-[#ff004f] hover:underline hover:text-red-600 transition"
+                >
+                  Forgot Password?
+                </button>
               </div>
             </div>
 

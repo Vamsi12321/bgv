@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   Loader2,
@@ -110,9 +111,9 @@ function CertificateBase({ id, candidate, orgName, ai }) {
     <div
       id={id}
       style={{
-        width: "794px",                // EXACT A4 WIDTH
-        minHeight: "1123px",           // EXACT A4 HEIGHT
-        padding: "10px 50px 60px 50px",// SAME AS SERVICE CERTIFICATE
+        width: "794px", // EXACT A4 WIDTH
+        minHeight: "1123px", // EXACT A4 HEIGHT
+        padding: "10px 50px 60px 50px", // SAME AS SERVICE CERTIFICATE
         background: "#ffffff",
         fontFamily: "Arial, sans-serif",
         position: "relative",
@@ -140,7 +141,6 @@ function CertificateBase({ id, candidate, orgName, ai }) {
 
       {/* ================= CONTENT WRAPPER ================= */}
       <div style={{ position: "relative", zIndex: 2, marginTop: "-10px" }}>
-        
         {/* ================================================== */}
         {/* HEADER AREA (Align exactly like Service Cert)      */}
         {/* ================================================== */}
@@ -212,20 +212,34 @@ function CertificateBase({ id, candidate, orgName, ai }) {
           style={{
             fontSize: "15px",
             lineHeight: "28px",
-            marginBottom: "60px",
+            marginBottom: "25px",
             marginTop: "-20px",
           }}
         >
-          <p><b>Candidate Name:</b> {candidate?.firstName} {candidate?.lastName}</p>
-          <p><b>Candidate ID:</b> {candidate?._id}</p>
-          <p><b>Organization:</b> {orgName}</p>
-          <p><b>Verification Timestamp:</b> {new Date().toLocaleString()}</p>
-          <p><b>Score:</b> {ai?.authenticity_score}/100</p>
-          <p><b>Recommendation:</b> {ai?.recommendation}</p>
+          <p>
+            <b>Candidate Name:</b> {candidate?.firstName} {candidate?.lastName}
+          </p>
+          <p>
+            <b>Candidate ID:</b> {candidate?._id}
+          </p>
+          <p>
+            <b>Organization:</b> {orgName}
+          </p>
+          <p>
+            <b>Verification Timestamp:</b> {new Date().toLocaleString()}
+          </p>
+          <p>
+            <b>Score:</b> {ai?.authenticity_score}/100
+          </p>
+          <p>
+            <b>Recommendation:</b> {ai?.recommendation}
+          </p>
 
           <p style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <b>Status:</b>
-            <span style={{ color: "#5cb85c", fontWeight: "bold", fontSize: "16px" }}>
+            <span
+              style={{ color: "#5cb85c", fontWeight: "bold", fontSize: "16px" }}
+            >
               ✓ Completed
             </span>
           </p>
@@ -250,7 +264,7 @@ function CertificateBase({ id, candidate, orgName, ai }) {
           style={{
             display: "flex",
             alignItems: "center",
-            marginBottom: "90px", // MATCH SERVICE CERT (was wrong earlier)
+            marginBottom: "35px", // MATCH SERVICE CERT (was wrong earlier)
           }}
         >
           <div
@@ -403,25 +417,23 @@ function CertificateBase({ id, candidate, orgName, ai }) {
             margin: 0,
           }}
         >
-          Maihoo Technologies Private Limited, Vaishnavi's Cynosure,
-          2-48/5/6, 8th Floor, Opp RTCC, Telecom Nagar Extension,
-          Gachibowli-500032
+          Maihoo Technologies Private Limited, Vaishnavi's Cynosure, 2-48/5/6,
+          8th Floor, Opp RTCC, Telecom Nagar Extension, Gachibowli-500032
         </p>
       </div>
     </div>
   );
 }
 
-
 /* -------------------------------------------------------------
    MAIN PAGE
 ------------------------------------------------------------- */
 export default function SuperAdminAICVVerificationPage() {
+  const router = useRouter();
+
   // State management context
-  const {
-    aiCVVerificationState = {},
-    setAiCVVerificationState = () => {},
-  } = useSuperAdminState();
+  const { aiCVVerificationState = {}, setAiCVVerificationState = () => {} } =
+    useSuperAdminState();
 
   // Local state
   const [organizations, setOrganizations] = useState([]);
@@ -433,21 +445,29 @@ export default function SuperAdminAICVVerificationPage() {
   const [analysis, setAnalysis] = useState(null);
   const [finalRemarks, setFinalRemarks] = useState("");
   const [checkStatus, setCheckStatus] = useState("PENDING"); // Track verification status
-  
+
   // Loading states
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [loadingValidation, setLoadingValidation] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
   const [submittingFinal, setSubmittingFinal] = useState(false);
-  
+  const [navigating, setNavigating] = useState(false);
+
   // UI states
   const [expanded, setExpanded] = useState({});
-  
+
   // Modal states
-  const [successModal, setSuccessModal] = useState({ isOpen: false, message: "" });
-  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "", details: "" });
-  
+  const [successModal, setSuccessModal] = useState({
+    isOpen: false,
+    message: "",
+  });
+  const [errorModal, setErrorModal] = useState({
+    isOpen: false,
+    message: "",
+    details: "",
+  });
+
   const pdfRef = useRef(null);
 
   // Load state from context on mount
@@ -500,7 +520,7 @@ export default function SuperAdminAICVVerificationPage() {
       setCandidates([]);
       return;
     }
-    
+
     setLoadingCandidates(true);
     fetch(`/api/proxy/secure/getCandidates?orgId=${selectedOrg}`, {
       credentials: "include",
@@ -523,18 +543,18 @@ export default function SuperAdminAICVVerificationPage() {
   const fetchVerification = async (candId) => {
     setAnalysis(null);
     setLoadingResults(true);
-    
+
     try {
       const res = await fetch(
         `/api/proxy/secure/getVerifications?candidateId=${candId}`,
         { credentials: "include" }
       );
-      
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
+
       const data = await res.json();
       const ver = data.verifications?.[0];
-      
+
       if (!ver) {
         setErrorModal({
           isOpen: true,
@@ -553,7 +573,7 @@ export default function SuperAdminAICVVerificationPage() {
       ];
 
       const aiCheck = allChecks.find((c) => c.check === "ai_cv_validation");
-      
+
       if (!aiCheck) {
         setErrorModal({
           isOpen: true,
@@ -589,16 +609,17 @@ export default function SuperAdminAICVVerificationPage() {
       });
       return;
     }
-    
+
     if (!resumeFile && !selectedCandidate.resumePath) {
       setErrorModal({
         isOpen: true,
         message: "No Resume Available",
-        details: "Please upload a resume or ensure candidate has an existing resume.",
+        details:
+          "Please upload a resume or ensure candidate has an existing resume.",
       });
       return;
     }
-    
+
     if (!verificationId) {
       setErrorModal({
         isOpen: true,
@@ -610,7 +631,7 @@ export default function SuperAdminAICVVerificationPage() {
 
     setLoadingValidation(true);
     setAnalysis(null);
-    
+
     try {
       const fd = new FormData();
       fd.append("verificationId", verificationId);
@@ -654,12 +675,15 @@ export default function SuperAdminAICVVerificationPage() {
   const loadResults = async (vId) => {
     setLoadingResults(true);
     try {
-      const res = await fetch(`/api/proxy/secure/ai_cv_validation_results/${vId}`, {
-        credentials: "include",
-      });
-      
+      const res = await fetch(
+        `/api/proxy/secure/ai_cv_validation_results/${vId}`,
+        {
+          credentials: "include",
+        }
+      );
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
+
       const data = await res.json();
       setAnalysis(data);
     } catch (error) {
@@ -683,9 +707,9 @@ export default function SuperAdminAICVVerificationPage() {
       });
       return;
     }
-    
+
     setSubmittingFinal(true);
-    
+
     try {
       const body = new URLSearchParams();
       body.append("verificationId", verificationId);
@@ -702,10 +726,18 @@ export default function SuperAdminAICVVerificationPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       setCheckStatus(status); // Update status after approval
+
+      // Show success message and redirect to BGV requests page
       setSuccessModal({
         isOpen: true,
         message: `Decision Submitted: ${status}`,
       });
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        setNavigating(true);
+        router.push("/superadmin/bgv-requests");
+      }, 1500);
     } catch (error) {
       setErrorModal({
         isOpen: true,
@@ -741,7 +773,7 @@ export default function SuperAdminAICVVerificationPage() {
 
       pdf.addImage(jpeg, "JPEG", 0, 0, pageWidth, pageHeight);
       pdf.save(`AI-CV-${selectedCandidate?.firstName || "report"}.pdf`);
-      
+
       setSuccessModal({
         isOpen: true,
         message: "PDF Exported Successfully!",
@@ -763,42 +795,65 @@ export default function SuperAdminAICVVerificationPage() {
   ------------------------------------------------------------- */
   return (
     <>
+      {/* Navigating Overlay */}
+      {navigating && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4">
+            <Loader2 className="animate-spin text-[#ff004f]" size={48} />
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                Redirecting...
+              </h3>
+              <p className="text-sm text-gray-600">
+                Please wait, navigating to BGV Requests page
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
       <SuccessModal
         isOpen={successModal.isOpen}
         onClose={() => setSuccessModal({ isOpen: false, message: "" })}
         message={successModal.message}
       />
-      
+
       <ErrorModal
         isOpen={errorModal.isOpen}
-        onClose={() => setErrorModal({ isOpen: false, message: "", details: "" })}
+        onClose={() =>
+          setErrorModal({ isOpen: false, message: "", details: "" })
+        }
         message={errorModal.message}
         details={errorModal.details}
       />
 
       {/* Hidden PDF element */}
       {analysis && selectedCandidate && (
-       <div style={{
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "794px",
-  minHeight: "1123px",
-  zIndex: -9999,
-  opacity: 0,
-  pointerEvents: "none",
-}}>
-  <div ref={pdfRef} style={{ background: "#fff" }}>
-    <CertificateBase
-      id="ai-cv-cert"
-      candidate={selectedCandidate}
-      orgName={organizations.find(o => o._id === selectedOrg)?.organizationName}
-      ai={ai}
-    />
-  </div>
-</div>
-
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "794px",
+            minHeight: "1123px",
+            zIndex: -9999,
+            opacity: 0,
+            pointerEvents: "none",
+          }}
+        >
+          <div ref={pdfRef} style={{ background: "#fff" }}>
+            <CertificateBase
+              id="ai-cv-cert"
+              candidate={selectedCandidate}
+              orgName={
+                organizations.find((o) => o._id === selectedOrg)
+                  ?.organizationName
+              }
+              ai={ai}
+            />
+          </div>
+        </div>
       )}
 
       {/* MAIN LAYOUT */}
@@ -831,7 +886,7 @@ export default function SuperAdminAICVVerificationPage() {
                     Organization <span className="text-red-500">*</span>
                   </label>
                   <select
-                    className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-[#ff004f] focus:outline-none transition text-gray-900"
+                    className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-[#ff004f] focus:outline-none transition text-black bg-white"
                     value={selectedOrg}
                     onChange={(e) => {
                       setSelectedOrg(e.target.value);
@@ -844,9 +899,15 @@ export default function SuperAdminAICVVerificationPage() {
                     }}
                     disabled={loadingOrgs}
                   >
-                    <option value="">-- Select Organization --</option>
+                    <option value="" className="text-gray-500">
+                      -- Select Organization --
+                    </option>
                     {organizations.map((org) => (
-                      <option key={org._id} value={org._id}>
+                      <option
+                        key={org._id}
+                        value={org._id}
+                        className="text-black"
+                      >
                         {org.organizationName}
                       </option>
                     ))}
@@ -866,10 +927,12 @@ export default function SuperAdminAICVVerificationPage() {
                     Candidate <span className="text-red-500">*</span>
                   </label>
                   <select
-                    className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-[#ff004f] focus:outline-none transition text-gray-900"
+                    className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-[#ff004f] focus:outline-none transition text-black bg-white"
                     value={selectedCandidate?._id || ""}
                     onChange={(e) => {
-                      const cand = candidates.find((c) => c._id === e.target.value);
+                      const cand = candidates.find(
+                        (c) => c._id === e.target.value
+                      );
                       setSelectedCandidate(cand);
                       setAnalysis(null);
                       setResumeFile(null);
@@ -880,9 +943,11 @@ export default function SuperAdminAICVVerificationPage() {
                     }}
                     disabled={!selectedOrg || loadingCandidates}
                   >
-                    <option value="">-- Select Candidate --</option>
+                    <option value="" className="text-gray-500">
+                      -- Select Candidate --
+                    </option>
                     {candidates.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c._id} value={c._id} className="text-black">
                         {c.firstName} {c.lastName}
                       </option>
                     ))}
@@ -907,10 +972,25 @@ export default function SuperAdminAICVVerificationPage() {
                       Candidate Details
                     </h3>
                     <div className="space-y-1 text-gray-700">
-                      <p><span className="font-semibold">Name:</span> {selectedCandidate.firstName} {selectedCandidate.lastName}</p>
-                      <p><span className="font-semibold">PAN:</span> {selectedCandidate.panNumber || "—"}</p>
-                      <p><span className="font-semibold">Aadhaar:</span> {selectedCandidate.aadhaarNumber || "—"}</p>
-                      <p><span className="font-semibold">Resume:</span> {selectedCandidate.resumePath ? "✓ Uploaded" : "✗ Not Uploaded"}</p>
+                      <p>
+                        <span className="font-semibold">Name:</span>{" "}
+                        {selectedCandidate.firstName}{" "}
+                        {selectedCandidate.lastName}
+                      </p>
+                      <p>
+                        <span className="font-semibold">PAN:</span>{" "}
+                        {selectedCandidate.panNumber || "—"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Aadhaar:</span>{" "}
+                        {selectedCandidate.aadhaarNumber || "—"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Resume:</span>{" "}
+                        {selectedCandidate.resumePath
+                          ? "✓ Uploaded"
+                          : "✗ Not Uploaded"}
+                      </p>
                       {verificationId && (
                         <p className="text-[#ff004f] font-semibold pt-2 border-t">
                           Verification ID: {verificationId.slice(0, 8)}...
@@ -926,7 +1006,10 @@ export default function SuperAdminAICVVerificationPage() {
                     Upload Resume (Optional)
                   </label>
                   <label className="cursor-pointer flex items-center justify-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-dashed border-gray-300 p-4 rounded-xl hover:border-[#ff004f] hover:bg-gray-50 transition group">
-                    <Upload size={20} className="text-gray-400 group-hover:text-[#ff004f] transition" />
+                    <Upload
+                      size={20}
+                      className="text-gray-400 group-hover:text-[#ff004f] transition"
+                    />
                     <span className="text-sm text-gray-600 group-hover:text-[#ff004f] font-medium transition">
                       {resumeFile ? resumeFile.name : "Choose Resume File"}
                     </span>
@@ -971,7 +1054,9 @@ export default function SuperAdminAICVVerificationPage() {
               {loadingResults ? (
                 <div className="bg-white p-12 rounded-2xl shadow-lg border flex flex-col items-center justify-center space-y-4">
                   <Loader2 className="animate-spin text-[#ff004f]" size={48} />
-                  <p className="text-gray-600 font-medium">Loading analysis results...</p>
+                  <p className="text-gray-600 font-medium">
+                    Loading analysis results...
+                  </p>
                 </div>
               ) : analysis && ai ? (
                 <ResultsSection
@@ -989,9 +1074,12 @@ export default function SuperAdminAICVVerificationPage() {
               ) : (
                 <div className="bg-white p-12 rounded-2xl shadow-lg border flex flex-col items-center justify-center space-y-4 text-center">
                   <AlertCircle className="text-gray-300" size={64} />
-                  <h3 className="text-xl font-bold text-gray-900">No Analysis Yet</h3>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    No Analysis Yet
+                  </h3>
                   <p className="text-gray-600 max-w-md">
-                    Select an organization and candidate, then click "Run AI Validation" to see the analysis results.
+                    Select an organization and candidate, then click "Run AI
+                    Validation" to see the analysis results.
                   </p>
                 </div>
               )}
@@ -1183,14 +1271,22 @@ function ResultsSection({
           disabled={submittingFinal}
           className="flex-1 bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition disabled:opacity-50"
         >
-          {submittingFinal ? <Loader2 className="animate-spin mx-auto" /> : "Approve"}
+          {submittingFinal ? (
+            <Loader2 className="animate-spin mx-auto" />
+          ) : (
+            "Approve"
+          )}
         </button>
         <button
           onClick={() => submitDecision("FAILED")}
           disabled={submittingFinal}
           className="flex-1 bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition disabled:opacity-50"
         >
-          {submittingFinal ? <Loader2 className="animate-spin mx-auto" /> : "Reject"}
+          {submittingFinal ? (
+            <Loader2 className="animate-spin mx-auto" />
+          ) : (
+            "Reject"
+          )}
         </button>
       </div>
     </motion.div>

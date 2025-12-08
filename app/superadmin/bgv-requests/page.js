@@ -28,21 +28,23 @@ import {
   MapPin,
   Building,
   UserCircle2,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSuperAdminState } from "../../context/SuperAdminStateContext";
 
 export default function BGVInitiationPage() {
   const router = useRouter();
-  
+
   // State management context
   const { bgvState = {}, setBgvState = () => {} } = useSuperAdminState();
 
   const [organizations, setOrganizations] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [selectedOrg, setSelectedOrg] = useState(bgvState.selectedOrg || "");
-  const [selectedCandidate, setSelectedCandidate] = useState(bgvState.selectedCandidate || "");
+  const [selectedCandidate, setSelectedCandidate] = useState(
+    bgvState.selectedCandidate || ""
+  );
   const [candidateVerification, setCandidateVerification] = useState(null);
 
   const [loading, setLoading] = useState(false);
@@ -57,7 +59,9 @@ export default function BGVInitiationPage() {
   const [orgDetails, setOrgDetails] = useState(null);
   const [navigating, setNavigating] = useState(false);
 
-  const [visibleStage, setVisibleStage] = useState(bgvState.visibleStage || "primary");
+  const [visibleStage, setVisibleStage] = useState(
+    bgvState.visibleStage || "primary"
+  );
   const [currentStep, setCurrentStep] = useState(bgvState.currentStep || 0);
   const stepNames = ["Primary", "Secondary", "Final"];
   const [showConfirmClose, setShowConfirmClose] = useState(false);
@@ -82,7 +86,7 @@ export default function BGVInitiationPage() {
     "pan_aadhaar_seeding",
     "pan_verification",
     "employment_history",
-    "aadhaar_to_uan",
+    "verify_pan_to_uan",
     "credit_report",
     "court_record",
   ];
@@ -151,11 +155,13 @@ export default function BGVInitiationPage() {
     final: [],
   };
 
-  const [stages, setStages] = useState(bgvState.stages || {
-    primary: [...DEFAULTS.primary],
-    secondary: [...DEFAULTS.secondary],
-    final: [...DEFAULTS.final],
-  });
+  const [stages, setStages] = useState(
+    bgvState.stages || {
+      primary: [...DEFAULTS.primary],
+      secondary: [...DEFAULTS.secondary],
+      final: [...DEFAULTS.final],
+    }
+  );
 
   const [modal, setModal] = useState({
     open: false,
@@ -165,11 +171,23 @@ export default function BGVInitiationPage() {
   });
 
   // Use ref to always have latest values for state persistence
-  const stateRef = useRef({ selectedOrg, selectedCandidate, stages, currentStep, visibleStage });
-  
+  const stateRef = useRef({
+    selectedOrg,
+    selectedCandidate,
+    stages,
+    currentStep,
+    visibleStage,
+  });
+
   // Update ref whenever state changes
   useEffect(() => {
-    stateRef.current = { selectedOrg, selectedCandidate, stages, currentStep, visibleStage };
+    stateRef.current = {
+      selectedOrg,
+      selectedCandidate,
+      stages,
+      currentStep,
+      visibleStage,
+    };
   }, [selectedOrg, selectedCandidate, stages, currentStep, visibleStage]);
 
   // Save state on unmount (when navigating away)
@@ -463,7 +481,7 @@ export default function BGVInitiationPage() {
       });
     }
 
-    // VALIDATION (unchanged)
+    // ENHANCED VALIDATION
     const errors = {};
     const {
       firstName,
@@ -483,21 +501,104 @@ export default function BGVInitiationPage() {
       uanNumber,
       bankAccountNumber,
       resume,
+      middleName,
     } = newCandidate;
 
-    if (!firstName) errors.firstName = "First name is required";
-    if (!lastName) errors.lastName = "Last name is required";
-    if (!fatherName) errors.fatherName = "Father name is required";
-    if (!dob) errors.dob = "Date of birth is required";
+    // Required field checks
+    if (!firstName) errors.firstName = "First Name is required";
+    if (!lastName) errors.lastName = "Last Name is required";
+    if (!fatherName) errors.fatherName = "Father's Name is required";
+    if (!dob) errors.dob = "Date of Birth is required";
     if (!gender) errors.gender = "Gender is required";
-    if (!phone) errors.phone = "Phone is required";
+    if (!phone) errors.phone = "Phone Number is required";
     if (!email) errors.email = "Email is required";
-    if (!aadhaarNumber) errors.aadhaarNumber = "Aadhaar required";
-    if (!panNumber) errors.panNumber = "PAN required";
-    if (!address) errors.address = "Address required";
-    if (!district) errors.district = "District required";
-    if (!state) errors.state = "State required";
-    if (!pincode) errors.pincode = "Pincode required";
+    if (!aadhaarNumber) errors.aadhaarNumber = "Aadhaar Number is required";
+    if (!panNumber) errors.panNumber = "PAN Number is required";
+    if (!address) errors.address = "Address is required";
+    if (!district) errors.district = "District is required";
+    if (!state) errors.state = "State is required";
+    if (!pincode) errors.pincode = "Pincode is required";
+
+    // Name validations - only letters and spaces, no numbers
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (firstName && !nameRegex.test(firstName)) {
+      errors.firstName =
+        "First Name must contain only letters and spaces, no numbers allowed";
+    }
+    if (middleName && !nameRegex.test(middleName)) {
+      errors.middleName =
+        "Middle Name must contain only letters and spaces, no numbers allowed";
+    }
+    if (lastName && !nameRegex.test(lastName)) {
+      errors.lastName =
+        "Last Name must contain only letters and spaces, no numbers allowed";
+    }
+    if (fatherName && !nameRegex.test(fatherName)) {
+      errors.fatherName =
+        "Father's Name must contain only letters and spaces, no numbers allowed";
+    }
+
+    // Email validation
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (email && !emailRegex.test(email)) {
+      errors.email =
+        "Invalid email format. Please enter a valid email address (e.g., user@example.com)";
+    } else if (
+      email &&
+      (!email.includes("@") || !email.split("@")[1]?.includes("."))
+    ) {
+      errors.email =
+        "Email must include @ symbol and a valid domain (e.g., user@gmail.com)";
+    }
+
+    // Aadhaar validation
+    if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
+      errors.aadhaarNumber =
+        "Invalid Aadhaar number. Must be exactly 12 digits";
+    }
+
+    // PAN validation
+    if (panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)) {
+      errors.panNumber =
+        "Invalid PAN format. Must be in format: ABCDE1234F (5 letters, 4 digits, 1 letter)";
+    }
+
+    // Phone validation
+    if (phone && !/^\d{10}$/.test(phone)) {
+      errors.phone = "Invalid phone number. Must be exactly 10 digits";
+    }
+
+    // District and State validation - only letters and spaces
+    if (district && !nameRegex.test(district)) {
+      errors.district =
+        "District must contain only letters and spaces, no numbers or special characters allowed";
+    }
+
+    if (state && !nameRegex.test(state)) {
+      errors.state =
+        "State must contain only letters and spaces, no numbers or special characters allowed";
+    }
+
+    // Pincode validation
+    if (pincode && !/^[1-9][0-9]{5}$/.test(pincode)) {
+      errors.pincode =
+        "Invalid Pincode. Must be exactly 6 digits and cannot start with 0";
+    }
+
+    // Optional field validations
+    if (passportNumber && !/^[A-PR-WY][1-9]\d{6}$/.test(passportNumber)) {
+      errors.passportNumber =
+        "Invalid Passport Number. Must be in format: A1234567 (1 letter followed by 7 digits)";
+    }
+
+    if (uanNumber && !/^[0-9]{10,12}$/.test(uanNumber)) {
+      errors.uanNumber = "Invalid UAN Number. Must be 10-12 digits";
+    }
+
+    if (bankAccountNumber && !/^[0-9]{9,18}$/.test(bankAccountNumber)) {
+      errors.bankAccountNumber =
+        "Invalid Bank Account Number. Must be 9-18 digits";
+    }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -884,7 +985,14 @@ export default function BGVInitiationPage() {
   /* RETURN UI */
   /* -------------------------------------------------- */
 
-  function SearchableDropdown({ label, value, onChange, options, disabled, loading }) {
+  function SearchableDropdown({
+    label,
+    value,
+    onChange,
+    options,
+    disabled,
+    loading,
+  }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
 
@@ -895,7 +1003,9 @@ export default function BGVInitiationPage() {
     return (
       <div className="w-full relative">
         {label && (
-          <label className="text-sm font-bold text-gray-700 mb-2 block">{label}</label>
+          <label className="text-sm font-bold text-gray-700 mb-2 block">
+            {label}
+          </label>
         )}
 
         {/* Input Box - Enhanced with Loading */}
@@ -912,13 +1022,27 @@ export default function BGVInitiationPage() {
         `}
           onClick={() => !disabled && !loading && setOpen(!open)}
         >
-          <span className={`text-sm font-medium truncate ${value ? "text-gray-900" : "text-gray-400"}`}>
-            {loading ? "Loading..." : (options.find((o) => o.value === value)?.label || "Select...")}
+          <span
+            className={`text-sm font-medium truncate ${
+              value ? "text-gray-900" : "text-gray-400"
+            }`}
+          >
+            {loading
+              ? "Loading..."
+              : options.find((o) => o.value === value)?.label || "Select..."}
           </span>
           {loading ? (
-            <Loader2 size={20} className="text-gray-600 animate-spin flex-shrink-0 ml-2" />
+            <Loader2
+              size={20}
+              className="text-gray-600 animate-spin flex-shrink-0 ml-2"
+            />
           ) : (
-            <ChevronDown size={20} className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`} />
+            <ChevronDown
+              size={20}
+              className={`text-gray-600 flex-shrink-0 ml-2 transition-transform ${
+                open ? "rotate-180" : ""
+              }`}
+            />
           )}
         </div>
 
@@ -986,12 +1110,11 @@ export default function BGVInitiationPage() {
         ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300"
         : "bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300";
 
-    const cardGradient =
-      selected
-        ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
-        : completed
-        ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
-        : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
+    const cardGradient = selected
+      ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
+      : completed
+      ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
+      : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
 
     return (
       <motion.div
@@ -1006,9 +1129,7 @@ export default function BGVInitiationPage() {
         {/* TOP ROW — ICON + TITLE */}
         <div className="flex justify-between items-start mb-3">
           <div className="flex gap-3 items-start flex-1">
-            <div className="p-2 bg-white rounded-lg shadow-sm">
-              {icon}
-            </div>
+            <div className="p-2 bg-white rounded-lg shadow-sm">{icon}</div>
             <div className="flex-1">
               <div className="text-base font-bold capitalize text-gray-900 leading-tight">
                 {v.replace(/_/g, " ")}
@@ -1043,18 +1164,24 @@ export default function BGVInitiationPage() {
 
         {/* TYPE BADGE */}
         <div className="flex items-center gap-2 mb-3">
-          <span className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-bold ${typeBadge}`}>
+          <span
+            className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-bold ${typeBadge}`}
+          >
             {type === "API" && "⚡"}
             {type === "MANUAL" && "✍️"}
             {type === "AI" && "🤖"}
             {type} Check
           </span>
           {status && (
-            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
-              status === "COMPLETED" ? "bg-green-200 text-green-800" :
-              status === "FAILED" ? "bg-red-200 text-red-800" :
-              "bg-yellow-200 text-yellow-800"
-            }`}>
+            <span
+              className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                status === "COMPLETED"
+                  ? "bg-green-200 text-green-800"
+                  : status === "FAILED"
+                  ? "bg-red-200 text-red-800"
+                  : "bg-yellow-200 text-yellow-800"
+              }`}
+            >
               {status}
             </span>
           )}
@@ -1092,37 +1219,36 @@ export default function BGVInitiationPage() {
         )}
 
         {/* AI CHECK REDIRECT BUTTON - Only show after finalization */}
-       {type === "AI" && !completed && isStageLocked(stageKey) && (
-  <button
-    onClick={() => {
-      setNavigating(true);
-      setTimeout(() => {
-        if (v === "ai_cv_validation") {
-          router.push("/superadmin/AI-CV-Verification");
-        } else if (v === "ai_education_validation") {
-          router.push("/superadmin/AI-Edu-Verification");
-        }
-      }, 100);
-    }}
-    disabled={navigating}
-    className="mt-2 w-full px-4 py-3 text-sm bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-  >
-    {navigating ? (
-      <>
-        <Loader2 className="animate-spin" size={16} />
-        Navigating...
-      </>
-    ) : (
-      <>
-        <ExternalLink size={16} />
-        {v === "ai_cv_validation"
-          ? "Go to CV Verification"
-          : "Go to Education Verification"}
-      </>
-    )}
-  </button>
-)}
-
+        {type === "AI" && !completed && isStageLocked(stageKey) && (
+          <button
+            onClick={() => {
+              setNavigating(true);
+              setTimeout(() => {
+                if (v === "ai_cv_validation") {
+                  router.push("/superadmin/AI-CV-Verification");
+                } else if (v === "ai_education_validation") {
+                  router.push("/superadmin/AI-Edu-Verification");
+                }
+              }, 100);
+            }}
+            disabled={navigating}
+            className="mt-2 w-full px-4 py-3 text-sm bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {navigating ? (
+              <>
+                <Loader2 className="animate-spin" size={16} />
+                Navigating...
+              </>
+            ) : (
+              <>
+                <ExternalLink size={16} />
+                {v === "ai_cv_validation"
+                  ? "Go to CV Verification"
+                  : "Go to Education Verification"}
+              </>
+            )}
+          </button>
+        )}
       </motion.div>
     );
   }
@@ -1188,8 +1314,12 @@ export default function BGVInitiationPage() {
             <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-[#ff004f]" size={48} />
               <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Loading Candidate Status</h3>
-                <p className="text-sm text-gray-600">Please wait while we fetch verification details...</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                  Loading Candidate Status
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Please wait while we fetch verification details...
+                </p>
               </div>
             </div>
           </div>
@@ -1204,7 +1334,9 @@ export default function BGVInitiationPage() {
             <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-purple-600" size={48} />
               <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Navigating</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                  Navigating
+                </h3>
                 <p className="text-sm text-gray-600">Please wait...</p>
               </div>
             </div>
@@ -1270,32 +1402,48 @@ export default function BGVInitiationPage() {
             <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <FileText size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-blue-900 mb-2 text-sm">Manual Verification</h4>
-            <p className="text-xs text-blue-700">Click "Verify Manually" on check cards for validation</p>
+            <h4 className="font-bold text-blue-900 mb-2 text-sm">
+              Manual Verification
+            </h4>
+            <p className="text-xs text-blue-700">
+              Click "Verify Manually" on check cards for validation
+            </p>
           </div>
-          
+
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
             <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <Brain size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-purple-900 mb-2 text-sm">AI Validation</h4>
-            <p className="text-xs text-purple-700">Automated CV and education analysis available</p>
+            <h4 className="font-bold text-purple-900 mb-2 text-sm">
+              AI Validation
+            </h4>
+            <p className="text-xs text-purple-700">
+              Automated CV and education analysis available
+            </p>
           </div>
-          
+
           <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
             <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <Building size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-green-900 mb-2 text-sm">Employment Check</h4>
-            <p className="text-xs text-green-700">API-based and manual verification with supervisory validation</p>
+            <h4 className="font-bold text-green-900 mb-2 text-sm">
+              Employment Check
+            </h4>
+            <p className="text-xs text-green-700">
+              API-based and manual verification with supervisory validation
+            </p>
           </div>
-          
+
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
             <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <Cpu size={20} className="text-white" />
             </div>
-            <h4 className="font-bold text-orange-900 mb-2 text-sm">API Services</h4>
-            <p className="text-xs text-orange-700">Automated checks for PAN, Aadhaar, and more</p>
+            <h4 className="font-bold text-orange-900 mb-2 text-sm">
+              API Services
+            </h4>
+            <p className="text-xs text-orange-700">
+              Automated checks for PAN, Aadhaar, and more
+            </p>
           </div>
         </div>
 
@@ -1307,14 +1455,20 @@ export default function BGVInitiationPage() {
                 <CheckCircle size={24} className="text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Verification Workflow</h3>
-                <p className="text-sm text-gray-500">Track progress through all verification stages</p>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Verification Workflow
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Track progress through all verification stages
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-700 px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                {isStageCompleted("primary") && isStageCompleted("secondary") && isStageCompleted("final") 
-                  ? "✓ All Stages Complete" 
+                {isStageCompleted("primary") &&
+                isStageCompleted("secondary") &&
+                isStageCompleted("final")
+                  ? "✓ All Stages Complete"
                   : `Stage ${currentStep + 1} / 3`}
               </span>
             </div>
@@ -1322,17 +1476,20 @@ export default function BGVInitiationPage() {
           <div className="flex justify-between relative">
             {/* Progress Line */}
             <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 -z-10">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-[#ff004f] to-purple-600 transition-all duration-500"
                 style={{ width: `${(currentStep / 2) * 100}%` }}
               />
             </div>
-            
+
             {stepNames.map((name, i) => {
               const active = i === currentStep;
               const done = isStageCompleted(name.toLowerCase());
               return (
-                <div key={i} className="flex flex-col items-center gap-2 flex-1 relative">
+                <div
+                  key={i}
+                  className="flex flex-col items-center gap-2 flex-1 relative"
+                >
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-lg transition-all duration-300 transform ${
                       done
@@ -1347,13 +1504,21 @@ export default function BGVInitiationPage() {
                   <div className="text-center">
                     <div
                       className={`font-bold text-sm ${
-                        active ? "text-[#ff004f]" : done ? "text-green-600" : "text-gray-600"
+                        active
+                          ? "text-[#ff004f]"
+                          : done
+                          ? "text-green-600"
+                          : "text-gray-600"
                       }`}
                     >
                       {name}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {done ? "✓ Completed" : active ? "In Progress" : "Pending"}
+                      {done
+                        ? "✓ Completed"
+                        : active
+                        ? "In Progress"
+                        : "Pending"}
                     </div>
                   </div>
                 </div>
@@ -1370,12 +1535,16 @@ export default function BGVInitiationPage() {
                 <User size={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Candidate Selection</h3>
-                <p className="text-xs text-gray-600">Choose organization and candidate to begin verification</p>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Candidate Selection
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Choose organization and candidate to begin verification
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
               {/* ORG */}
@@ -1414,14 +1583,21 @@ export default function BGVInitiationPage() {
 
               {/* STATUS */}
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Verification Status</label>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Verification Status
+                </label>
                 <div className="border-2 border-gray-300 rounded-xl px-4 py-3 bg-gray-50">
-                  <div className={`font-bold text-sm ${
-                    candidateVerification?.overallStatus === "COMPLETED" ? "text-green-600" :
-                    candidateVerification?.overallStatus === "IN_PROGRESS" ? "text-yellow-600" :
-                    candidateVerification?.overallStatus === "FAILED" ? "text-red-600" :
-                    "text-gray-600"
-                  }`}>
+                  <div
+                    className={`font-bold text-sm ${
+                      candidateVerification?.overallStatus === "COMPLETED"
+                        ? "text-green-600"
+                        : candidateVerification?.overallStatus === "IN_PROGRESS"
+                        ? "text-yellow-600"
+                        : candidateVerification?.overallStatus === "FAILED"
+                        ? "text-red-600"
+                        : "text-gray-600"
+                    }`}
+                  >
                     {candidateVerification?.overallStatus || "Not Initiated"}
                   </div>
                 </div>
@@ -1431,41 +1607,48 @@ export default function BGVInitiationPage() {
         </div>
 
         {/* SERVICE CARDS - SHOW WHEN ORGANIZATION IS SELECTED */}
-        {selectedOrg && orgDetails && orgDetails.services && orgDetails.services.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#ff004f] to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                <Shield size={20} className="text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Available Services</h3>
-                <p className="text-xs text-gray-600">Services offered by {orgDetails.organizationName}</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {orgDetails.services.map((service, idx) => (
-                <div
-                  key={idx}
-                  className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-4 hover:border-[#ff004f] hover:shadow-lg transition-all"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-[#ff004f]/10 to-purple-600/10 rounded-lg flex items-center justify-center">
-                      <CheckCircle size={16} className="text-[#ff004f]" />
-                    </div>
-                    <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
-                      ₹{service.price}
-                    </div>
-                  </div>
-                  <h4 className="font-bold text-gray-900 text-sm mb-1 capitalize">
-                    {service.serviceName.replace(/_/g, ' ')}
-                  </h4>
-                  <p className="text-xs text-gray-600">Per verification</p>
+        {selectedOrg &&
+          orgDetails &&
+          orgDetails.services &&
+          orgDetails.services.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#ff004f] to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                  <Shield size={20} className="text-white" />
                 </div>
-              ))}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Available Services
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Services offered by {orgDetails.organizationName}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {orgDetails.services.map((service, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-4 hover:border-[#ff004f] hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-[#ff004f]/10 to-purple-600/10 rounded-lg flex items-center justify-center">
+                        <CheckCircle size={16} className="text-[#ff004f]" />
+                      </div>
+                      <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                        ₹{service.price}
+                      </div>
+                    </div>
+                    <h4 className="font-bold text-gray-900 text-sm mb-1 capitalize">
+                      {service.serviceName.replace(/_/g, " ")}
+                    </h4>
+                    <p className="text-xs text-gray-600">Per verification</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* CONSENT STATUS BOX - ENHANCED */}
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 p-6 rounded-2xl shadow-lg mt-4">
@@ -1477,7 +1660,9 @@ export default function BGVInitiationPage() {
               <h3 className="text-xl font-bold text-gray-900">
                 Candidate Consent Status
               </h3>
-              <p className="text-sm text-gray-600">Required before initiating verification</p>
+              <p className="text-sm text-gray-600">
+                Required before initiating verification
+              </p>
             </div>
           </div>
 
@@ -1572,14 +1757,15 @@ export default function BGVInitiationPage() {
                   "Choose initial verification checks for primary stage."}
                 {currentStep === 1 &&
                   "Select from remaining checks not used in Primary."}
-                {currentStep === 2 &&
-                  "Final stage with all remaining checks."}
+                {currentStep === 2 && "Final stage with all remaining checks."}
               </p>
             </div>
 
             {/* SELECTED CHECKS */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
-              <div className="text-xs font-bold text-blue-900 mb-2">Selected Checks</div>
+              <div className="text-xs font-bold text-blue-900 mb-2">
+                Selected Checks
+              </div>
               <div className="text-sm font-medium text-gray-900 break-words">
                 {[
                   ...new Set([
@@ -1596,7 +1782,10 @@ export default function BGVInitiationPage() {
                         ...stages.final,
                       ]),
                     ].map((check, i) => (
-                      <span key={i} className="px-2 py-1 bg-blue-200 text-blue-900 rounded-md text-xs font-semibold">
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-blue-200 text-blue-900 rounded-md text-xs font-semibold"
+                      >
                         {check.replace(/_/g, " ")}
                       </span>
                     ))}
@@ -1856,8 +2045,12 @@ export default function BGVInitiationPage() {
                       <Cpu className="text-blue-600" size={24} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">API-Based Checks</h3>
-                      <p className="text-xs text-gray-600">Automated verification through external APIs</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        API-Based Checks
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Automated verification through external APIs
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1876,8 +2069,13 @@ export default function BGVInitiationPage() {
                       <FileSearch className="text-orange-600" size={24} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">Manual Verification Checks</h3>
-                      <p className="text-xs text-gray-600">Requires manual verification on this page - Click "Verify Manually Here" button</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        Manual Verification Checks
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Requires manual verification on this page - Click
+                        "Verify Manually Here" button
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1896,8 +2094,12 @@ export default function BGVInitiationPage() {
                       <Brain className="text-purple-600" size={24} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">AI-Powered Validation</h3>
-                      <p className="text-xs text-gray-600">Advanced AI analysis for CV and education verification</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        AI-Powered Validation
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Advanced AI analysis for CV and education verification
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1922,9 +2124,12 @@ export default function BGVInitiationPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {visibleStage.charAt(0).toUpperCase() + visibleStage.slice(1)} Stage Summary
+                  {visibleStage.charAt(0).toUpperCase() + visibleStage.slice(1)}{" "}
+                  Stage Summary
                 </h2>
-                <p className="text-sm text-gray-600">Detailed verification results</p>
+                <p className="text-sm text-gray-600">
+                  Detailed verification results
+                </p>
               </div>
             </div>
 
@@ -1933,11 +2138,21 @@ export default function BGVInitiationPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
                   <tr>
-                    <th className="p-4 text-left font-bold text-gray-900">Check</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Status</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Remarks</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Submitted At</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Stage</th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Check
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Status
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Remarks
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Submitted At
+                    </th>
+                    <th className="p-4 text-left font-bold text-gray-900">
+                      Stage
+                    </th>
                   </tr>
                 </thead>
 
@@ -1945,8 +2160,13 @@ export default function BGVInitiationPage() {
                   {candidateVerification.stages?.[visibleStage]?.length ? (
                     candidateVerification.stages[visibleStage].map(
                       (item, i) => (
-                        <tr key={i} className="border-t hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors">
-                          <td className="p-4 capitalize font-medium text-gray-900">{item.check.replace(/_/g, " ")}</td>
+                        <tr
+                          key={i}
+                          className="border-t hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-colors"
+                        >
+                          <td className="p-4 capitalize font-medium text-gray-900">
+                            {item.check.replace(/_/g, " ")}
+                          </td>
                           <td className="p-4">
                             <span
                               className={`px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
@@ -1985,7 +2205,9 @@ export default function BGVInitiationPage() {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-gray-700 break-words">{item.remarks || "—"}</span>
+                              <span className="text-gray-700 break-words">
+                                {item.remarks || "—"}
+                              </span>
                             )}
                           </td>
 
@@ -1994,7 +2216,9 @@ export default function BGVInitiationPage() {
                               ? new Date(item.submittedAt).toLocaleString()
                               : "—"}
                           </td>
-                          <td className="p-4 capitalize font-medium text-gray-900">{visibleStage}</td>
+                          <td className="p-4 capitalize font-medium text-gray-900">
+                            {visibleStage}
+                          </td>
                         </tr>
                       )
                     )
@@ -2013,7 +2237,10 @@ export default function BGVInitiationPage() {
             <div className="lg:hidden space-y-4">
               {candidateVerification.stages?.[visibleStage]?.length ? (
                 candidateVerification.stages[visibleStage].map((item, i) => (
-                  <div key={i} className="bg-white border-2 rounded-2xl shadow-lg p-5 space-y-3">
+                  <div
+                    key={i}
+                    className="bg-white border-2 rounded-2xl shadow-lg p-5 space-y-3"
+                  >
                     {/* Check Name */}
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="font-bold text-gray-900 capitalize text-base flex-1">
@@ -2039,7 +2266,9 @@ export default function BGVInitiationPage() {
 
                     {/* Stage */}
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-gray-600">Stage:</span>
+                      <span className="font-semibold text-gray-600">
+                        Stage:
+                      </span>
                       <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-medium capitalize">
                         {visibleStage}
                       </span>
@@ -2048,20 +2277,30 @@ export default function BGVInitiationPage() {
                     {/* Remarks */}
                     {item.remarks && (
                       <div className="bg-gray-50 p-3 rounded-lg border">
-                        <div className="font-semibold text-gray-700 text-xs mb-2">Remarks:</div>
+                        <div className="font-semibold text-gray-700 text-xs mb-2">
+                          Remarks:
+                        </div>
                         {typeof item.remarks === "object" ? (
                           <div className="text-xs text-gray-700 space-y-1">
-                            {Object.entries(item.remarks).map(([key, value]) => (
-                              <div key={key} className="break-words">
-                                <span className="font-semibold capitalize">{key}: </span>
-                                <span>
-                                  {value === null || value === undefined ? "—" : value.toString()}
-                                </span>
-                              </div>
-                            ))}
+                            {Object.entries(item.remarks).map(
+                              ([key, value]) => (
+                                <div key={key} className="break-words">
+                                  <span className="font-semibold capitalize">
+                                    {key}:{" "}
+                                  </span>
+                                  <span>
+                                    {value === null || value === undefined
+                                      ? "—"
+                                      : value.toString()}
+                                  </span>
+                                </div>
+                              )
+                            )}
                           </div>
                         ) : (
-                          <div className="text-xs text-gray-700 break-words">{item.remarks}</div>
+                          <div className="text-xs text-gray-700 break-words">
+                            {item.remarks}
+                          </div>
                         )}
                       </div>
                     )}
@@ -2070,7 +2309,9 @@ export default function BGVInitiationPage() {
                     {item.submittedAt && (
                       <div className="flex items-center gap-2 text-xs text-gray-600">
                         <span className="font-semibold">Submitted:</span>
-                        <span>{new Date(item.submittedAt).toLocaleString()}</span>
+                        <span>
+                          {new Date(item.submittedAt).toLocaleString()}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -2095,7 +2336,9 @@ export default function BGVInitiationPage() {
                   <UserPlus size={28} />
                   <div>
                     <h2 className="text-2xl font-bold">Add New Candidate</h2>
-                    <p className="text-white/90 text-sm">Fill in candidate information</p>
+                    <p className="text-white/90 text-sm">
+                      Fill in candidate information
+                    </p>
                   </div>
                 </div>
                 <button
@@ -2113,7 +2356,9 @@ export default function BGVInitiationPage() {
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-blue-200">
                   <User className="text-blue-600" size={20} />
-                  <h3 className="text-lg font-bold text-gray-900">Personal Information</h3>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Personal Information
+                  </h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* FIRST NAME */}
@@ -2124,11 +2369,15 @@ export default function BGVInitiationPage() {
                       onChange={handleInputChange}
                       placeholder="First Name *"
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
-                        fieldErrors.firstName ? "border-red-500" : "border-gray-300"
+                        fieldErrors.firstName
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.firstName && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.firstName}
+                      </p>
                     )}
                   </div>
 
@@ -2149,11 +2398,15 @@ export default function BGVInitiationPage() {
                       onChange={handleInputChange}
                       placeholder="Last Name *"
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
-                        fieldErrors.lastName ? "border-red-500" : "border-gray-300"
+                        fieldErrors.lastName
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.lastName && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.lastName}
+                      </p>
                     )}
                   </div>
 
@@ -2165,11 +2418,15 @@ export default function BGVInitiationPage() {
                       onChange={handleInputChange}
                       placeholder="Father Name *"
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
-                        fieldErrors.fatherName ? "border-red-500" : "border-gray-300"
+                        fieldErrors.fatherName
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.fatherName && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.fatherName}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.fatherName}
+                      </p>
                     )}
                   </div>
 
@@ -2185,7 +2442,9 @@ export default function BGVInitiationPage() {
                       }`}
                     />
                     {fieldErrors.dob && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.dob}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.dob}
+                      </p>
                     )}
                   </div>
 
@@ -2196,7 +2455,9 @@ export default function BGVInitiationPage() {
                       value={newCandidate.gender}
                       onChange={handleInputChange}
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
-                        fieldErrors.gender ? "border-red-500" : "border-gray-300"
+                        fieldErrors.gender
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     >
                       <option value="">Select Gender *</option>
@@ -2205,7 +2466,9 @@ export default function BGVInitiationPage() {
                       <option value="other">Other</option>
                     </select>
                     {fieldErrors.gender && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.gender}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.gender}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -2215,7 +2478,9 @@ export default function BGVInitiationPage() {
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-green-200">
                   <Mail className="text-green-600" size={20} />
-                  <h3 className="text-lg font-bold text-gray-900">Contact Information</h3>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Contact Information
+                  </h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* PHONE */}
@@ -2230,7 +2495,9 @@ export default function BGVInitiationPage() {
                       }`}
                     />
                     {fieldErrors.phone && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.phone}
+                      </p>
                     )}
                   </div>
 
@@ -2246,7 +2513,9 @@ export default function BGVInitiationPage() {
                       }`}
                     />
                     {fieldErrors.email && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.email}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -2267,11 +2536,15 @@ export default function BGVInitiationPage() {
                       onChange={handleInputChange}
                       placeholder="Aadhaar Number *"
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition ${
-                        fieldErrors.aadhaarNumber ? "border-red-500" : "border-gray-300"
+                        fieldErrors.aadhaarNumber
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.aadhaarNumber && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.aadhaarNumber}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.aadhaarNumber}
+                      </p>
                     )}
                   </div>
 
@@ -2283,11 +2556,15 @@ export default function BGVInitiationPage() {
                       onChange={handleInputChange}
                       placeholder="PAN Number *"
                       className={`border-2 p-3 rounded-lg w-full uppercase text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition ${
-                        fieldErrors.panNumber ? "border-red-500" : "border-gray-300"
+                        fieldErrors.panNumber
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.panNumber && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.panNumber}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.panNumber}
+                      </p>
                     )}
                   </div>
 
@@ -2337,11 +2614,15 @@ export default function BGVInitiationPage() {
                       onChange={handleInputChange}
                       placeholder="District *"
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition ${
-                        fieldErrors.district ? "border-red-500" : "border-gray-300"
+                        fieldErrors.district
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.district && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.district}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.district}
+                      </p>
                     )}
                   </div>
 
@@ -2357,7 +2638,9 @@ export default function BGVInitiationPage() {
                       }`}
                     />
                     {fieldErrors.state && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.state}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.state}
+                      </p>
                     )}
                   </div>
 
@@ -2369,11 +2652,15 @@ export default function BGVInitiationPage() {
                       onChange={handleInputChange}
                       placeholder="Pincode *"
                       className={`border-2 p-3 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition ${
-                        fieldErrors.pincode ? "border-red-500" : "border-gray-300"
+                        fieldErrors.pincode
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     />
                     {fieldErrors.pincode && (
-                      <p className="text-red-500 text-xs mt-1">{fieldErrors.pincode}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.pincode}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -2391,19 +2678,26 @@ export default function BGVInitiationPage() {
                     rows={3}
                   />
                   {fieldErrors.address && (
-                    <p className="text-red-500 text-xs mt-1">{fieldErrors.address}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {fieldErrors.address}
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Resume Upload */}
               <div className="mb-6">
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Resume (Optional)</label>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Resume (Optional)
+                </label>
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx"
                   onChange={(e) =>
-                    setNewCandidate((p) => ({ ...p, resume: e.target.files[0] }))
+                    setNewCandidate((p) => ({
+                      ...p,
+                      resume: e.target.files[0],
+                    }))
                   }
                   className="border-2 border-gray-300 p-2 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] outline-none transition"
                 />
@@ -2490,13 +2784,23 @@ export default function BGVInitiationPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className={`bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border-2 ${
-                modal.type === "success" ? "border-green-300" : modal.type === "error" ? "border-red-300" : "border-blue-300"
+                modal.type === "success"
+                  ? "border-green-300"
+                  : modal.type === "error"
+                  ? "border-red-300"
+                  : "border-blue-300"
               }`}
             >
               <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-full ${
-                  modal.type === "success" ? "bg-green-100" : modal.type === "error" ? "bg-red-100" : "bg-blue-100"
-                }`}>
+                <div
+                  className={`p-3 rounded-full ${
+                    modal.type === "success"
+                      ? "bg-green-100"
+                      : modal.type === "error"
+                      ? "bg-red-100"
+                      : "bg-blue-100"
+                  }`}
+                >
                   {modal.type === "error" && (
                     <XCircle className="text-red-600" size={32} />
                   )}
@@ -2509,9 +2813,15 @@ export default function BGVInitiationPage() {
                 </div>
 
                 <div className="flex-1">
-                  <h3 className={`text-xl font-bold mb-2 ${
-                    modal.type === "success" ? "text-green-700" : modal.type === "error" ? "text-red-700" : "text-blue-700"
-                  }`}>
+                  <h3
+                    className={`text-xl font-bold mb-2 ${
+                      modal.type === "success"
+                        ? "text-green-700"
+                        : modal.type === "error"
+                        ? "text-red-700"
+                        : "text-blue-700"
+                    }`}
+                  >
                     {modal.title}
                   </h3>
                   <p className="text-gray-700 whitespace-pre-wrap text-sm">

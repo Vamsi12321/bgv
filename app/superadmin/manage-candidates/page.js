@@ -51,6 +51,7 @@ export default function ManageCandidatesPage() {
   const [saving, setSaving] = useState(false);
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const [orgSearch, setOrgSearch] = useState("");
+  const [candidateSearch, setCandidateSearch] = useState("");
 
   const [modal, setModal] = useState({
     show: false,
@@ -58,11 +59,16 @@ export default function ManageCandidatesPage() {
     message: "",
   });
 
-  const showError = (msg) =>
-    setModal({ show: true, type: "error", message: msg.detail });
+  const showError = (msg) => {
+    // Handle both string messages and objects with detail property
+    const errorMessage = typeof msg === 'string' ? msg : (msg?.detail || msg?.message || 'An error occurred');
+    setModal({ show: true, type: "error", message: errorMessage });
+  };
 
-  const showSuccess = (msg) =>
-    setModal({ show: true, type: "success", message: msg });
+  const showSuccess = (msg) => {
+    const successMessage = typeof msg === 'string' ? msg : (msg?.message || 'Operation successful');
+    setModal({ show: true, type: "success", message: successMessage });
+  };
 
   /* ----------------------------------------------------
    VALIDATION UTILITIES
@@ -92,6 +98,9 @@ export default function ManageCandidatesPage() {
 
   /* Pincode → 6 digits */
   const isValidPincode = (v) => /^[1-9][0-9]{5}$/.test(v);
+
+  /* Name validation → only letters and spaces, no numbers */
+  const isValidName = (v) => /^[a-zA-Z\s]+$/.test(v);
 
   /* -------------------------------------------- */
   /* FETCH ORGANIZATIONS */
@@ -193,7 +202,8 @@ export default function ManageCandidatesPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        showError(data.detail || "Failed to add candidate");
+        // Handle backend error response
+        showError(data);
         return;
       }
 
@@ -202,7 +212,7 @@ export default function ManageCandidatesPage() {
       setNewCandidate(normalizeCandidate({}));
       await loadCandidates();
     } catch (err) {
-      showError(err.message);
+      showError(err?.message || "Network error. Please check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -271,16 +281,17 @@ export default function ManageCandidatesPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        showError(data.detail || "Failed to update candidate");
+        // Handle backend error response
+        showError(data);
         return;
       }
 
-      showSuccess("Candidate updated!");
+      showSuccess("Candidate updated successfully!");
       setShowEditModal(false);
       setEditCandidate(normalizeCandidate({}));
       await loadCandidates();
     } catch (err) {
-      showError(err.message);
+      showError(err?.message || "Network error. Please check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -307,7 +318,8 @@ export default function ManageCandidatesPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        showError(data.detail || data.message || "Delete failed.");
+        // Handle backend error response
+        showError(data);
         return;
       }
 
@@ -315,7 +327,7 @@ export default function ManageCandidatesPage() {
       setShowDeleteModal(false);
       await loadCandidates();
     } catch (err) {
-      showError(err.message);
+      showError(err?.message || "Network error. Please check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -325,69 +337,115 @@ export default function ManageCandidatesPage() {
    MASTER VALIDATION FUNCTION
 ---------------------------------------------------- */
   const validateCandidate = (c, showError) => {
-    // Mandatory fields
-    const required = [
-      "firstName",
-      "lastName",
-      "fatherName",
-      "phone",
-      "email",
-      "aadhaarNumber",
-      "panNumber",
-      "address",
-      "district",
-      "state",
-      "pincode",
-      "dob",
-      "gender",
-    ];
+    // Mandatory fields with user-friendly names
+    const required = {
+      firstName: "First Name",
+      lastName: "Last Name",
+      fatherName: "Father's Name",
+      phone: "Phone Number",
+      email: "Email",
+      aadhaarNumber: "Aadhaar Number",
+      panNumber: "PAN Number",
+      address: "Address",
+      district: "District",
+      state: "State",
+      pincode: "Pincode",
+      dob: "Date of Birth",
+      gender: "Gender",
+    };
 
-    for (let key of required) {
+    // Check required fields
+    for (let [key, label] of Object.entries(required)) {
       if (isEmpty(c[key])) {
-        showError(`${key.replace(/([A-Z])/g, " $1")} is required`);
+        showError(`${label} is required`);
         return false;
       }
     }
 
+    // Name validations - only letters and spaces, no numbers
+    if (!isValidName(c.firstName)) {
+      showError("First Name must contain only letters and spaces, no numbers allowed.");
+      return false;
+    }
+
+    if (c.middleName && !isValidName(c.middleName)) {
+      showError("Middle Name must contain only letters and spaces, no numbers allowed.");
+      return false;
+    }
+
+    if (!isValidName(c.lastName)) {
+      showError("Last Name must contain only letters and spaces, no numbers allowed.");
+      return false;
+    }
+
+    if (!isValidName(c.fatherName)) {
+      showError("Father's Name must contain only letters and spaces, no numbers allowed.");
+      return false;
+    }
+
+    // Email validation - must have @ and domain with extension
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(c.email)) {
+      showError("Invalid email format. Please enter a valid email address (e.g., user@example.com).");
+      return false;
+    }
+    
+    // Check if email has proper domain
+    if (!c.email.includes('@') || !c.email.split('@')[1].includes('.')) {
+      showError("Email must include @ symbol and a valid domain (e.g., user@gmail.com).");
+      return false;
+    }
+
     // Aadhaar
     if (!isValidAadhaar(c.aadhaarNumber)) {
-      showError("Invalid Aadhaar number. Must be 12 digits.");
+      showError("Invalid Aadhaar number. Must be exactly 12 digits.");
       return false;
     }
 
     // PAN
     if (!isValidPAN(c.panNumber)) {
-      showError("Invalid PAN format. Must be ABCDE1234F.");
+      showError("Invalid PAN format. Must be in format: ABCDE1234F (5 letters, 4 digits, 1 letter).");
       return false;
     }
 
     // Phone
     if (!isValidPhone(c.phone)) {
-      showError("Invalid phone number. Must be 10 digits.");
+      showError("Invalid phone number. Must be exactly 10 digits.");
+      return false;
+    }
+
+    // District and State validation - only letters and spaces
+    if (!isValidName(c.district)) {
+      showError("District must contain only letters and spaces, no numbers or special characters allowed.");
+      return false;
+    }
+
+    if (!isValidName(c.state)) {
+      showError("State must contain only letters and spaces, no numbers or special characters allowed.");
       return false;
     }
 
     // Pincode
     if (!isValidPincode(c.pincode)) {
-      showError("Invalid Pincode. Must be 6 digits.");
+      showError("Invalid Pincode. Must be exactly 6 digits and cannot start with 0.");
       return false;
     }
 
     // Passport optional
-    if (!isValidPassport(c.passportNumber || "")) {
-      showError("Invalid Passport Number.");
+    if (c.passportNumber && !isValidPassport(c.passportNumber)) {
+      showError("Invalid Passport Number. Must be in format: A1234567 (1 letter followed by 7 digits).");
       return false;
     }
 
     // UAN optional
-    if (!isValidUAN(c.uanNumber || "")) {
-      showError("Invalid UAN Number.");
+    if (c.uanNumber && !isValidUAN(c.uanNumber)) {
+      showError("Invalid UAN Number. Must be 10-12 digits.");
       return false;
     }
 
     // Bank Account optional
-    if (!isValidAccount(c.bankAccountNumber || "")) {
-      showError("Invalid Bank Account Number.");
+    if (c.bankAccountNumber && !isValidAccount(c.bankAccountNumber)) {
+      showError("Invalid Bank Account Number. Must be 9-18 digits.");
       return false;
     }
 
@@ -521,6 +579,29 @@ export default function ManageCandidatesPage() {
           </div>
         </div>
 
+        {/* CANDIDATE SEARCH FILTER */}
+        {selectedOrg && (
+          <div className="bg-gradient-to-br from-white via-gray-50 to-white p-6 rounded-2xl shadow-xl border-2 border-gray-100 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <label className="text-base font-bold text-gray-800">
+                Search Candidates
+              </label>
+            </div>
+            <input
+              type="text"
+              placeholder="🔍 Search by name, email, phone, Aadhaar, or PAN..."
+              value={candidateSearch}
+              onChange={(e) => setCandidateSearch(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl p-4 bg-white text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition-all shadow-sm"
+            />
+          </div>
+        )}
+
         {/* SUPERB CANDIDATES LIST */}
         <div className="bg-white p-6 rounded-2xl shadow-xl border-2 border-gray-100 text-gray-900">
           {loading ? (
@@ -552,7 +633,18 @@ export default function ManageCandidatesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {candidates.map((c, idx) => (
+                    {candidates.filter((c) => {
+                      if (!candidateSearch.trim()) return true;
+                      const search = candidateSearch.toLowerCase();
+                      return (
+                        (c.firstName || "").toLowerCase().includes(search) ||
+                        (c.lastName || "").toLowerCase().includes(search) ||
+                        (c.email || "").toLowerCase().includes(search) ||
+                        (c.phone || "").includes(search) ||
+                        (c.aadhaarNumber || "").includes(search) ||
+                        (c.panNumber || "").toLowerCase().includes(search)
+                      );
+                    }).map((c, idx) => (
                       <tr
                         key={c._id}
                         className={`transition-all group hover:bg-gradient-to-r hover:from-[#fff5f8] hover:to-[#fff0f5] hover:shadow-md ${
@@ -599,7 +691,18 @@ export default function ManageCandidatesPage() {
 
               {/* SUPERB MOBILE CARDS */}
               <div className="md:hidden grid gap-4">
-                {candidates.map((c) => (
+                {candidates.filter((c) => {
+                  if (!candidateSearch.trim()) return true;
+                  const search = candidateSearch.toLowerCase();
+                  return (
+                    (c.firstName || "").toLowerCase().includes(search) ||
+                    (c.lastName || "").toLowerCase().includes(search) ||
+                    (c.email || "").toLowerCase().includes(search) ||
+                    (c.phone || "").includes(search) ||
+                    (c.aadhaarNumber || "").includes(search) ||
+                    (c.panNumber || "").toLowerCase().includes(search)
+                  );
+                }).map((c) => (
                   <div
                     key={c._id}
                     className="border-2 border-gray-100 rounded-2xl p-5 shadow-lg bg-gradient-to-br from-white to-gray-50 hover:shadow-2xl transition-all transform hover:scale-[1.02]"

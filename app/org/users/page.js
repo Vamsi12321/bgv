@@ -68,6 +68,8 @@ export default function OrgUsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState("All"); // Active/Inactive filter
+  const [searchUsername, setSearchUsername] = useState(""); // Username search
 
   const router = useRouter();
   useEffect(() => {
@@ -149,8 +151,21 @@ export default function OrgUsersPage() {
     }
   };
 
-  const filteredUsers =
-    filterRole === "All" ? users : users.filter((u) => u.role === filterRole);
+  const filteredUsers = users.filter((u) => {
+    const byRole = filterRole === "All" ? true : u.role === filterRole;
+    const byStatus = 
+      filterStatus === "All" 
+        ? true 
+        : filterStatus === "Active" 
+          ? u.isActive === true 
+          : u.isActive === false;
+    const byUsername = 
+      searchUsername.trim() === ""
+        ? true
+        : (u.userName || "").toLowerCase().includes(searchUsername.toLowerCase()) ||
+          (u.email || "").toLowerCase().includes(searchUsername.toLowerCase());
+    return byRole && byStatus && byUsername;
+  });
 
   return (
     <div className="p-4 sm:p-6 md:p-8 text-gray-900 space-y-6 bg-gray-50 min-h-screen">
@@ -174,15 +189,35 @@ export default function OrgUsersPage() {
           </div>
           <h3 className="text-lg font-bold text-gray-800">Filter Users</h3>
         </div>
-        <select
-          className="w-full sm:w-auto border-2 border-gray-200 rounded-xl px-4 py-3 bg-white text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition"
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-        >
-          <option value="All">All Roles</option>
-          <option value="ORG_HR">Org HR</option>
-          <option value="HELPER">Helper</option>
-        </select>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <input
+            type="text"
+            placeholder="🔍 Search username or email..."
+            value={searchUsername}
+            onChange={(e) => setSearchUsername(e.target.value)}
+            className="w-full sm:flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 bg-white text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition"
+          />
+
+          <select
+            className="w-full sm:w-auto border-2 border-gray-200 rounded-xl px-4 py-3 bg-white text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition"
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+          >
+            <option value="All">🌐 All Roles</option>
+            <option value="ORG_HR">👔 Org HR</option>
+            <option value="HELPER">👤 Helper</option>
+          </select>
+
+          <select
+            className="w-full sm:w-auto border-2 border-gray-200 rounded-xl px-4 py-3 bg-white text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="All">🌐 All Status</option>
+            <option value="Active">✅ Active</option>
+            <option value="Inactive">❌ Inactive</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -218,13 +253,13 @@ export default function OrgUsersPage() {
                       <td className="p-3">{u.role}</td>
                       <td className="p-3">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
                             u.isActive
                               ? "bg-green-100 text-green-700"
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {u.isActive ? "Active" : "Suspended"}
+                          {u.isActive ? "✅ Active" : "❌ Inactive"}
                         </span>
                       </td>
                       <td className="p-3">{u.createdBy || "—"}</td>
@@ -268,13 +303,13 @@ export default function OrgUsersPage() {
                     <p className="text-sm text-gray-600">{u.email}</p>
                   </div>
                   <span
-                    className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${
                       u.isActive
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {u.isActive ? "Active" : "Suspended"}
+                    {u.isActive ? "✅ Active" : "❌ Inactive"}
                   </span>
                 </div>
 

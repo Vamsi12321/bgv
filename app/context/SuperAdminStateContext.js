@@ -33,7 +33,7 @@ export function SuperAdminStateProvider({ children }) {
   const [logsData, setLogsData] = useState([]);
   const [logsPagination, setLogsPagination] = useState({
     currentPage: 1,
-    pageSize: 10,
+    pageSize: 25,
   });
 
   // Verifications state
