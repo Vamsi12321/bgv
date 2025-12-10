@@ -47,6 +47,7 @@ const rolePermissionPresets = {
     "dashboard:view",
   ],
   HELPER: [
+    "candidate:create",
     "candidate:view",
     "verification:view",
     "verification:assign",
