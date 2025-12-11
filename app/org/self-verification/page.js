@@ -16,6 +16,7 @@ import {
   UserCheck,
   FileText,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function OrgCandidateSelfVerification() {
   /* ---------------------------------------------- */
@@ -70,6 +71,155 @@ export default function OrgCandidateSelfVerification() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [validationError, setValidationError] = useState("");
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+  
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    supervisory1: false,
+    supervisory2: false,
+    employment1: false,
+    employment2: false,
+    education: false,
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  // Create truly empty candidate object (no default values for close detection)
+  const createEmptyCandidate = () => ({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    fatherName: "",
+    dob: "",
+    gender: "", // No default value initially
+    phone: "",
+    email: "",
+    aadhaarNumber: "",
+    panNumber: "",
+    uanNumber: "",
+    passportNumber: "",
+    bankAccountNumber: "",
+    address: "",
+    district: "",
+    state: "",
+    pincode: "",
+    supervisory1_name: "",
+    supervisory1_phone: "",
+    supervisory1_email: "",
+    supervisory1_relationship: "",
+    supervisory1_company: "",
+    supervisory1_designation: "",
+    supervisory1_workingPeriod: "",
+    supervisory2_name: "",
+    supervisory2_phone: "",
+    supervisory2_email: "",
+    supervisory2_relationship: "",
+    supervisory2_company: "",
+    supervisory2_designation: "",
+    supervisory2_workingPeriod: "",
+    employment1_company: "",
+    employment1_designation: "",
+    employment1_joiningDate: "",
+    employment1_relievingDate: "",
+    employment1_hrContact: "",
+    employment1_hrEmail: "",
+    employment1_hrName: "",
+    employment1_address: "",
+    relievingLetter1: null,
+    experienceLetter1: null,
+    salarySlips1: null,
+    relievingLetterUrl1: "",
+    experienceLetterUrl1: "",
+    salarySlipsUrl1: "",
+    employment2_company: "",
+    employment2_designation: "",
+    employment2_joiningDate: "",
+    employment2_relievingDate: "",
+    employment2_hrContact: "",
+    employment2_hrEmail: "",
+    employment2_hrName: "",
+    employment2_address: "",
+    relievingLetter2: null,
+    experienceLetter2: null,
+    salarySlips2: null,
+    relievingLetterUrl2: "",
+    experienceLetterUrl2: "",
+    salarySlipsUrl2: "",
+    education_degree: "",
+    education_specialization: "",
+    education_universityName: "",
+    education_collegeName: "",
+    education_yearOfPassing: "",
+    education_cgpa: "",
+    education_universityContact: "",
+    education_universityEmail: "",
+    education_universityAddress: "",
+    education_collegeContact: "",
+    education_collegeEmail: "",
+    education_collegeAddress: "",
+    educationCertificate: null,
+    marksheet: null,
+    certificateUrl: "",
+    marksheetUrl: "",
+  });
+
+  // Check if any form data has been entered
+  const hasFormData = () => {
+    // Check all text fields (excluding gender since it has a default value)
+    const textFields = [
+      'firstName', 'middleName', 'lastName', 'fatherName', 'dob',
+      'phone', 'email', 'aadhaarNumber', 'panNumber', 'uanNumber', 
+      'passportNumber', 'bankAccountNumber', 'district', 'state', 'pincode', 'address',
+      'supervisory1_name', 'supervisory1_phone', 'supervisory1_email', 'supervisory1_relationship',
+      'supervisory1_company', 'supervisory1_designation', 'supervisory1_workingPeriod',
+      'supervisory2_name', 'supervisory2_phone', 'supervisory2_email', 'supervisory2_relationship',
+      'supervisory2_company', 'supervisory2_designation', 'supervisory2_workingPeriod',
+      'employment1_company', 'employment1_designation', 'employment1_joiningDate', 'employment1_relievingDate',
+      'employment1_hrContact', 'employment1_hrEmail', 'employment1_hrName', 'employment1_address',
+      'employment2_company', 'employment2_designation', 'employment2_joiningDate', 'employment2_relievingDate',
+      'employment2_hrContact', 'employment2_hrEmail', 'employment2_hrName', 'employment2_address',
+      'education_degree', 'education_specialization', 'education_universityName', 'education_collegeName',
+      'education_yearOfPassing', 'education_cgpa', 'education_universityContact', 'education_universityEmail',
+      'education_universityAddress', 'education_collegeContact', 'education_collegeEmail', 'education_collegeAddress'
+    ];
+    
+    // Check if any text field has data
+    const hasTextData = textFields.some(field => newCandidate[field]?.trim());
+    
+    // Check gender separately (only consider it changed if it's not empty)
+    const hasGenderChange = newCandidate.gender && newCandidate.gender.trim();
+    
+    // Check if any file has been selected
+    const hasFileData = newCandidate.resume || newCandidate.relievingLetter1 || 
+                       newCandidate.experienceLetter1 || newCandidate.salarySlips1 ||
+                       newCandidate.relievingLetter2 || newCandidate.experienceLetter2 || 
+                       newCandidate.salarySlips2 || newCandidate.educationCertificate || 
+                       newCandidate.marksheet;
+    
+    return hasTextData || hasGenderChange || hasFileData;
+  };
+
+  // Handle modal close with smart confirmation
+  const handleModalClose = () => {
+    if (hasFormData()) {
+      setShowConfirmClose(true);
+    } else {
+      // No data entered, close directly
+      setShowAddModal(false);
+      setNewCandidate(createEmptyCandidate());
+      setValidationError("");
+      setExpandedSections({
+        supervisory1: false,
+        supervisory2: false,
+        employment1: false,
+        employment2: false,
+        education: false,
+      });
+    }
+  };
 
   const [stages, setStages] = useState({
     primary: [],
@@ -135,6 +285,74 @@ export default function OrgCandidateSelfVerification() {
     district: "",
     state: "",
     pincode: "",
+    
+    // Supervisory Check 1 - FLAT STRUCTURE
+    supervisory1_name: "",
+    supervisory1_phone: "",
+    supervisory1_email: "",
+    supervisory1_relationship: "",
+    supervisory1_company: "",
+    supervisory1_designation: "",
+    supervisory1_workingPeriod: "",
+
+    // Supervisory Check 2 - FLAT STRUCTURE
+    supervisory2_name: "",
+    supervisory2_phone: "",
+    supervisory2_email: "",
+    supervisory2_relationship: "",
+    supervisory2_company: "",
+    supervisory2_designation: "",
+    supervisory2_workingPeriod: "",
+
+    // Employment History 1 - FLAT STRUCTURE
+    employment1_company: "",
+    employment1_designation: "",
+    employment1_joiningDate: "",
+    employment1_relievingDate: "",
+    employment1_hrContact: "",
+    employment1_hrEmail: "",
+    employment1_hrName: "",
+    employment1_address: "",
+    relievingLetter1: null,
+    experienceLetter1: null,
+    salarySlips1: null,
+    relievingLetterUrl1: "",
+    experienceLetterUrl1: "",
+    salarySlipsUrl1: "",
+
+    // Employment History 2 - FLAT STRUCTURE
+    employment2_company: "",
+    employment2_designation: "",
+    employment2_joiningDate: "",
+    employment2_relievingDate: "",
+    employment2_hrContact: "",
+    employment2_hrEmail: "",
+    employment2_hrName: "",
+    employment2_address: "",
+    relievingLetter2: null,
+    experienceLetter2: null,
+    salarySlips2: null,
+    relievingLetterUrl2: "",
+    experienceLetterUrl2: "",
+    salarySlipsUrl2: "",
+
+    // Education Check - FLAT STRUCTURE
+    education_degree: "",
+    education_specialization: "",
+    education_universityName: "",
+    education_collegeName: "",
+    education_yearOfPassing: "",
+    education_cgpa: "",
+    education_universityContact: "",
+    education_universityEmail: "",
+    education_universityAddress: "",
+    education_collegeContact: "",
+    education_collegeEmail: "",
+    education_collegeAddress: "",
+    educationCertificate: null,
+    marksheet: null,
+    certificateUrl: "",
+    marksheetUrl: "",
   };
 
   const [newCandidate, setNewCandidate] = useState(emptyCandidate);
@@ -171,17 +389,31 @@ export default function OrgCandidateSelfVerification() {
   /* ---------------------------------------------- */
   /* INPUT SANITIZER                                 */
   /* ---------------------------------------------- */
-  const handleInputChange = (e, isFile = false) => {
+  const handleInputChange = (e, isFile = false, fileField = null) => {
     if (isFile) {
-      setNewCandidate((prev) => ({ ...prev, resume: e.target.files[0] }));
+      const file = e.target.files[0];
+      
+      // Handle file uploads with flat field names
+      if (fileField) {
+        setNewCandidate((p) => ({ ...p, [fileField]: file }));
+        return;
+      }
+      
+      // Handle top-level file (resume)
+      setNewCandidate((p) => ({ ...p, resume: file }));
       return;
     }
 
     let { name, value } = e.target;
 
+    // Auto-format specific fields based on field name
+    if (name.includes('phone') || name.includes('hrContact') || name.includes('Contact')) {
+      value = value.replace(/\D/g, "").slice(0, 10);
+    }
+    
+    // Auto-format top-level fields
     if (name === "panNumber")
       value = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-
     if (name === "aadhaarNumber") value = value.replace(/\D/g, "").slice(0, 12);
     if (name === "phone") value = value.replace(/\D/g, "").slice(0, 10);
     if (name === "uanNumber") value = value.replace(/\D/g, "").slice(0, 12);
@@ -190,6 +422,11 @@ export default function OrgCandidateSelfVerification() {
       value = value.replace(/\D/g, "").slice(0, 18);
 
     setNewCandidate((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear validation error when user starts typing
+    if (validationError) {
+      setValidationError("");
+    }
   };
 
   /* ---------------------------------------------- */
@@ -726,6 +963,158 @@ export default function OrgCandidateSelfVerification() {
   };
 
   /* ---------------------------------------------- */
+  /* ADD CANDIDATE FUNCTION                          */
+  /* ---------------------------------------------- */
+  const handleAddCandidate = async () => {
+    setSubmitting(true);
+
+    try {
+      const formData = new FormData();
+
+      // Append all fields EXACTLY as backend expects
+      formData.append("firstName", newCandidate.firstName || "");
+      formData.append("middleName", newCandidate.middleName || "");
+      formData.append("lastName", newCandidate.lastName || "");
+      formData.append("phone", newCandidate.phone || "");
+      formData.append("aadhaarNumber", newCandidate.aadhaarNumber || "");
+      formData.append("panNumber", newCandidate.panNumber || "");
+      formData.append("address", newCandidate.address || "");
+      formData.append("email", newCandidate.email || "");
+      formData.append("fatherName", newCandidate.fatherName || "");
+      formData.append("dob", newCandidate.dob || "");
+      formData.append("gender", newCandidate.gender || "");
+      formData.append("uanNumber", newCandidate.uanNumber || "");
+      formData.append("passportNumber", newCandidate.passportNumber || "");
+      formData.append("bankAccountNumber", newCandidate.bankAccountNumber || "");
+      formData.append("district", newCandidate.district || "");
+      formData.append("state", newCandidate.state || "");
+      formData.append("pincode", newCandidate.pincode || "");
+      formData.append("organizationId", bgvUser.organizationId);
+
+      // Supervisory Check 1 Fields (flat structure as backend expects)
+      formData.append("supervisory1_name", newCandidate.supervisory1_name || "");
+      formData.append("supervisory1_phone", newCandidate.supervisory1_phone || "");
+      formData.append("supervisory1_email", newCandidate.supervisory1_email || "");
+      formData.append("supervisory1_relationship", newCandidate.supervisory1_relationship || "");
+      formData.append("supervisory1_company", newCandidate.supervisory1_company || "");
+      formData.append("supervisory1_designation", newCandidate.supervisory1_designation || "");
+      formData.append("supervisory1_workingPeriod", newCandidate.supervisory1_workingPeriod || "");
+
+      // Supervisory Check 2 Fields
+      formData.append("supervisory2_name", newCandidate.supervisory2_name || "");
+      formData.append("supervisory2_phone", newCandidate.supervisory2_phone || "");
+      formData.append("supervisory2_email", newCandidate.supervisory2_email || "");
+      formData.append("supervisory2_relationship", newCandidate.supervisory2_relationship || "");
+      formData.append("supervisory2_company", newCandidate.supervisory2_company || "");
+      formData.append("supervisory2_designation", newCandidate.supervisory2_designation || "");
+      formData.append("supervisory2_workingPeriod", newCandidate.supervisory2_workingPeriod || "");
+
+      // Employment History 1 Fields
+      formData.append("employment1_company", newCandidate.employment1_company || "");
+      formData.append("employment1_designation", newCandidate.employment1_designation || "");
+      formData.append("employment1_joiningDate", newCandidate.employment1_joiningDate || "");
+      formData.append("employment1_relievingDate", newCandidate.employment1_relievingDate || "");
+      formData.append("employment1_hrContact", newCandidate.employment1_hrContact || "");
+      formData.append("employment1_hrEmail", newCandidate.employment1_hrEmail || "");
+      formData.append("employment1_hrName", newCandidate.employment1_hrName || "");
+      formData.append("employment1_address", newCandidate.employment1_address || "");
+
+      // Employment History 2 Fields
+      formData.append("employment2_company", newCandidate.employment2_company || "");
+      formData.append("employment2_designation", newCandidate.employment2_designation || "");
+      formData.append("employment2_joiningDate", newCandidate.employment2_joiningDate || "");
+      formData.append("employment2_relievingDate", newCandidate.employment2_relievingDate || "");
+      formData.append("employment2_hrContact", newCandidate.employment2_hrContact || "");
+      formData.append("employment2_hrEmail", newCandidate.employment2_hrEmail || "");
+      formData.append("employment2_hrName", newCandidate.employment2_hrName || "");
+      formData.append("employment2_address", newCandidate.employment2_address || "");
+
+      // Education Check Fields
+      formData.append("education_degree", newCandidate.education_degree || "");
+      formData.append("education_specialization", newCandidate.education_specialization || "");
+      formData.append("education_universityName", newCandidate.education_universityName || "");
+      formData.append("education_collegeName", newCandidate.education_collegeName || "");
+      formData.append("education_yearOfPassing", newCandidate.education_yearOfPassing || "");
+      formData.append("education_cgpa", newCandidate.education_cgpa || "");
+      formData.append("education_universityContact", newCandidate.education_universityContact || "");
+      formData.append("education_universityEmail", newCandidate.education_universityEmail || "");
+      formData.append("education_universityAddress", newCandidate.education_universityAddress || "");
+      formData.append("education_collegeContact", newCandidate.education_collegeContact || "");
+      formData.append("education_collegeEmail", newCandidate.education_collegeEmail || "");
+      formData.append("education_collegeAddress", newCandidate.education_collegeAddress || "");
+
+      // Document Uploads
+      if (newCandidate.resume) {
+        formData.append("resume", newCandidate.resume);
+      }
+      
+      if (newCandidate.relievingLetter1) {
+        formData.append("relievingLetter1", newCandidate.relievingLetter1);
+      }
+      if (newCandidate.experienceLetter1) {
+        formData.append("experienceLetter1", newCandidate.experienceLetter1);
+      }
+      if (newCandidate.salarySlips1) {
+        formData.append("salarySlips1", newCandidate.salarySlips1);
+      }
+      
+      if (newCandidate.relievingLetter2) {
+        formData.append("relievingLetter2", newCandidate.relievingLetter2);
+      }
+      if (newCandidate.experienceLetter2) {
+        formData.append("experienceLetter2", newCandidate.experienceLetter2);
+      }
+      if (newCandidate.salarySlips2) {
+        formData.append("salarySlips2", newCandidate.salarySlips2);
+      }
+      
+      if (newCandidate.educationCertificate) {
+        formData.append("educationCertificate", newCandidate.educationCertificate);
+      }
+      if (newCandidate.marksheet) {
+        formData.append("marksheet", newCandidate.marksheet);
+      }
+
+      const res = await fetch(`/api/proxy/secure/addCandidate`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showModal({
+          title: "Error Adding Candidate",
+          message: data.detail || "Server error",
+          type: "error",
+        });
+      } else {
+        showModal({
+          title: "Success",
+          message: "Candidate added successfully.",
+          type: "success",
+        });
+
+        setShowAddModal(false);
+        setNewCandidate(createEmptyCandidate());
+        setValidationError("");
+        setExpandedSections({
+          supervisory1: false,
+          supervisory2: false,
+          employment1: false,
+          employment2: false,
+          education: false,
+        });
+
+        await fetchCandidates(bgvUser.organizationId);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ---------------------------------------------- */
   /* PAGE UI                                         */
   /* ---------------------------------------------- */
   return (
@@ -888,7 +1277,10 @@ export default function OrgCandidateSelfVerification() {
 
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setNewCandidate(createEmptyCandidate());
+                setShowAddModal(true);
+              }}
             >
               <PlusCircle size={16} /> Add Candidate
             </button>
@@ -1324,616 +1716,1054 @@ export default function OrgCandidateSelfVerification() {
 
         {/* ADD CANDIDATE MODAL */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center p-4 overflow-y-auto">
-            <div className="bg-white p-4 rounded-xl w-full max-w-lg shadow-xl border relative mt-10 mb-10 max-h-[90vh] overflow-y-auto">
-              {/* Confirm Close */}
-              {modal.open && modal.type === "confirmClose" && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999] p-4">
-                  <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl border">
-                    <h2 className="text-lg font-bold text-gray-800">
-                      Discard Changes?
-                    </h2>
-                    <p className="text-gray-600 mt-2">
-                      All unsaved changes will be lost.
-                    </p>
+          <Modal 
+            title="Add Candidate" 
+            onClose={handleModalClose}
+          >
+            <CandidateForm
+              data={newCandidate}
+              onChange={handleInputChange}
+              onSubmit={handleAddCandidate}
+              saving={submitting}
+              submitText="Add Candidate"
+              validationError={validationError}
+              setValidationError={setValidationError}
+            />
+          </Modal>
+        )}
 
-                    <div className="flex gap-3 mt-6">
-                      <button
-                        onClick={() => setModal({ open: false })}
-                        className="w-1/2 py-2 rounded bg-gray-200 text-gray-800 font-medium hover:bg-gray-300"
-                      >
-                        Cancel
-                      </button>
+        {/* CONFIRM CLOSE MODAL */}
+        {showConfirmClose && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-2">Discard Changes?</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                You have unsaved changes. Are you sure you want to close without saving?
+              </p>
 
-                      <button
-                        onClick={() => {
-                          setShowAddModal(false);
-                          setModal({ open: false });
-                          setNewCandidate(emptyCandidate);
-                        }}
-                        className="w-1/2 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700"
-                      >
-                        Yes, Close
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* HEADER */}
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Add Candidate
-                </h2>
-
+              <div className="flex justify-end gap-3">
                 <button
-                  onClick={() => setModal({ open: true, type: "confirmClose" })}
-                  className="text-gray-500 hover:text-black"
-                >
-                  <X />
-                </button>
-              </div>
-
-              {/* FORM GRID */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* FIRST NAME */}
-                <div>
-                  <input
-                    name="firstName"
-                    value={newCandidate.firstName}
-                    onChange={handleInputChange}
-                    placeholder="First Name *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.firstName ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.firstName && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.firstName}
-                    </p>
-                  )}
-                </div>
-
-                {/* MIDDLE NAME */}
-                <div>
-                  <input
-                    name="middleName"
-                    value={newCandidate.middleName}
-                    onChange={handleInputChange}
-                    placeholder="Middle Name (optional)"
-                    className="border p-2 rounded w-full"
-                  />
-                </div>
-
-                {/* LAST NAME */}
-                <div>
-                  <input
-                    name="lastName"
-                    value={newCandidate.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Last Name *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.lastName ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.lastName && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.lastName}
-                    </p>
-                  )}
-                </div>
-
-                {/* FATHER NAME */}
-                <div>
-                  <input
-                    name="fatherName"
-                    value={newCandidate.fatherName}
-                    onChange={handleInputChange}
-                    placeholder="Father Name *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.fatherName ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.fatherName && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.fatherName}
-                    </p>
-                  )}
-                </div>
-
-                {/* DOB */}
-                <div>
-                  <input
-                    name="dob"
-                    type="date"
-                    value={newCandidate.dob}
-                    onChange={handleInputChange}
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.dob ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.dob && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.dob}
-                    </p>
-                  )}
-                </div>
-
-                {/* GENDER */}
-                <div>
-                  <select
-                    name="gender"
-                    value={newCandidate.gender}
-                    onChange={handleInputChange}
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.gender ? "border-red-500" : ""
-                    }`}
-                  >
-                    <option value="">Select Gender *</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {fieldErrors.gender && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.gender}
-                    </p>
-                  )}
-                </div>
-
-                {/* PHONE */}
-                <div>
-                  <input
-                    name="phone"
-                    value={newCandidate.phone}
-                    onChange={handleInputChange}
-                    placeholder="Phone *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.phone ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.phone && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.phone}
-                    </p>
-                  )}
-                </div>
-
-                {/* EMAIL */}
-                <div className="sm:col-span-2">
-                  <input
-                    name="email"
-                    value={newCandidate.email}
-                    onChange={handleInputChange}
-                    placeholder="Email *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.email ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.email && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.email}
-                    </p>
-                  )}
-                </div>
-
-                {/* AADHAAR */}
-                <div>
-                  <input
-                    name="aadhaarNumber"
-                    value={newCandidate.aadhaarNumber}
-                    onChange={handleInputChange}
-                    placeholder="Aadhaar Number *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.aadhaarNumber ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.aadhaarNumber && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.aadhaarNumber}
-                    </p>
-                  )}
-                </div>
-
-                {/* PAN */}
-                <div>
-                  <input
-                    name="panNumber"
-                    value={newCandidate.panNumber}
-                    onChange={handleInputChange}
-                    placeholder="PAN Number *"
-                    className={`border p-2 rounded uppercase w-full ${
-                      fieldErrors.panNumber ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.panNumber && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.panNumber}
-                    </p>
-                  )}
-                </div>
-
-                {/* UAN */}
-                <div>
-                  <input
-                    name="uanNumber"
-                    value={newCandidate.uanNumber}
-                    onChange={handleInputChange}
-                    placeholder="UAN Number (optional)"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.uanNumber ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.uanNumber && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.uanNumber}
-                    </p>
-                  )}
-                </div>
-
-                {/* PASSPORT */}
-                <div>
-                  <input
-                    name="passportNumber"
-                    value={newCandidate.passportNumber}
-                    onChange={handleInputChange}
-                    placeholder="Passport Number (optional)"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.passportNumber ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.passportNumber && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.passportNumber}
-                    </p>
-                  )}
-                </div>
-
-                {/* BANK ACCOUNT */}
-                <div className="sm:col-span-2">
-                  <input
-                    name="bankAccountNumber"
-                    value={newCandidate.bankAccountNumber}
-                    onChange={handleInputChange}
-                    placeholder="Bank Account Number (optional)"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.bankAccountNumber ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.bankAccountNumber && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.bankAccountNumber}
-                    </p>
-                  )}
-                </div>
-
-                {/* DISTRICT */}
-                <div>
-                  <input
-                    name="district"
-                    value={newCandidate.district}
-                    onChange={handleInputChange}
-                    placeholder="District *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.district ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.district && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.district}
-                    </p>
-                  )}
-                </div>
-
-                {/* STATE */}
-                <div>
-                  <input
-                    name="state"
-                    value={newCandidate.state}
-                    onChange={handleInputChange}
-                    placeholder="State *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.state ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.state && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.state}
-                    </p>
-                  )}
-                </div>
-
-                {/* PINCODE */}
-                <div>
-                  <input
-                    name="pincode"
-                    value={newCandidate.pincode}
-                    onChange={handleInputChange}
-                    placeholder="Pincode *"
-                    className={`border p-2 rounded w-full ${
-                      fieldErrors.pincode ? "border-red-500" : ""
-                    }`}
-                  />
-                  {fieldErrors.pincode && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {fieldErrors.pincode}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* ADDRESS */}
-              <textarea
-                name="address"
-                value={newCandidate.address}
-                onChange={handleInputChange}
-                placeholder="Full Address *"
-                className="border p-2 rounded w-full mt-4"
-                rows={3}
-              />
-              {fieldErrors.address && (
-                <p className="text-red-500 text-xs mt-1">
-                  {fieldErrors.address}
-                </p>
-              )}
-              {/* RESUME UPLOAD */}
-              <div className="mt-4">
-                <label className="text-sm font-medium">
-                  Resume (PDF/DOC/DOCX)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) =>
-                    setNewCandidate((prev) => ({
-                      ...prev,
-                      resume: e.target.files[0],
-                    }))
-                  }
-                  className="border p-2 rounded w-full mt-1"
-                />
-
-                {newCandidate.resume && (
-                  <p className="text-xs text-gray-600 mt-1">
-                    Selected: <strong>{newCandidate.resume.name}</strong>
-                  </p>
-                )}
-              </div>
-
-              {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-3 mt-4">
-                <button
-                  onClick={() => setModal({ open: true, type: "confirmClose" })}
-                  className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100"
+                  onClick={() => setShowConfirmClose(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
                 >
                   Cancel
                 </button>
-
                 <button
-                  onClick={async () => {
-                    // ENHANCED VALIDATION
-                    const errors = {};
-                    const {
-                      firstName,
-                      lastName,
-                      fatherName,
-                      dob,
-                      gender,
-                      phone,
-                      email,
-                      aadhaarNumber,
-                      panNumber,
-                      address,
-                      district,
-                      state,
-                      pincode,
-                      middleName,
-                      passportNumber,
-                      uanNumber,
-                      bankAccountNumber,
-                    } = newCandidate;
-
-                    // Required field checks
-                    if (!firstName) errors.firstName = "First Name is required";
-                    if (!lastName) errors.lastName = "Last Name is required";
-                    if (!fatherName)
-                      errors.fatherName = "Father's Name is required";
-                    if (!dob) errors.dob = "Date of Birth is required";
-                    if (!gender) errors.gender = "Gender is required";
-                    if (!phone) errors.phone = "Phone Number is required";
-                    if (!email) errors.email = "Email is required";
-                    if (!aadhaarNumber)
-                      errors.aadhaarNumber = "Aadhaar Number is required";
-                    if (!panNumber) errors.panNumber = "PAN Number is required";
-                    if (!address) errors.address = "Address is required";
-                    if (!district) errors.district = "District is required";
-                    if (!state) errors.state = "State is required";
-                    if (!pincode) errors.pincode = "Pincode is required";
-
-                    // Name validations - only letters and spaces, no numbers
-                    const nameRegex = /^[a-zA-Z\s]+$/;
-                    if (firstName && !nameRegex.test(firstName)) {
-                      errors.firstName =
-                        "First Name must contain only letters and spaces, no numbers allowed";
-                    }
-                    if (middleName && !nameRegex.test(middleName)) {
-                      errors.middleName =
-                        "Middle Name must contain only letters and spaces, no numbers allowed";
-                    }
-                    if (lastName && !nameRegex.test(lastName)) {
-                      errors.lastName =
-                        "Last Name must contain only letters and spaces, no numbers allowed";
-                    }
-                    if (fatherName && !nameRegex.test(fatherName)) {
-                      errors.fatherName =
-                        "Father's Name must contain only letters and spaces, no numbers allowed";
-                    }
-
-                    // Email validation
-                    const emailRegex =
-                      /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-                    if (email && !emailRegex.test(email)) {
-                      errors.email =
-                        "Invalid email format. Please enter a valid email address (e.g., user@example.com)";
-                    } else if (
-                      email &&
-                      (!email.includes("@") ||
-                        !email.split("@")[1]?.includes("."))
-                    ) {
-                      errors.email =
-                        "Email must include @ symbol and a valid domain (e.g., user@gmail.com)";
-                    }
-
-                    // Aadhaar validation
-                    if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
-                      errors.aadhaarNumber =
-                        "Invalid Aadhaar number. Must be exactly 12 digits";
-                    }
-
-                    // PAN validation
-                    if (
-                      panNumber &&
-                      !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)
-                    ) {
-                      errors.panNumber =
-                        "Invalid PAN format. Must be in format: ABCDE1234F (5 letters, 4 digits, 1 letter)";
-                    }
-
-                    // Phone validation
-                    if (phone && !/^\d{10}$/.test(phone)) {
-                      errors.phone =
-                        "Invalid phone number. Must be exactly 10 digits";
-                    }
-
-                    // District and State validation - only letters and spaces
-                    if (district && !nameRegex.test(district)) {
-                      errors.district =
-                        "District must contain only letters and spaces, no numbers or special characters allowed";
-                    }
-
-                    if (state && !nameRegex.test(state)) {
-                      errors.state =
-                        "State must contain only letters and spaces, no numbers or special characters allowed";
-                    }
-
-                    // Pincode validation
-                    if (pincode && !/^[1-9][0-9]{5}$/.test(pincode)) {
-                      errors.pincode =
-                        "Invalid Pincode. Must be exactly 6 digits and cannot start with 0";
-                    }
-
-                    // Optional field validations
-                    if (
-                      passportNumber &&
-                      !/^[A-PR-WY][1-9]\d{6}$/.test(passportNumber)
-                    ) {
-                      errors.passportNumber =
-                        "Invalid Passport Number. Must be in format: A1234567 (1 letter followed by 7 digits)";
-                    }
-
-                    if (uanNumber && !/^[0-9]{10,12}$/.test(uanNumber)) {
-                      errors.uanNumber =
-                        "Invalid UAN Number. Must be 10-12 digits";
-                    }
-
-                    if (
-                      bankAccountNumber &&
-                      !/^[0-9]{9,18}$/.test(bankAccountNumber)
-                    ) {
-                      errors.bankAccountNumber =
-                        "Invalid Bank Account Number. Must be 9-18 digits";
-                    }
-
-                    if (Object.keys(errors).length > 0) {
-                      setFieldErrors(errors);
-                      return;
-                    }
-
-                    setSubmitting(true);
-
-                    try {
-                      const formData = new FormData();
-
-                      formData.append("organizationId", bgvUser.organizationId);
-                      formData.append("firstName", newCandidate.firstName);
-                      formData.append("middleName", newCandidate.middleName);
-                      formData.append("lastName", newCandidate.lastName);
-                      formData.append("fatherName", newCandidate.fatherName);
-                      formData.append("dob", newCandidate.dob);
-                      formData.append("gender", newCandidate.gender);
-                      formData.append("phone", newCandidate.phone);
-                      formData.append("email", newCandidate.email);
-                      formData.append(
-                        "aadhaarNumber",
-                        newCandidate.aadhaarNumber
-                      );
-                      formData.append("panNumber", newCandidate.panNumber);
-                      formData.append("uanNumber", newCandidate.uanNumber);
-                      formData.append(
-                        "passportNumber",
-                        newCandidate.passportNumber
-                      );
-                      formData.append(
-                        "bankAccountNumber",
-                        newCandidate.bankAccountNumber
-                      );
-                      formData.append("address", newCandidate.address);
-                      formData.append("district", newCandidate.district);
-                      formData.append("state", newCandidate.state);
-                      formData.append("pincode", newCandidate.pincode);
-
-                      // OPTIONAL resume
-                      if (newCandidate.resume) {
-                        formData.append("resume", newCandidate.resume);
-                      }
-
-                      const res = await fetch(
-                        `/api/proxy/secure/addCandidate`,
-                        {
-                          method: "POST",
-                          credentials: "include",
-                          body: formData,
-                        }
-                      );
-
-                      const data = await res.json();
-
-                      if (!res.ok) {
-                        showModal({
-                          title: "Error Adding Candidate",
-                          message: data.detail || "Server error",
-                          type: "error",
-                        });
-                      } else {
-                        showModal({
-                          title: "Success",
-                          message: "Candidate added successfully.",
-                          type: "success",
-                        });
-
-                        setShowAddModal(false);
-                        setNewCandidate(emptyCandidate);
-
-                        await fetchCandidates(bgvUser.organizationId);
-                      }
-                    } finally {
-                      setSubmitting(false);
-                    }
+                  onClick={() => {
+                    setShowConfirmClose(false);
+                    setShowAddModal(false);
+                    setNewCandidate(createEmptyCandidate());
+                    setValidationError("");
+                    setExpandedSections({
+                      supervisory1: false,
+                      supervisory2: false,
+                      employment1: false,
+                      employment2: false,
+                      education: false,
+                    });
                   }}
-                  disabled={submitting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
-                  {submitting ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <PlusCircle size={16} />
-                  )}
-                  Add Candidate
+                  Discard Changes
                 </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* CONFIRM CLOSE MODAL */}
+        {showConfirmClose && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-2">Discard Changes?</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                You have unsaved changes. Are you sure you want to close without saving?
+              </p>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowConfirmClose(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmClose(false);
+                    setShowAddModal(false);
+                    setNewCandidate(createEmptyCandidate());
+                    setValidationError("");
+                    setExpandedSections({
+                      supervisory1: false,
+                      supervisory2: false,
+                      employment1: false,
+                      employment2: false,
+                      education: false,
+                    });
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Discard Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================== */
+/* ============================== MODAL ================================ */
+/* ====================================================================== */
+
+function Modal({ title, children, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg text-gray-900 overflow-hidden">
+        {/* Enhanced Header with Gradient */}
+        <div className="bg-gradient-to-r from-[#ff004f] to-[#ff3366] px-6 py-4 relative sticky top-0 z-10">
+          <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-lg p-1 transition-all"
+          >
+            <X size={22} />
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">{title}</h2>
+              <p className="text-white/80 text-sm">Fill in candidate information</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------- */
+/* -------------------------------------------- */
+/* FORM COMPONENT — WITH FULL NEW FIELDS */
+/* -------------------------------------------- */
+function CandidateForm({ data, onChange, onSubmit, saving, submitText, validationError, setValidationError }) {
+  const [expandedSections, setExpandedSections] = useState({
+    supervisory1: false,
+    supervisory2: false,
+    employment1: false,
+    employment2: false,
+    education: false,
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const handleSubmitWithValidation = () => {
+    // Validate required fields
+    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.email?.trim() || !data.phone?.trim()) {
+      setValidationError("Please fill all required details");
+      return;
+    }
+    
+    // Clear validation error and proceed with submission
+    setValidationError("");
+    onSubmit();
+  };
+
+  const handleInputChange = (e) => {
+    // Clear validation error when user starts typing
+    if (validationError) {
+      setValidationError("");
+    }
+    onChange(e);
+  };
+
+  return (
+    <div className="text-gray-900 max-h-[70vh] overflow-y-auto pr-2">
+      {/* Validation Error Message */}
+      {validationError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600 text-sm font-medium flex items-center gap-2">
+            <span>⚠️</span>
+            {validationError}
+          </p>
+        </div>
+      )}
+
+      {/* FULL NAME */}
+      <h3 className="font-semibold text-lg mb-3 text-[#ff004f]">
+        Personal Details
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input
+          name="firstName"
+          value={data.firstName}
+          onChange={handleInputChange}
+          placeholder="First Name*"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="middleName"
+          value={data.middleName}
+          onChange={handleInputChange}
+          placeholder="Middle Name (Optional)"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="lastName"
+          value={data.lastName}
+          onChange={handleInputChange}
+          placeholder="Last Name*"
+          className="border p-2 rounded"
+        />
+      </div>
+
+      {/* FATHER NAME */}
+      <input
+        name="fatherName"
+        value={data.fatherName}
+        onChange={onChange}
+        placeholder="Father's Name*"
+        className="border p-2 rounded w-full mt-4"
+      />
+
+      {/* DOB + GENDER PREMIUM */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Date of Birth*
+          </label>
+          <input
+            type="date"
+            name="dob"
+            value={data.dob}
+            onChange={onChange}
+            className="border p-2 rounded w-full"
+          />
+        </div>
+
+        {/* 🔥 PREMIUM GENDER BUTTONS */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Gender*</label>
+          <div className="flex gap-3">
+            {["male", "female", "other"].map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() =>
+                  onChange({ target: { name: "gender", value: g } })
+                }
+                className={`px-4 py-2 rounded-md border flex-1 capitalize ${
+                  data.gender === g
+                    ? "bg-[#ff004f] text-white border-[#ff004f]"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-[#ff004f]"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CONTACT INFO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <input
+          name="phone"
+          value={data.phone}
+          onChange={onChange}
+          placeholder="Phone Number*"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="email"
+          value={data.email}
+          onChange={onChange}
+          placeholder="Email Address*"
+          className="border p-2 rounded"
+        />
+      </div>
+
+      {/* DOCUMENT NUMBERS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <input
+          name="aadhaarNumber"
+          value={data.aadhaarNumber}
+          onChange={onChange}
+          placeholder="Aadhaar Number*"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="panNumber"
+          value={data.panNumber}
+          onChange={onChange}
+          placeholder="PAN Number*"
+          className="border p-2 rounded uppercase"
+        />
+      </div>
+
+      {/* OPTIONAL DOCUMENTS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <input
+          name="uanNumber"
+          value={data.uanNumber}
+          onChange={onChange}
+          placeholder="UAN Number (Optional)"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="passportNumber"
+          value={data.passportNumber}
+          onChange={onChange}
+          placeholder="Passport Number (Optional)"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="bankAccountNumber"
+          value={data.bankAccountNumber}
+          onChange={onChange}
+          placeholder="Bank Account (Optional)"
+          className="border p-2 rounded"
+        />
+      </div>
+
+      {/* ADDRESS SECTION */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <input
+          name="district"
+          value={data.district}
+          onChange={onChange}
+          placeholder="District*"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="state"
+          value={data.state}
+          onChange={onChange}
+          placeholder="State*"
+          className="border p-2 rounded"
+        />
+
+        <input
+          name="pincode"
+          value={data.pincode}
+          onChange={onChange}
+          placeholder="Pincode*"
+          className="border p-2 rounded"
+        />
+      </div>
+
+      <textarea
+        name="address"
+        value={data.address}
+        onChange={onChange}
+        placeholder="Full Address*"
+        className="border p-2 rounded w-full mt-4"
+        rows={3}
+      />
+
+      {/* ============================================ */}
+      {/* SUPERVISORY CHECK 1 - COLLAPSIBLE */}
+      {/* ============================================ */}
+      <div className="mt-4 border-2 border-blue-200 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection('supervisory1')}
+          className="w-full bg-gradient-to-r from-blue-50 to-blue-100 p-4 flex justify-between items-center hover:from-blue-100 hover:to-blue-200 transition-all"
+        >
+          <h3 className="font-semibold text-lg text-blue-700">
+            👤 Supervisory Check 1 (Optional)
+          </h3>
+          <ChevronDown 
+            className={`transform transition-transform ${expandedSections.supervisory1 ? 'rotate-180' : ''}`}
+            size={20}
+          />
+        </button>
+        
+        {expandedSections.supervisory1 && (
+          <div className="p-4 bg-white space-y-3">
+            <input
+              name="supervisory1_name"
+              value={data.supervisory1_name || ''}
+              onChange={onChange}
+              placeholder="Supervisor Name"
+              className="border p-2 rounded w-full"
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="supervisory1_phone"
+                value={data.supervisory1_phone || ''}
+                onChange={onChange}
+                placeholder="Phone Number"
+                className="border p-2 rounded"
+              />
+              <input
+                name="supervisory1_email"
+                value={data.supervisory1_email || ''}
+                onChange={onChange}
+                placeholder="Email"
+                type="email"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="supervisory1_relationship"
+                value={data.supervisory1_relationship || ''}
+                onChange={onChange}
+                placeholder="Relationship (e.g., Former Manager)"
+                className="border p-2 rounded"
+              />
+              <input
+                name="supervisory1_company"
+                value={data.supervisory1_company || ''}
+                onChange={onChange}
+                placeholder="Company Name"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="supervisory1_designation"
+                value={data.supervisory1_designation || ''}
+                onChange={onChange}
+                placeholder="Designation"
+                className="border p-2 rounded"
+              />
+              <input
+                name="supervisory1_workingPeriod"
+                value={data.supervisory1_workingPeriod || ''}
+                onChange={onChange}
+                placeholder="Working Period (e.g., 2020-2023)"
+                className="border p-2 rounded"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================ */}
+      {/* SUPERVISORY CHECK 2 - COLLAPSIBLE */}
+      {/* ============================================ */}
+      <div className="mt-4 border-2 border-blue-200 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection('supervisory2')}
+          className="w-full bg-gradient-to-r from-blue-50 to-blue-100 p-4 flex justify-between items-center hover:from-blue-100 hover:to-blue-200 transition-all"
+        >
+          <h3 className="font-semibold text-lg text-blue-700">
+            👤 Supervisory Check 2 (Optional)
+          </h3>
+          <ChevronDown 
+            className={`transform transition-transform ${expandedSections.supervisory2 ? 'rotate-180' : ''}`}
+            size={20}
+          />
+        </button>
+        
+        {expandedSections.supervisory2 && (
+          <div className="p-4 bg-white space-y-3">
+            <input
+              name="supervisory2_name"
+              value={data.supervisory2_name || ''}
+              onChange={onChange}
+              placeholder="Supervisor Name"
+              className="border p-2 rounded w-full"
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="supervisory2_phone"
+                value={data.supervisory2_phone || ''}
+                onChange={onChange}
+                placeholder="Phone Number"
+                className="border p-2 rounded"
+              />
+              <input
+                name="supervisory2_email"
+                value={data.supervisory2_email || ''}
+                onChange={onChange}
+                placeholder="Email"
+                type="email"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="supervisory2_relationship"
+                value={data.supervisory2_relationship || ''}
+                onChange={onChange}
+                placeholder="Relationship (e.g., Former Team Lead)"
+                className="border p-2 rounded"
+              />
+              <input
+                name="supervisory2_company"
+                value={data.supervisory2_company || ''}
+                onChange={onChange}
+                placeholder="Company Name"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="supervisory2_designation"
+                value={data.supervisory2_designation || ''}
+                onChange={onChange}
+                placeholder="Designation"
+                className="border p-2 rounded"
+              />
+              <input
+                name="supervisory2_workingPeriod"
+                value={data.supervisory2_workingPeriod || ''}
+                onChange={onChange}
+                placeholder="Working Period (e.g., 2018-2020)"
+                className="border p-2 rounded"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================ */}
+      {/* EMPLOYMENT HISTORY 1 - COLLAPSIBLE */}
+      {/* ============================================ */}
+      <div className="mt-4 border-2 border-green-200 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection('employment1')}
+          className="w-full bg-gradient-to-r from-green-50 to-green-100 p-4 flex justify-between items-center hover:from-green-100 hover:to-green-200 transition-all"
+        >
+          <h3 className="font-semibold text-lg text-green-700">
+            🏢 Employment History 1 (Optional)
+          </h3>
+          <ChevronDown 
+            className={`transform transition-transform ${expandedSections.employment1 ? 'rotate-180' : ''}`}
+            size={20}
+          />
+        </button>
+        
+        {expandedSections.employment1 && (
+          <div className="p-4 bg-white space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="employment1_company"
+                value={data.employment1_company || ''}
+                onChange={onChange}
+                placeholder="Company Name"
+                className="border p-2 rounded"
+              />
+              <input
+                name="employment1_designation"
+                value={data.employment1_designation || ''}
+                onChange={onChange}
+                placeholder="Designation"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Joining Date</label>
+                <input
+                  type="date"
+                  name="employment1_joiningDate"
+                  value={data.employment1_joiningDate || ''}
+                  onChange={onChange}
+                  className="border p-2 rounded w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Relieving Date</label>
+                <input
+                  type="date"
+                  name="employment1_relievingDate"
+                  value={data.employment1_relievingDate || ''}
+                  onChange={onChange}
+                  className="border p-2 rounded w-full"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                name="employment1_hrName"
+                value={data.employment1_hrName || ''}
+                onChange={onChange}
+                placeholder="HR Name"
+                className="border p-2 rounded"
+              />
+              <input
+                name="employment1_hrContact"
+                value={data.employment1_hrContact || ''}
+                onChange={onChange}
+                placeholder="HR Contact"
+                className="border p-2 rounded"
+              />
+              <input
+                name="employment1_hrEmail"
+                value={data.employment1_hrEmail || ''}
+                onChange={onChange}
+                placeholder="HR Email"
+                type="email"
+                className="border p-2 rounded"
+              />
+            </div>
+            <textarea
+              name="employment1_address"
+              value={data.employment1_address || ''}
+              onChange={onChange}
+              placeholder="Company Address"
+              rows={2}
+              className="border p-2 rounded w-full"
+            />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Relieving Letter* (PDF)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'relievingLetter1')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.relievingLetter1 && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.relievingLetter1.name}
+                  </p>
+                )}
+                {!data.relievingLetter1 && data.relievingLetterUrl1 && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Experience Letter (PDF, Optional)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'experienceLetter1')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.experienceLetter1 && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.experienceLetter1.name}
+                  </p>
+                )}
+                {!data.experienceLetter1 && data.experienceLetterUrl1 && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salary Slips (PDF, Optional)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'salarySlips1')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.salarySlips1 && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.salarySlips1.name}
+                  </p>
+                )}
+                {!data.salarySlips1 && data.salarySlipsUrl1 && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================ */}
+      {/* EMPLOYMENT HISTORY 2 - COLLAPSIBLE */}
+      {/* ============================================ */}
+      <div className="mt-4 border-2 border-green-200 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection('employment2')}
+          className="w-full bg-gradient-to-r from-green-50 to-green-100 p-4 flex justify-between items-center hover:from-green-100 hover:to-green-200 transition-all"
+        >
+          <h3 className="font-semibold text-lg text-green-700">
+            🏢 Employment History 2 (Optional)
+          </h3>
+          <ChevronDown 
+            className={`transform transition-transform ${expandedSections.employment2 ? 'rotate-180' : ''}`}
+            size={20}
+          />
+        </button>
+        
+        {expandedSections.employment2 && (
+          <div className="p-4 bg-white space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="employment2_company"
+                value={data.employment2_company || ''}
+                onChange={onChange}
+                placeholder="Company Name"
+                className="border p-2 rounded"
+              />
+              <input
+                name="employment2_designation"
+                value={data.employment2_designation || ''}
+                onChange={onChange}
+                placeholder="Designation"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Joining Date</label>
+                <input
+                  type="date"
+                  name="employment2_joiningDate"
+                  value={data.employment2_joiningDate || ''}
+                  onChange={onChange}
+                  className="border p-2 rounded w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Relieving Date</label>
+                <input
+                  type="date"
+                  name="employment2_relievingDate"
+                  value={data.employment2_relievingDate || ''}
+                  onChange={onChange}
+                  className="border p-2 rounded w-full"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                name="employment2_hrName"
+                value={data.employment2_hrName || ''}
+                onChange={onChange}
+                placeholder="HR Name"
+                className="border p-2 rounded"
+              />
+              <input
+                name="employment2_hrContact"
+                value={data.employment2_hrContact || ''}
+                onChange={onChange}
+                placeholder="HR Contact"
+                className="border p-2 rounded"
+              />
+              <input
+                name="employment2_hrEmail"
+                value={data.employment2_hrEmail || ''}
+                onChange={onChange}
+                placeholder="HR Email"
+                type="email"
+                className="border p-2 rounded"
+              />
+            </div>
+            <textarea
+              name="employment2_address"
+              value={data.employment2_address || ''}
+              onChange={onChange}
+              placeholder="Company Address"
+              rows={2}
+              className="border p-2 rounded w-full"
+            />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Relieving Letter* (PDF)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'relievingLetter2')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.relievingLetter2 && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.relievingLetter2.name}
+                  </p>
+                )}
+                {!data.relievingLetter2 && data.relievingLetterUrl2 && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Experience Letter (PDF, Optional)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'experienceLetter2')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.experienceLetter2 && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.experienceLetter2.name}
+                  </p>
+                )}
+                {!data.experienceLetter2 && data.experienceLetterUrl2 && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salary Slips (PDF, Optional)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'salarySlips2')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.salarySlips2 && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.salarySlips2.name}
+                  </p>
+                )}
+                {!data.salarySlips2 && data.salarySlipsUrl2 && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================ */}
+      {/* EDUCATION CHECK - COLLAPSIBLE */}
+      {/* ============================================ */}
+      <div className="mt-4 border-2 border-purple-200 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection('education')}
+          className="w-full bg-gradient-to-r from-purple-50 to-purple-100 p-4 flex justify-between items-center hover:from-purple-100 hover:to-purple-200 transition-all"
+        >
+          <h3 className="font-semibold text-lg text-purple-700">
+            🎓 Education Check (Optional)
+          </h3>
+          <ChevronDown 
+            className={`transform transition-transform ${expandedSections.education ? 'rotate-180' : ''}`}
+            size={20}
+          />
+        </button>
+        
+        {expandedSections.education && (
+          <div className="p-4 bg-white space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Degree Certificate (PDF, Optional)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'educationCertificate')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.educationCertificate && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.educationCertificate.name}
+                  </p>
+                )}
+                {!data.educationCertificate && data.educationCertificateUrl && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Marksheet (PDF, Optional)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onChange(e, true, 'marksheet')}
+                  className="border p-2 rounded w-full"
+                />
+                {data.marksheet && (
+                  <p className="text-xs mt-1 text-green-600">
+                    ✓ New file: {data.marksheet.name}
+                  </p>
+                )}
+                {!data.marksheet && data.marksheetUrl && (
+                  <p className="text-xs mt-1 text-blue-600">
+                    📄 Existing file uploaded
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="education_degree"
+                value={data.education_degree || ''}
+                onChange={onChange}
+                placeholder="Degree (e.g., Bachelor of Technology)"
+                className="border p-2 rounded"
+              />
+              <input
+                name="education_specialization"
+                value={data.education_specialization || ''}
+                onChange={onChange}
+                placeholder="Specialization"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="education_universityName"
+                value={data.education_universityName || ''}
+                onChange={onChange}
+                placeholder="University Name"
+                className="border p-2 rounded"
+              />
+              <input
+                name="education_collegeName"
+                value={data.education_collegeName || ''}
+                onChange={onChange}
+                placeholder="College Name"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="education_yearOfPassing"
+                value={data.education_yearOfPassing || ''}
+                onChange={onChange}
+                placeholder="Year of Passing"
+                className="border p-2 rounded"
+              />
+              <input
+                name="education_cgpa"
+                value={data.education_cgpa || ''}
+                onChange={onChange}
+                placeholder="CGPA/Percentage"
+                className="border p-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                name="education_universityContact"
+                value={data.education_universityContact || ''}
+                onChange={onChange}
+                placeholder="University Contact"
+                className="border p-2 rounded"
+              />
+              <input
+                name="education_universityEmail"
+                value={data.education_universityEmail || ''}
+                onChange={onChange}
+                placeholder="University Email"
+                type="email"
+                className="border p-2 rounded"
+              />
+              <input
+                name="education_collegeContact"
+                value={data.education_collegeContact || ''}
+                onChange={onChange}
+                placeholder="College Contact"
+                className="border p-2 rounded"
+              />
+            </div>
+            <input
+              name="education_collegeEmail"
+              value={data.education_collegeEmail || ''}
+              onChange={onChange}
+              placeholder="College Email"
+              type="email"
+              className="border p-2 rounded w-full"
+            />
+            <textarea
+              name="education_universityAddress"
+              value={data.education_universityAddress || ''}
+              onChange={onChange}
+              placeholder="University Address"
+              rows={2}
+              className="border p-2 rounded w-full"
+            />
+            <textarea
+              name="education_collegeAddress"
+              value={data.education_collegeAddress || ''}
+              onChange={onChange}
+              placeholder="College Address"
+              rows={2}
+              className="border p-2 rounded w-full"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* RESUME UPLOAD */}
+      <h3 className="font-semibold text-lg mt-6 mb-3 text-red-600">
+        Resume Upload (Optional)
+      </h3>
+
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx"
+        onChange={(e) => onChange(e, true)}
+        className="border p-2 rounded w-full"
+      />
+
+      {data.resume && (
+        <p className="text-sm mt-2 text-gray-700">
+          Selected: <span className="font-semibold">{data.resume.name}</span>
+        </p>
+      )}
+
+      {/* SUBMIT BUTTON */}
+      <div className="mt-8 pt-6 border-t-2 border-gray-100">
+        <button
+          onClick={handleSubmitWithValidation}
+          disabled={saving}
+          className={`w-full py-3.5 rounded-xl text-white font-bold shadow-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2 ${
+            saving
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-[#ff004f] to-[#ff3366] hover:shadow-2xl hover:shadow-[#ff004f]/30"
+          }`}
+        >
+          {saving ? (
+            <>
+              <Loader2 className="animate-spin" size={20} />
+              <span>Saving...</span>
+            </>
+          ) : (
+            <>
+              <span>💾 {submitText}</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

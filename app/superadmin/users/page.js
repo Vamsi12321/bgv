@@ -390,7 +390,7 @@ export default function UsersPage() {
   }, [showModal]);
 
   return (
-    <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 text-black">
+    <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 text-black overflow-x-hidden">
       {/* SUCCESS & ERROR MODALS */}
       <MessageModal modal={modal} onClose={closeModal} />
 
@@ -430,9 +430,9 @@ export default function UsersPage() {
           <h3 className="text-lg font-bold text-gray-800">Filter Users</h3>
         </div>
         
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* 🔥 Username Search */}
-          <div className="w-full sm:flex-1">
+          <div className="lg:col-span-2 xl:col-span-1">
             <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
               <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
               Search by Username/Email
@@ -448,7 +448,7 @@ export default function UsersPage() {
           </div>
 
           {/* 🔥 Improved Role Dropdown */}
-          <div className="w-full sm:w-64">
+          <div>
             <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
               <span className="w-2 h-2 bg-[#ff004f] rounded-full"></span>
               Filter by Role
@@ -469,7 +469,7 @@ export default function UsersPage() {
           </div>
 
           {/* 🔥 Status Filter (Active/Inactive) */}
-          <div className="w-full sm:w-48">
+          <div>
             <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
               <span className="w-2 h-2 bg-green-500 rounded-full"></span>
               Filter by Status
@@ -487,7 +487,7 @@ export default function UsersPage() {
           </div>
 
           {/* 🔥 Searchable Organization Dropdown */}
-          <div className="w-full sm:w-80 relative">
+          <div className="relative">
             <label className="text-sm font-semibold text-gray-700 mb-2 block flex items-center gap-2">
               <span className="w-2 h-2 bg-[#ff3366] rounded-full"></span>
               Filter by Organization
@@ -498,11 +498,11 @@ export default function UsersPage() {
           flex justify-between items-center hover:border-[#ff004f]/50 transition-all"
               onClick={() => setShowOrgFilterMenu(!showOrgFilterMenu)}
             >
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-gray-700 truncate">
                 {normalizedOrgs.find((o) => o.organizationId === filterOrgId)
                   ?.organizationName || "🌐 All Organizations"}
               </span>
-              <span className="text-gray-400 text-lg">▾</span>
+              <span className="text-gray-400 text-lg ml-2">▾</span>
             </div>
 
             {/* Dropdown */}
@@ -572,7 +572,8 @@ export default function UsersPage() {
         <>
           {/* ------------------ SUPERB DESKTOP TABLE ------------------ */}
           <div className="hidden md:block bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden text-black">
-            <table className="min-w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm" style={{ minWidth: '800px' }}>
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100 uppercase text-xs tracking-wide">
                 <tr>
                   <th className="p-4 text-left font-semibold text-gray-700">👤 Name</th>
@@ -701,6 +702,7 @@ export default function UsersPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* ------------------ SUPERB MOBILE CARDS ------------------ */}

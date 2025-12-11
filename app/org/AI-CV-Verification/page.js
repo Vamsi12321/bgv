@@ -284,51 +284,23 @@ export default function OrgAICVVerificationPage() {
   const fetchVerification = async (candId) => {
     setAnalysis(null);
     setLoadingResults(true);
-    
+
     try {
       const res = await fetch(
         `/api/proxy/secure/getVerifications?candidateId=${candId}`,
         { credentials: "include" }
       );
-      
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
+
       const data = await res.json();
       const ver = data.verifications?.[0];
-      
-      if (!ver) {
-        setErrorModal({
-          isOpen: true,
-          message: "No Verification Found",
-          details: "This candidate doesn't have any verification records.",
-        });
-        return;
-      }
 
-      setVerificationId(ver._id);
+      // ❌ DO NOT SET VERIFICATION ID HERE
+      // ❌ DO NOT DEPEND ON BACKEND STAGE
 
-      const allChecks = [
-        ...(ver.stages?.primary || []),
-        ...(ver.stages?.secondary || []),
-        ...(ver.stages?.final || []),
-      ];
-
-      const aiCheck = allChecks.find((c) => c.check === "ai_cv_validation");
-      
-      if (!aiCheck) {
-        setErrorModal({
-          isOpen: true,
-          message: "AI CV Validation Not Configured",
-          details: "This verification doesn't include AI CV validation check.",
-        });
-        return;
-      }
-
-      setCheckStatus(aiCheck.status); // Store the check status
-
-      if (aiCheck.status !== "PENDING") {
+      if (ver?.ai_cv_results_available) {
         loadResults(ver._id);
       }
+
     } catch (err) {
       setErrorModal({
         isOpen: true,
@@ -350,7 +322,7 @@ export default function OrgAICVVerificationPage() {
       });
       return;
     }
-    
+
     if (!resumeFile && !selectedCandidate.resumePath) {
       setErrorModal({
         isOpen: true,
@@ -359,19 +331,19 @@ export default function OrgAICVVerificationPage() {
       });
       return;
     }
-    
-    if (!verificationId) {
-      setErrorModal({
-        isOpen: true,
-        message: "Verification ID Missing",
-        details: "Please select a candidate with an active verification.",
-      });
-      return;
-    }
+
+    // if (!verificationId) {
+    //   setErrorModal({
+    //     isOpen: true,
+    //     message: "Verification ID Missing",
+    //     details: "Please select a candidate with an active verification.",
+    //   });
+    //   return;
+    // }
 
     setLoadingValidation(true);
     setAnalysis(null);
-    
+
     try {
       const fd = new FormData();
       fd.append("verificationId", verificationId);
@@ -393,14 +365,20 @@ export default function OrgAICVVerificationPage() {
       const data = await res.json();
 
       if (data.verificationId) {
-        // Directly use the results from the response instead of fetching again
-        // The response should contain the full analysis data
+
+        // ✔ Save verification ID for final approval submission
+        setVerificationId(data.verificationId);
+
+        // ✔ Save the AI analysis data
         setAnalysis(data);
+
         setSuccessModal({
           isOpen: true,
           message: "Validation Complete!",
         });
-      } else {
+      }
+      
+      else {
         throw new Error(data.message || "Validation failed");
       }
     } catch (error) {
@@ -447,9 +425,9 @@ export default function OrgAICVVerificationPage() {
       });
       return;
     }
-    
+
     setSubmittingFinal(true);
-    
+
     try {
       const body = new URLSearchParams();
       body.append("verificationId", verificationId);
@@ -466,18 +444,19 @@ export default function OrgAICVVerificationPage() {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      setCheckStatus(status); // Update status after approval
+      // Update UI only
+      setCheckStatus(status);
+
+      // Show success modal
       setSuccessModal({
         isOpen: true,
         message: `Decision Submitted: ${status}`,
       });
-      
-      // Redirect after a short delay
-      setTimeout(() => {
-        setNavigating(true);
-        router.push("/org/bgv-requests");
-      }, 1500);
-      
+
+      // ❌ DO NOT REDIRECT
+      // ❌ DO NOT SET navigating
+      // After closing modal, download button will show
+
     } catch (error) {
       setErrorModal({
         isOpen: true,
@@ -649,11 +628,11 @@ export default function OrgAICVVerificationPage() {
                       <p><span className="font-semibold">PAN:</span> {selectedCandidate.panNumber || "—"}</p>
                       <p><span className="font-semibold">Aadhaar:</span> {selectedCandidate.aadhaarNumber || "—"}</p>
                       <p><span className="font-semibold">Resume:</span> {selectedCandidate.resumePath ? "✓ Uploaded" : "✗ Not Uploaded"}</p>
-                      {verificationId && (
+                      {/* {verificationId && (
                         <p className="text-[#ff004f] font-semibold pt-2 border-t">
                           Verification ID: {verificationId.slice(0, 8)}...
                         </p>
-                      )}
+                      )} */}
                     </div>
                   </motion.div>
                 )}

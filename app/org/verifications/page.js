@@ -153,13 +153,24 @@ export default function OrgVerificationsPage() {
         (s) => s.candidateId === candidate.candidateId
       );
 
-      setSelectedCandidate({
-        ...(details || candidate),
-        completionPercentage: summaryInfo?.completionPercentage || 0,
-        overallStatus: summaryInfo?.overallStatus || details?.overallStatus,
-        initiatedByName:
-          summaryInfo?.initiatedByName || details?.initiatedByName,
-      });
+    setSelectedCandidate({
+  ...(details || candidate),
+  completionPercentage: summaryInfo?.completionPercentage || 0,
+  overallStatus: summaryInfo?.overallStatus || details?.overallStatus,
+  initiatedByName: summaryInfo?.initiatedByName || details?.initiatedByName,
+
+  // 🔥 NEW: AI CV Validation status & % 
+  aiCvStatus:
+    details?.aiCvValidation?.status ||
+    summaryInfo?.aiCvValidationStatus ||
+    "NOT_STARTED",
+
+  aiCvCompletion:
+    details?.aiCvValidation?.aiCvValidationCompletion ||
+    summaryInfo?.aiCvValidationCompletion ||
+    0,
+});
+
       setLoadingCandidate(false);
     }, 300);
   };
@@ -592,6 +603,27 @@ export default function OrgVerificationsPage() {
                 <span className="font-semibold">Completion:</span>{" "}
                 {selectedCandidate.completionPercentage || 0}%
               </p>
+
+              <p>
+  <span className="font-semibold">AI CV Validation:</span>{" "}
+  <span className={
+    selectedCandidate.aiCvStatus === "COMPLETED"
+      ? "text-green-600 font-semibold"
+      : selectedCandidate.aiCvStatus === "IN_PROGRESS"
+      ? "text-blue-600 font-semibold"
+      : selectedCandidate.aiCvStatus === "FAILED"
+      ? "text-red-600 font-semibold"
+      : "text-gray-600"
+  }>
+    {selectedCandidate.aiCvStatus}
+  </span>
+</p>
+
+<p>
+  <span className="font-semibold">AI CV Completion:</span>{" "}
+  {selectedCandidate.aiCvCompletion || 0}%
+</p>
+
             </div>
 
             {selectedCandidate.stages && (

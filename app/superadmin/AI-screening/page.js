@@ -1401,7 +1401,7 @@ export default function AIResumeScreeningPage() {
       />
 
       {/* Loading Overlay for Downloads */}
-      {loading && (
+      {(loading || enhancedLoading) && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center">
           <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-md">
             <div className="relative">
@@ -1410,10 +1410,10 @@ export default function AIResumeScreeningPage() {
             </div>
             <div className="text-center">
               <h3 className="text-lg font-bold text-gray-900 mb-1">
-                Processing Downloads...
+                {loading ? "Basic Screening AI Please Wait..." : "Enhanced Screening AI Please Wait..."}
               </h3>
               <p className="text-sm text-gray-600">
-                Please wait while we prepare your files
+                Please wait while we process your screening
               </p>
             </div>
           </div>

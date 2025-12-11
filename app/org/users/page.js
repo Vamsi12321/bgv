@@ -18,10 +18,10 @@ import { useOrgState } from "../../context/OrgStateContext";
 
 /* 🔹 Updated Org-Level Permissions (as requested) */
 const allPermissions = [
-  { key: "organization:create", label: "Organization Create" },
+ 
   { key: "organization:view", label: "Organization View" },
   { key: "organization:update", label: "Organization Update" },
-  { key: "organization:delete", label: "Organization Delete" },
+ 
   { key: "users:manage", label: "Users Manage" },
   { key: "users:view", label: "Users View" },
   { key: "employee:create", label: "Employee Create" },
@@ -497,22 +497,28 @@ function AddEditUserModal({ onClose, onSave, editData }) {
               />
             )}
 
-            <select
-              value={form.role}
-              onChange={(e) => handleRoleChange(e.target.value)}
-              className="w-full border p-2 rounded text-sm"
-            >
-              {/* ALWAYS allow Helper */}
-              <option value="HELPER">Organization Helper</option>
+           <select
+  value={form.role}
+  onChange={(e) => handleRoleChange(e.target.value)}
+  className="w-full border p-2 rounded text-sm"
+>
+  {/* HELPER is always allowed */}
+  <option value="HELPER">Organization Helper</option>
 
-              {/* ORG_HR can only add HELPER → hide ORG_HR option */}
-              {typeof window !== "undefined" &&
-                JSON.parse(localStorage.getItem("bgvUser"))?.role !==
-                  "ORG_HR" && <option value="ORG_HR">Organization HR</option>}
+  {typeof window !== "undefined" && (() => {
+    const loggedUser = JSON.parse(localStorage.getItem("bgvUser"));
+    const role = loggedUser?.role;
 
-              {/* Remove SUPER_ADMIN_HELPER everywhere */}
-              {/* (Do NOT include this option) */}
-            </select>
+    // SPOC or SUPER_ADMIN → can create ORG_HR
+    if (role === "SPOC" ) {
+      return <option value="ORG_HR">Organization HR</option>;
+    }
+
+    // ORG_HR → cannot create ORG_HR, only HELPER (already added above)
+    return null;
+  })()}
+</select>
+
 
             {/* Status toggle only if editing */}
             {isEdit && (

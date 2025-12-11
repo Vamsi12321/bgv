@@ -165,14 +165,34 @@ export default function SuperAdminVerificationsPage() {
   };
 
   const openCandidateDetails = (c) => {
-    setLoadingCandidate(true);
-    // Simulate loading for better UX
-    setTimeout(() => {
-      const full = verifications.find((v) => v.candidateId === c.candidateId);
-      setSelectedCandidate(full || c);
-      setLoadingCandidate(false);
-    }, 300);
-  };
+  setLoadingCandidate(true);
+
+  setTimeout(() => {
+    const full = verifications.find((v) => v.candidateId === c.candidateId);
+
+    // summary object (source of aiCvValidationStatus)
+    const summaryInfo = summary.find((s) => s.candidateId === c.candidateId);
+
+    // merge full verification + summary and add AI fields
+    setSelectedCandidate({
+      ...(full || c),
+
+     aiCvStatus: full?.aiCvValidation?.status 
+              || summaryInfo?.aiCvValidationStatus 
+              || "NOT_STARTED",
+
+aiCvCompletion: summaryInfo?.aiCvValidationCompletion 
+              || 0,
+
+authenticityScore: full?.aiCvValidation?.authenticity_score 
+              || null,
+
+    });
+
+    setLoadingCandidate(false);
+  }, 300);
+};
+
 
   /* ===================================================================
      RENDER
@@ -683,6 +703,29 @@ export default function SuperAdminVerificationsPage() {
                       </span>
                       {getStatusBadge(selectedCandidate.overallStatus)}
                     </p>
+<p>
+  <span className="font-semibold text-gray-700">AI CV Validation:</span>{" "}
+  <span
+    className={
+      selectedCandidate.aiCvStatus === "COMPLETED"
+        ? "text-green-600 font-semibold"
+        : selectedCandidate.aiCvStatus === "IN_PROGRESS"
+        ? "text-blue-600 font-semibold"
+        : selectedCandidate.aiCvStatus === "FAILED"
+        ? "text-red-600 font-semibold"
+        : "text-gray-600"
+    }
+  >
+    {selectedCandidate.aiCvStatus}
+  </span>
+</p>
+
+<p>
+  <span className="font-semibold text-gray-700">
+    AI CV Completion:
+  </span>{" "}
+  {selectedCandidate.aiCvCompletion || 0}%
+</p>
 
                     <p>
                       <span className="font-semibold text-gray-700">

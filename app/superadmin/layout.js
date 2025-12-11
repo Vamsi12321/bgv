@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { useState, useRef, useEffect, useContext } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { logout } from "@/utils/logout";
+ import { logout } from "@/utils/logout";
 import { usePathname } from "next/navigation";
 import { SuperAdminStateProvider } from "../context/SuperAdminStateContext";
 

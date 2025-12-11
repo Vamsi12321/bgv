@@ -522,7 +522,7 @@ export default function SuperAdminAICVVerificationPage() {
   }, [selectedOrg]);
 
   /* ---------------- Fetch Verification ---------------- */
- const fetchVerification = async (candId) => {
+const fetchVerification = async (candId) => {
   setAnalysis(null);
   setLoadingResults(true);
 
@@ -532,25 +532,13 @@ export default function SuperAdminAICVVerificationPage() {
       { credentials: "include" }
     );
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
     const data = await res.json();
     const ver = data.verifications?.[0];
 
-    if (!ver) {
-      setErrorModal({
-        isOpen: true,
-        message: "No Verification Found",
-        details: "This candidate doesn't have any verification records.",
-      });
-      return;
-    }
+    // ❌ DO NOT SET VERIFICATION ID HERE
+    // ❌ DO NOT DEPEND ON BACKEND STAGE
 
-    setVerificationId(ver._id);
-
-    // 🔥 REMOVE ALL STAGE CHECKING — AI can run anytime
-    // But if results already exist, load them
-    if (ver.ai_cv_results_available) {
+    if (ver?.ai_cv_results_available) {
       loadResults(ver._id);
     }
 
@@ -564,6 +552,7 @@ export default function SuperAdminAICVVerificationPage() {
     setLoadingResults(false);
   }
 };
+
 
   /* ---------------- Run Validation ---------------- */
   const runValidation = async () => {
@@ -586,14 +575,14 @@ export default function SuperAdminAICVVerificationPage() {
       return;
     }
 
-    if (!verificationId) {
-      setErrorModal({
-        isOpen: true,
-        message: "Verification ID Missing",
-        details: "Please select a candidate with an active verification.",
-      });
-      return;
-    }
+    // if (!verificationId) {
+    //   setErrorModal({
+    //     isOpen: true,
+    //     message: "Verification ID Missing",
+    //     details: "Please select a candidate with an active verification.",
+    //   });
+    //   return;
+    // }
 
     setLoadingValidation(true);
     setAnalysis(null);
@@ -618,15 +607,22 @@ export default function SuperAdminAICVVerificationPage() {
 
       const data = await res.json();
 
-      if (data.verificationId) {
-        // Directly use the results from the response instead of fetching again
-        // The response should contain the full analysis data
-        setAnalysis(data);
-        setSuccessModal({
-          isOpen: true,
-          message: "Validation Complete!",
-        });
-      } else {
+   if (data.verificationId) {
+
+  // ✔ Save verification ID for final approval submission
+  setVerificationId(data.verificationId);
+
+  // ✔ Save the AI analysis data
+  setAnalysis(data);
+
+  setSuccessModal({
+    isOpen: true,
+    message: "Validation Complete!",
+  });
+}
+
+      
+      else {
         throw new Error(data.message || "Validation failed");
       }
     } catch (error) {

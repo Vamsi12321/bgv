@@ -204,7 +204,7 @@ export default function OrganizationsPage() {
       : `/logos/${url}`;
 
   return (
-    <div className="text-gray-900 bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+    <div className="text-gray-900 bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 overflow-x-hidden w-full max-w-full">
       {/* ----------------------------------------------------
            ENHANCED MODAL WITH ANIMATIONS
         ---------------------------------------------------- */}
@@ -293,7 +293,7 @@ export default function OrganizationsPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-end">
-          <div className="relative w-full flex-1">
+          <div className="relative w-full flex-1 min-w-0">
             <input
               placeholder="🔍 Search by organization name..."
               value={search}
@@ -312,7 +312,7 @@ export default function OrganizationsPage() {
 
           <button
             onClick={() => setSortAsc(!sortAsc)}
-            className="flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#ff004f]/10 hover:to-[#ff3366]/10 hover:border-[#ff004f] transition-all font-medium whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#ff004f]/10 hover:to-[#ff3366]/10 hover:border-[#ff004f] transition-all font-medium whitespace-nowrap flex-shrink-0"
           >
             {sortAsc ? (
               <SortAsc size={18} className="text-[#ff004f]" />
@@ -338,7 +338,7 @@ export default function OrganizationsPage() {
         <>
           <div className="hidden md:block bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[900px]">
+              <table className="w-full border-collapse" style={{ minWidth: '900px' }}>
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                   <tr className="text-sm text-gray-700">
                     {[
@@ -377,17 +377,17 @@ export default function OrganizationsPage() {
                           />
                         </td>
 
-                        <td className="p-3 font-semibold truncate max-w-[200px]">
+                        <td className="p-3 font-semibold truncate" style={{ maxWidth: '200px' }}>
                           {org.organizationName}
                         </td>
 
-                        <td className="p-3">{org.spocName || "—"}</td>
+                        <td className="p-3 truncate" style={{ maxWidth: '150px' }}>{org.spocName || "—"}</td>
 
-                        <td className="p-3 truncate max-w-[180px]">
+                        <td className="p-3 truncate" style={{ maxWidth: '180px' }}>
                           {org.email}
                         </td>
 
-                        <td className="p-3">{org.subDomain}</td>
+                        <td className="p-3 truncate" style={{ maxWidth: '120px' }}>{org.subDomain}</td>
 
                         {/* STATUS TOGGLE RESTORED */}
                         <td className="p-3">
