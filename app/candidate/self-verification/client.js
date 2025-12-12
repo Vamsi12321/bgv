@@ -76,40 +76,124 @@ export default function SelfVerificationPage() {
   async function startCheck(checkName) {
     setCheckLoading(checkName);
 
-    const formData = new FormData();
-    formData.append("verificationId", verificationId);
-    formData.append("check", checkName);
+    try {
+      const formData = new FormData();
+      formData.append("verificationId", verificationId);
+      formData.append("check", checkName);
 
-    const res = await fetch(`/api/proxy/self/verify/check`, {
-      method: "POST",
-      body: formData,
-    });
+      const res = await fetch(`/api/proxy/self/verify/check`, {
+        method: "POST",
+        body: formData,
+      });
 
-    const data = await res.json();
-    alert(`Check Completed: ${data.remarks}`);
-
-    setCheckLoading(null);
-    refreshChecks();
+      const data = await res.json();
+      
+      // Enhanced error handling for detailed API responses
+      if (data.status === "FAILED" && data.remarks) {
+        let errorMessage = `Check Failed: ${checkName.toUpperCase()}\n\n`;
+        
+        if (typeof data.remarks === 'object') {
+          if (data.remarks.message) {
+            errorMessage += `Message: ${data.remarks.message}\n`;
+          }
+          if (data.remarks.message_code) {
+            errorMessage += `Code: ${data.remarks.message_code}\n`;
+          }
+          if (data.remarks.data) {
+            errorMessage += `Details: ${JSON.stringify(data.remarks.data, null, 2)}\n`;
+          }
+        } else {
+          errorMessage += `Remarks: ${data.remarks}`;
+        }
+        
+        alert(errorMessage);
+      } else if (data.status === "COMPLETED") {
+        let successMessage = `Check Completed: ${checkName.toUpperCase()}\n\n`;
+        
+        if (data.remarks && typeof data.remarks === 'object') {
+          if (data.remarks.reason) {
+            successMessage += `Status: ${data.remarks.reason}\n`;
+          }
+          if (data.remarks.linking_status !== undefined) {
+            successMessage += `Linking Status: ${data.remarks.linking_status ? 'Linked' : 'Not Linked'}\n`;
+          }
+          if (data.remarks.masked_pan) {
+            successMessage += `Masked PAN: ${data.remarks.masked_pan}\n`;
+          }
+        }
+        
+        alert(successMessage);
+      } else {
+        alert(`Check Status: ${data.status}\nRemarks: ${data.remarks || 'No additional details'}`);
+      }
+    } catch (error) {
+      alert(`Error starting check: ${error.message}`);
+    } finally {
+      setCheckLoading(null);
+      refreshChecks();
+    }
   }
 
   /* ---------------------- RETRY CHECK ---------------------- */
   async function retryCheck(checkName) {
     setCheckLoading(checkName);
 
-    const formData = new FormData();
-    formData.append("verificationId", verificationId);
-    formData.append("check", checkName);
+    try {
+      const formData = new FormData();
+      formData.append("verificationId", verificationId);
+      formData.append("check", checkName);
 
-    const res = await fetch(`/api/proxy/self/verify/retryCheck`, {
-      method: "POST",
-      body: formData,
-    });
+      const res = await fetch(`/api/proxy/self/verify/retryCheck`, {
+        method: "POST",
+        body: formData,
+      });
 
-    const data = await res.json();
-    alert(`Retry Status: ${data.status}`);
-
-    setCheckLoading(null);
-    refreshChecks();
+      const data = await res.json();
+      
+      // Enhanced error handling for detailed API responses
+      if (data.status === "FAILED" && data.remarks) {
+        let errorMessage = `Retry Failed: ${checkName.toUpperCase()}\n\n`;
+        
+        if (typeof data.remarks === 'object') {
+          if (data.remarks.message) {
+            errorMessage += `Message: ${data.remarks.message}\n`;
+          }
+          if (data.remarks.message_code) {
+            errorMessage += `Code: ${data.remarks.message_code}\n`;
+          }
+          if (data.remarks.data) {
+            errorMessage += `Details: ${JSON.stringify(data.remarks.data, null, 2)}\n`;
+          }
+        } else {
+          errorMessage += `Remarks: ${data.remarks}`;
+        }
+        
+        alert(errorMessage);
+      } else if (data.status === "COMPLETED") {
+        let successMessage = `Retry Successful: ${checkName.toUpperCase()}\n\n`;
+        
+        if (data.remarks && typeof data.remarks === 'object') {
+          if (data.remarks.reason) {
+            successMessage += `Status: ${data.remarks.reason}\n`;
+          }
+          if (data.remarks.linking_status !== undefined) {
+            successMessage += `Linking Status: ${data.remarks.linking_status ? 'Linked' : 'Not Linked'}\n`;
+          }
+          if (data.remarks.masked_pan) {
+            successMessage += `Masked PAN: ${data.remarks.masked_pan}\n`;
+          }
+        }
+        
+        alert(successMessage);
+      } else {
+        alert(`Retry Status: ${data.status}\nRemarks: ${data.remarks || 'No additional details'}`);
+      }
+    } catch (error) {
+      alert(`Error retrying check: ${error.message}`);
+    } finally {
+      setCheckLoading(null);
+      refreshChecks();
+    }
   }
 
   /* ---------------------- REFRESH CHECKS ---------------------- */
@@ -173,9 +257,77 @@ export default function SelfVerificationPage() {
               {chk.check.toUpperCase()}
             </h4>
 
-            <p className="text-gray-700 mt-1">
-              <strong>Status:</strong> {chk.status}
-            </p>
+            <div className="mt-3">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  chk.status === "COMPLETED"
+                    ? "bg-green-100 text-green-800"
+                    : chk.status === "FAILED"
+                    ? "bg-red-100 text-red-800"
+                    : chk.status === "IN_PROGRESS"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {chk.status === "COMPLETED" && "✓ "}
+                {chk.status === "FAILED" && "✗ "}
+                {chk.status === "IN_PROGRESS" && "⏳ "}
+                {chk.status}
+              </span>
+            </div>
+
+            {/* Enhanced Remarks Display */}
+            {chk.remarks && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
+                <h5 className="text-sm font-semibold text-gray-700 mb-2">Details:</h5>
+                {typeof chk.remarks === 'object' ? (
+                  <div className="space-y-2 text-sm">
+                    {chk.remarks.message && (
+                      <div>
+                        <span className="font-medium text-gray-600">Message:</span>
+                        <span className="ml-2 text-gray-800">{chk.remarks.message}</span>
+                      </div>
+                    )}
+                    {chk.remarks.message_code && (
+                      <div>
+                        <span className="font-medium text-gray-600">Code:</span>
+                        <span className="ml-2 text-gray-800">{chk.remarks.message_code}</span>
+                      </div>
+                    )}
+                    {chk.remarks.reason && (
+                      <div>
+                        <span className="font-medium text-gray-600">Reason:</span>
+                        <span className="ml-2 text-gray-800">{chk.remarks.reason}</span>
+                      </div>
+                    )}
+                    {chk.remarks.linking_status !== undefined && (
+                      <div>
+                        <span className="font-medium text-gray-600">Linking Status:</span>
+                        <span className={`ml-2 font-medium ${chk.remarks.linking_status ? 'text-green-600' : 'text-red-600'}`}>
+                          {chk.remarks.linking_status ? 'Linked' : 'Not Linked'}
+                        </span>
+                      </div>
+                    )}
+                    {chk.remarks.masked_pan && (
+                      <div>
+                        <span className="font-medium text-gray-600">Masked PAN:</span>
+                        <span className="ml-2 text-gray-800 font-mono">{chk.remarks.masked_pan}</span>
+                      </div>
+                    )}
+                    {chk.remarks.data && (
+                      <div>
+                        <span className="font-medium text-gray-600">Additional Data:</span>
+                        <pre className="ml-2 mt-1 text-xs bg-white p-2 rounded border overflow-x-auto">
+                          {JSON.stringify(chk.remarks.data, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-800">{chk.remarks}</p>
+                )}
+              </div>
+            )}
 
             {/* ACTION BUTTONS */}
             {chk.status === "NOT_STARTED" && (

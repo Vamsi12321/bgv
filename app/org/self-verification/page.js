@@ -522,7 +522,8 @@ export default function OrgCandidateSelfVerification() {
   const isPrevStageCompleted = (stageKey) => {
     const idx = steps.indexOf(stageKey);
     if (idx === 0) return true;
-    return getStageStatus(steps[idx - 1]) === "COMPLETED";
+    const prevStageStatus = getStageStatus(steps[idx - 1]);
+    return prevStageStatus === "COMPLETED" || prevStageStatus === "FAILED";
   };
   /* ---------------------------------------------- */
   /* VISIBLE CHECK CARDS                             */
@@ -1468,10 +1469,10 @@ export default function OrgCandidateSelfVerification() {
         )}
 
         {/* CHECK PANEL */}
-        <div className="bg-white p-6 rounded-xl shadow border">
-          <div className="grid md:grid-cols-4 gap-6">
+        <div className="bg-white p-4 md:p-6 rounded-xl shadow border">
+          <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6">
             {/* LEFT PANEL */}
-            <div className="space-y-4 md:sticky md:top-4 mb-6 md:mb-0">
+            <div className="space-y-4 lg:sticky lg:top-4 mb-6 lg:mb-0 order-2 lg:order-1">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 Verification Stages
               </h3>
@@ -1484,7 +1485,10 @@ export default function OrgCandidateSelfVerification() {
                   index === 0 ||
                   steps
                     .slice(0, index)
-                    .every((s) => getStageStatus(s) === "COMPLETED");
+                    .every((s) => {
+                      const status = getStageStatus(s);
+                      return status === "COMPLETED" || status === "FAILED";
+                    });
 
                 return (
                   <div
@@ -1536,10 +1540,11 @@ export default function OrgCandidateSelfVerification() {
               })}
 
               {/* SELECTED CHECKS - Enhanced */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm mt-6 max-h-[260px] overflow-auto">
-                <div className="text-xs font-bold text-blue-900 mb-2">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border-2 border-blue-200 shadow-sm mt-6">
+                <div className="text-xs font-bold text-blue-900 mb-3">
                   Selected Checks
                 </div>
+                <div className="max-h-[200px] overflow-y-auto">
 
                 {stages[steps[currentStep]].length ? (
                   <div className="space-y-2">
@@ -1575,6 +1580,7 @@ export default function OrgCandidateSelfVerification() {
                     No checks selected
                   </div>
                 )}
+                </div>
               </div>
 
               {/* INITIATE BUTTON */}
@@ -1605,7 +1611,7 @@ export default function OrgCandidateSelfVerification() {
             </div>
 
             {/* RIGHT — CHECK CARDS */}
-            <div className="md:col-span-3">
+            <div className="lg:col-span-3 order-1 lg:order-2">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-800">
                   {steps[currentStep].toUpperCase()} Stage - Available Checks
@@ -1616,7 +1622,7 @@ export default function OrgCandidateSelfVerification() {
               </div>
 
               {/* RESPONSIVE CARD GRID - Enhanced */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 w-full">
                 {visibleCheckCards().map((c) => {
                   const stageKey = steps[currentStep];
                   const selected = stages[stageKey].includes(c.key);
@@ -1632,7 +1638,7 @@ export default function OrgCandidateSelfVerification() {
                   return (
                     <div
                       key={c.key}
-                      className={`border-2 rounded-2xl p-5 transition-all duration-200 min-h-[180px] transform hover:scale-105 ${cardGradient}`}
+                      className={`border-2 rounded-2xl p-4 md:p-5 transition-all duration-200 min-h-[160px] md:min-h-[180px] transform hover:scale-105 ${cardGradient}`}
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div className="p-2 bg-white rounded-lg shadow-sm">

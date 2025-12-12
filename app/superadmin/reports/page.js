@@ -1051,11 +1051,7 @@ export default function SuperAdminReportsPage() {
                   )}
 
                   {/* MERGED ALL REPORTS */}
-                  {/* Show button if at least one stage is fully completed */}
-                  {((primaryChecks.length > 0 && primaryChecks.every((x) => x.status === "COMPLETED")) ||
-                    (secondaryChecks.length > 0 && secondaryChecks.every((x) => x.status === "COMPLETED")) ||
-                    (finalChecks.length > 0 && finalChecks.every((x) => x.status === "COMPLETED"))) && (
-                      <button
+                  <button
                         disabled={downloading}
                         onClick={() => {
                           // Filter out AI validation checks
@@ -1090,7 +1086,6 @@ export default function SuperAdminReportsPage() {
                         )}
                         Download ALL Reports (Merged)
                       </button>
-                    )}
                 </div>
               )}
             </div>
@@ -1310,14 +1305,15 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
         />
 
         {/* =============================================== */}
-        {/* GREEN STATUS BAR                                 */}
+        {/* DYNAMIC STATUS BAR                               */}
         {/* =============================================== */}
         <div style={{ display: "flex", alignItems: "center", marginBottom: "90px" }}>
           <div
             style={{
               width: "70px",
               height: "32px",
-              background: "#5cb85c",
+              background: checks[0]?.status === "COMPLETED" ? "#22c55e" : 
+                         checks[0]?.status === "FAILED" ? "#ef4444" : "#f59e0b",
               borderRadius: "5px",
             }}
           />
@@ -1325,7 +1321,8 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
             style={{
               width:"25%",
               height: "2px",
-              background: "#5cb85c",
+              background: checks[0]?.status === "COMPLETED" ? "#22c55e" : 
+                         checks[0]?.status === "FAILED" ? "#ef4444" : "#f59e0b",
               marginLeft: "10px",
             }}
           />

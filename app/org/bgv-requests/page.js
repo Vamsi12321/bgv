@@ -555,6 +555,12 @@ export default function OrgBGVRequestsPage() {
     try {
       setInitLoading(true);
 
+      // Filter out failed checks from the current stage selection
+      const filteredChecks = stages[stageKey].filter(checkKey => {
+        const status = getCheckStatus(checkKey);
+        return status !== "FAILED";
+      });
+
       const res = await fetch(`/api/proxy/secure/initiateStageVerification`, {
         method: "POST",
         credentials: "include",
@@ -562,14 +568,25 @@ export default function OrgBGVRequestsPage() {
         body: JSON.stringify({
           candidateId: selectedCandidate,
           organizationId: userOrgId,
-          stages: { [stageKey]: stages[stageKey] },
+          stages: { [stageKey]: filteredChecks },
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok)
+      if (!res.ok) {
+        // Handle specific error format for missing required data
+        if (data.detail && data.detail.missingData) {
+          const missingChecks = data.detail.missingData.map(item => 
+            `• ${item.check}: ${item.message}`
+          ).join('\n');
+          
+          const errorMessage = `${data.detail.error}\n\n${missingChecks}\n\n${data.detail.action}`;
+          throw new Error(errorMessage);
+        }
+        
         throw new Error(data.message || data.error || data.detail || "Failed");
+      }
 
       showModal({
         title: "Success",
@@ -619,8 +636,14 @@ export default function OrgBGVRequestsPage() {
 
       const data = await res.json();
 
-      if (!res.ok)
+      if (!res.ok) {
+        // Handle specific error format for failed checks
+        if (data.overallStatus === "FAILED" && data.failedChecks) {
+          const failedList = data.failedChecks.join(", ");
+          throw new Error(`${data.message || "Stage failed"}\nFailed checks: ${failedList}`);
+        }
         throw new Error(data.message || data.error || data.detail || "Failed");
+      }
 
       setLastRunStage(stageKey);
 
@@ -629,6 +652,14 @@ export default function OrgBGVRequestsPage() {
           title: "Completed",
           message: `${stageKey} stage completed successfully.`,
           type: "success",
+        });
+      } else if (data.overallStatus === "FAILED" && data.failedChecks) {
+        // Handle successful response but with failed checks
+        const failedList = data.failedChecks.join(", ");
+        showModal({
+          title: "Stage Completed with Failures",
+          message: `${data.message || "Stage completed"}\nFailed checks: ${failedList}`,
+          type: "error",
         });
       }
 
@@ -658,26 +689,69 @@ export default function OrgBGVRequestsPage() {
         });
       }
 
+      const retryResults = [];
+      
       for (const entry of failed) {
-        await fetch(`/api/proxy/secure/retryCheck`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            verificationId: candidateVerification._id,
-            stage: entry.stage,
-            check: entry.check,
-          }),
-        });
+        try {
+          const retryRes = await fetch(`/api/proxy/secure/retryCheck`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              verificationId: candidateVerification._id,
+              stage: entry.stage,
+              check: entry.check,
+            }),
+          });
+
+          const retryData = await retryRes.json();
+          
+          if (!retryRes.ok) {
+            // Handle specific retry error format
+            if (retryData.status === "FAILED" && retryData.remarks) {
+              let errorMessage = `${entry.check}: ${retryData.remarks.message || "Failed"}`;
+              if (retryData.remarks.errors) {
+                const errorDetails = Object.entries(retryData.remarks.errors)
+                  .map(([key, value]) => `${key}: ${value}`)
+                  .join(", ");
+                errorMessage += `\nErrors: ${errorDetails}`;
+              }
+              retryResults.push({ check: entry.check, success: false, error: errorMessage });
+            } else {
+              retryResults.push({ 
+                check: entry.check, 
+                success: false, 
+                error: retryData.message || retryData.error || "Retry failed" 
+              });
+            }
+          } else {
+            retryResults.push({ check: entry.check, success: true });
+          }
+        } catch (error) {
+          retryResults.push({ check: entry.check, success: false, error: error.message });
+        }
       }
 
       await fetchCandidateVerification(selectedCandidate);
 
-      showModal({
-        title: "Retried",
-        message: "All failed checks have been retried successfully.",
-        type: "success",
-      });
+      // Show results summary
+      const successCount = retryResults.filter(r => r.success).length;
+      const failedResults = retryResults.filter(r => !r.success);
+      
+      if (failedResults.length === 0) {
+        showModal({
+          title: "Retried",
+          message: "All failed checks have been retried successfully.",
+          type: "success",
+        });
+      } else {
+        const failedMessages = failedResults.map(r => r.error).join("\n\n");
+        showModal({
+          title: "Retry Results",
+          message: `${successCount} checks retried successfully.\n\nFailed retries:\n${failedMessages}`,
+          type: "error",
+        });
+      }
     } catch (err) {
       showModal({ title: "Error", message: err.message, type: "error" });
     } finally {
@@ -1393,10 +1467,7 @@ export default function OrgBGVRequestsPage() {
               {currentStep === 0 && (
                 <>
                   <button
-                    disabled={
-                      initLoading ||
-                      candidateVerification?.stages?.primary?.length > 0
-                    }
+                    disabled={initLoading}
                     onClick={() => handleInitiateStage("primary")}
                     className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
                   >
@@ -1437,10 +1508,7 @@ export default function OrgBGVRequestsPage() {
               {currentStep === 1 && (
                 <>
                   <button
-                    disabled={
-                      initLoading ||
-                      candidateVerification?.stages?.secondary?.length > 0
-                    }
+                    disabled={initLoading}
                     onClick={() => handleInitiateStage("secondary")}
                     className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
                   >
@@ -1479,10 +1547,7 @@ export default function OrgBGVRequestsPage() {
               {currentStep === 2 && (
                 <>
                   <button
-                    disabled={
-                      initLoading ||
-                      candidateVerification?.stages?.final?.length > 0
-                    }
+                    disabled={initLoading}
                     onClick={() => handleInitiateStage("final")}
                     className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
                   >

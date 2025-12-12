@@ -98,7 +98,7 @@ function ErrorModal({ isOpen, onClose, message, details }) {
 }
 
 /* -------------------------------------------------------------
-   PDF CERTIFICATE COMPONENT
+   AI-CV CERTIFICATE BASE (MATCHING SUPERADMIN CERTIFICATE DESIGN)
 ------------------------------------------------------------- */
 function CertificateBase({ id, candidate, orgName, ai }) {
   const positives = ai?.positive_findings || [];
@@ -108,96 +108,297 @@ function CertificateBase({ id, candidate, orgName, ai }) {
     <div
       id={id}
       style={{
-        width: "860px",
-        minHeight: "1120px",
-        padding: "50px 60px",
+        width: "794px", // EXACT A4 WIDTH
+        minHeight: "1123px", // EXACT A4 HEIGHT
+        padding: "10px 50px 60px 50px", // SAME AS SERVICE CERTIFICATE
         background: "#ffffff",
         fontFamily: "Arial, sans-serif",
+        position: "relative",
         color: "#000",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
+        overflow: "hidden",
       }}
     >
-      <div style={{ textAlign: "center", marginBottom: "20px" }}>
-        <img
-          src="/logos/maihooMain.png"
-          alt="logo"
+      {/* ================= WATERMARK ================= */}
+      <img
+        src="/logos/maihooMain.png"
+        alt="watermark"
+        style={{
+          position: "absolute",
+          top: "300px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          opacity: 0.08,
+          width: "750px",
+          height: "750px",
+          objectFit: "contain",
+          zIndex: 1,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* ================= CONTENT WRAPPER ================= */}
+      <div style={{ position: "relative", zIndex: 2, marginTop: "-10px" }}>
+        {/* ================================================== */}
+        {/* HEADER AREA (Align exactly like Service Cert)      */}
+        {/* ================================================== */}
+        <div
           style={{
-            height: "195px",
-            objectFit: "contain",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "35px",
+            marginBottom: "25px",
+            marginTop: "0",
+          }}
+        >
+          {/* LOGO */}
+          <div style={{ flexShrink: 0, marginTop: "5px" }}>
+            <img
+              src="/logos/maihooMain.png"
+              alt="logo"
+              style={{
+                maxHeight: "180px",
+                maxWidth: "450px",
+                height: "auto",
+                width: "auto",
+                display: "block",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+
+          {/* TITLE */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start",
+              gap: "2px",
+              marginTop: "55px", // MATCH SERVICE CERT
+            }}
+          >
+            <h1
+              style={{
+                fontSize: "26px",
+                fontWeight: "900",
+                margin: 0,
+                lineHeight: "1",
+                fontFamily: "Arial Black, Arial, sans-serif",
+              }}
+            >
+              AI CV
+            </h1>
+
+            <h2
+              style={{
+                fontSize: "26px",
+                fontWeight: "900",
+                margin: 0,
+                lineHeight: "1",
+                fontFamily: "Arial Black, Arial, sans-serif",
+              }}
+            >
+              Verification Report
+            </h2>
+          </div>
+        </div>
+
+        {/* ================================================== */}
+        {/* CANDIDATE DETAILS                                  */}
+        {/* ================================================== */}
+        <div
+          style={{
+            fontSize: "15px",
+            lineHeight: "28px",
+            marginBottom: "25px",
+            marginTop: "-20px",
+          }}
+        >
+          <p>
+            <b>Candidate Name:</b> {candidate?.firstName} {candidate?.lastName}
+          </p>
+          <p>
+            <b>Candidate ID:</b> {candidate?._id}
+          </p>
+          <p>
+            <b>Organization:</b> {orgName}
+          </p>
+          <p>
+            <b>Verification Timestamp:</b> {new Date().toLocaleString()}
+          </p>
+          <p>
+            <b>Score:</b> {ai?.authenticity_score}/100
+          </p>
+          <p>
+            <b>Recommendation:</b> {ai?.recommendation}
+          </p>
+
+          <p style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <b>Status:</b>
+            <span
+              style={{ color: "#5cb85c", fontWeight: "bold", fontSize: "16px" }}
+            >
+              ✓ Completed
+            </span>
+          </p>
+        </div>
+
+        {/* ================================================== */}
+        {/* BLACK SEPARATOR LINE                               */}
+        {/* ================================================== */}
+        <div
+          style={{
+            width: "100%",
+            height: "3px",
+            background: "#000",
+            margin: "20px 0 70px 0",
+          }}
+        />
+
+        {/* ================================================== */}
+        {/* GREEN STATUS BAR (MATCH SERVICE CERTIFICATE)       */}
+        {/* ================================================== */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            marginBottom: "35px", // MATCH SERVICE CERT (was wrong earlier)
+          }}
+        >
+          <div
+            style={{
+              width: "60px",
+              height: "28px",
+              background: "#5cb85c",
+              borderRadius: "5px",
+            }}
+          />
+          <div
+            style={{
+              width :"25%",
+              height: "2px",
+              background: "#5cb85c",
+              marginLeft: "10px",
+            }}
+          />
+        </div>
+
+        {/* ================================================== */}
+        {/* POSITIVE FINDINGS                                  */}
+        {/* ================================================== */}
+       
+
+        <div style={{ marginBottom: "30px" }}>
+          {positives.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                marginBottom: "12px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "18px",
+                  marginRight: "10px",
+                }}
+              >
+                ✓
+              </span>
+              <span style={{ fontSize: "14px" }}>{item}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* ================================================== */}
+        {/* RED FLAGS                                          */}
+        {/* ================================================== */}
+        {redflags.length > 0 && (
+          <>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "30px",
+              }}
+            >
+              <div
+                style={{
+                  width: "60px",
+                  height: "28px",
+                  background: "#d9534f",
+                  borderRadius: "5px",
+                }}
+              />
+              <div
+                style={{
+                    width :"25%",
+                  height: "2px",
+                  background: "#d9534f",
+                  marginLeft: "10px",
+                }}
+              />
+            </div>
+
+           
+
+            {redflags.map((rf, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  marginBottom: "12px",
+                }}
+              >
+                <span
+                  style={{
+                    marginRight: "10px",
+                    fontSize: "18px",
+                    color: "#d9534f",
+                  }}
+                >
+                  ✓
+                </span>
+                <span style={{ fontSize: "14px" }}>
+                  <b>{rf.severity}</b> — {rf.description}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* ================================================== */}
+      {/* FOOTER FIXED AT BOTTOM (MATCH SERVICE CERT)        */}
+      {/* ================================================== */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "10px",
+          left: "50px",
+          right: "50px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            height: "2px",
+            background: "#dc3545",
+            width: "100%",
             marginBottom: "10px",
           }}
         />
-        <div
+        <p
           style={{
-            fontSize: "36px",
-            fontWeight: "700",
-            lineHeight: "42px",
-            textDecoration: "underline",
+            fontSize: "12px",
+            color: "#dc3545",
+            fontWeight: "600",
+            margin: 0,
           }}
         >
-          AI CV Verification Report
-        </div>
-      </div>
-
-      <div style={{ marginTop: "20px", fontSize: "20px", lineHeight: "30px" }}>
-        <p><b>Candidate Name:</b> {candidate?.firstName} {candidate?.lastName}</p>
-        <p><b>Candidate ID:</b> {candidate?._id}</p>
-        <p><b>Organization:</b> {orgName}</p>
-        <p><b>Verification Time:</b> {new Date().toLocaleString()}</p>
-        <p><b>Score:</b> {ai?.authenticity_score}/100</p>
-        <p><b>Recommendation:</b> {ai?.recommendation}</p>
-      </div>
-
-      <div style={{ height: "2px", width: "100%", background: "#000", marginTop: "18px", marginBottom: "26px" }} />
-
-      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-        <div style={{ width: "70px", height: "30px", background: "#6ac46a", borderRadius: "5px" }} />
-        <div style={{ flexGrow: 1, height: "3px", background: "#6ac46a", marginLeft: "14px" }} />
-      </div>
-
-      <div style={{ marginTop: "16px", fontSize: "30px", fontWeight: "700", color: "#2c7a2c" }}>
-        Positive Findings
-      </div>
-
-      <div style={{ marginTop: "10px", marginLeft: "40px" }}>
-        {positives.map((item, i) => (
-          <div key={i} style={{ display: "flex", marginBottom: "14px", fontSize: "24px", lineHeight: "32px" }}>
-            <span style={{ marginRight: "10px" }}>✓</span>
-            <span>{item}</span>
-          </div>
-        ))}
-      </div>
-
-      {redflags.length > 0 && (
-        <>
-          <div style={{ display: "flex", alignItems: "center", marginTop: "26px" }}>
-            <div style={{ width: "70px", height: "30px", background: "#d9534f", borderRadius: "5px" }} />
-            <div style={{ flexGrow: 1, height: "3px", background: "#d9534f", marginLeft: "14px" }} />
-          </div>
-
-          <div style={{ marginTop: "16px", fontSize: "30px", fontWeight: "700", color: "#d9534f" }}>
-            Red Flags
-          </div>
-
-          <div style={{ marginTop: "10px", marginLeft: "40px" }}>
-            {redflags.map((rf, i) => (
-              <div key={i} style={{ display: "flex", marginBottom: "14px", fontSize: "24px", lineHeight: "32px" }}>
-                <span style={{ marginRight: "10px", color: "#d9534f" }}>✓</span>
-                <span><b>{rf.severity}</b> – {rf.description}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      <div style={{ marginTop: "40px", textAlign: "center" }}>
-        <div style={{ width: "100%", height: "2px", background: "#d9534f" }} />
-        <div style={{ fontSize: "20px", fontWeight: "600", color: "#d9534f", marginTop: "10px" }}>
           Maihoo Technologies Private Limited, Vaishnavi's Cynosure, 2-48/5/6,
           8th Floor, Opp RTCC, Telecom Nagar Extension, Gachibowli-500032
-        </div>
+        </p>
       </div>
     </div>
   );
@@ -216,6 +417,7 @@ export default function OrgAICVVerificationPage() {
   } = useOrgState();
 
   // Local state
+  const [currentOrg, setCurrentOrg] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [verificationId, setVerificationId] = useState("");
@@ -259,6 +461,24 @@ export default function OrgAICVVerificationPage() {
       });
     };
   }, [analysis, finalRemarks]);
+
+  // Load Current Organization
+  useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const res = await fetch(`/api/proxy/secure/getOrganizations`, {
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (res.ok && data.organizations?.length) {
+          setCurrentOrg(data.organizations[0]);
+        }
+      } catch (err) {
+        console.error("Org fetch error:", err);
+      }
+    };
+    fetchOrg();
+  }, []);
 
   /* ---------------- Load Candidates (Org users see only their candidates) ---------------- */
   useEffect(() => {
@@ -541,12 +761,23 @@ export default function OrgAICVVerificationPage() {
 
       {/* Hidden PDF element */}
       {analysis && selectedCandidate && (
-        <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
-          <div ref={pdfRef}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "794px",
+            minHeight: "1123px",
+            zIndex: -9999,
+            opacity: 0,
+            pointerEvents: "none",
+          }}
+        >
+          <div ref={pdfRef} style={{ background: "#fff" }}>
             <CertificateBase
               id="ai-cv-cert"
               candidate={selectedCandidate}
-              orgName="Your Organization"
+              orgName={currentOrg?.organizationName || "Organization"}
               ai={ai}
             />
           </div>

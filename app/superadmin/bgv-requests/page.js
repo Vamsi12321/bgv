@@ -962,6 +962,12 @@ export default function BGVInitiationPage() {
     try {
       setInitLoading(true);
 
+      // Filter out failed checks from the current stage selection
+      const filteredChecks = stages[stageKey].filter(checkKey => {
+        const status = getCheckStatus(checkKey);
+        return status !== "FAILED";
+      });
+
       const res = await fetch(`/api/proxy/secure/initiateStageVerification`, {
         method: "POST",
         credentials: "include",
@@ -969,13 +975,23 @@ export default function BGVInitiationPage() {
         body: JSON.stringify({
           candidateId: selectedCandidate,
           organizationId: selectedOrg,
-          stages: { [stageKey]: stages[stageKey] },
+          stages: { [stageKey]: filteredChecks },
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle specific error format for missing required data
+        if (data.detail && data.detail.missingData) {
+          const missingChecks = data.detail.missingData.map(item => 
+            `• ${item.check}: ${item.message}`
+          ).join('\n');
+          
+          const errorMessage = `${data.detail.error}\n\n${missingChecks}\n\n${data.detail.action}`;
+          throw new Error(errorMessage);
+        }
+        
         const msg = data.message || data.error || data.detail || "Failed";
         throw new Error(msg);
       }
@@ -1045,6 +1061,11 @@ export default function BGVInitiationPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle specific error format for failed checks
+        if (data.overallStatus === "FAILED" && data.failedChecks) {
+          const failedList = data.failedChecks.join(", ");
+          throw new Error(`${data.message || "Stage failed"}\nFailed checks: ${failedList}`);
+        }
         const msg = data.message || data.error || data.detail || "Failed";
         throw new Error(msg);
       }
@@ -1056,6 +1077,14 @@ export default function BGVInitiationPage() {
           title: "Completed",
           message: `${stageKey} completed.`,
           type: "success",
+        });
+      } else if (data.overallStatus === "FAILED" && data.failedChecks) {
+        // Handle successful response but with failed checks
+        const failedList = data.failedChecks.join(", ");
+        showModal({
+          title: "Stage Completed with Failures",
+          message: `${data.message || "Stage completed"}\nFailed checks: ${failedList}`,
+          type: "error",
         });
       }
 
@@ -1083,33 +1112,69 @@ export default function BGVInitiationPage() {
         });
       }
 
+      const retryResults = [];
+      
       for (const f of failed) {
-        const res = await fetch(`/api/proxy/secure/retryCheck`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            verificationId: candidateVerification._id,
-            stage: f.stage,
-            check: f.check,
-          }),
-        });
+        try {
+          const res = await fetch(`/api/proxy/secure/retryCheck`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              verificationId: candidateVerification._id,
+              stage: f.stage,
+              check: f.check,
+            }),
+          });
 
-        const data = await res.json();
+          const data = await res.json();
 
-        if (!res.ok) {
-          const msg = data.message || data.error || data.detail || "Failed";
-          throw new Error(msg);
+          if (!res.ok) {
+            // Handle specific retry error format
+            if (data.status === "FAILED" && data.remarks) {
+              let errorMessage = `${f.check}: ${data.remarks.message || "Failed"}`;
+              if (data.remarks.errors) {
+                const errorDetails = Object.entries(data.remarks.errors)
+                  .map(([key, value]) => `${key}: ${value}`)
+                  .join(", ");
+                errorMessage += `\nErrors: ${errorDetails}`;
+              }
+              retryResults.push({ check: f.check, success: false, error: errorMessage });
+            } else {
+              retryResults.push({ 
+                check: f.check, 
+                success: false, 
+                error: data.message || data.error || "Retry failed" 
+              });
+            }
+          } else {
+            retryResults.push({ check: f.check, success: true });
+          }
+        } catch (error) {
+          retryResults.push({ check: f.check, success: false, error: error.message });
         }
       }
 
       await fetchCandidateVerification(selectedCandidate);
 
-      showModal({
-        title: "Retried",
-        message: "All failed checks have been retried.",
-        type: "success",
-      });
+      // Show results summary
+      const successCount = retryResults.filter(r => r.success).length;
+      const failedResults = retryResults.filter(r => !r.success);
+      
+      if (failedResults.length === 0) {
+        showModal({
+          title: "Retried",
+          message: "All failed checks have been retried.",
+          type: "success",
+        });
+      } else {
+        const failedMessages = failedResults.map(r => r.error).join("\n\n");
+        showModal({
+          title: "Retry Results",
+          message: `${successCount} checks retried successfully.\n\nFailed retries:\n${failedMessages}`,
+          type: "error",
+        });
+      }
     } catch (err) {
       showModal({
         title: "Error",
@@ -2022,11 +2087,7 @@ export default function BGVInitiationPage() {
               {currentStep === 0 && (
                 <>
                   <button
-                    disabled={
-                      isStageLocked("primary") ||
-                      initLoading ||
-                      candidateVerification?.stages?.primary?.length > 0
-                    }
+                    disabled={initLoading}
                     onClick={() => {
                       if (!candidateHasConsented) {
                         setShowConsentWarning({ open: true, stage: "primary" });
@@ -2055,7 +2116,6 @@ export default function BGVInitiationPage() {
                   <button
                     disabled={
                       !candidateVerification ||
-                      isStageCompleted("primary") ||
                       runLoading
                     }
                     onClick={() => handleRunStage("primary")}
@@ -2083,12 +2143,7 @@ export default function BGVInitiationPage() {
               {currentStep === 1 && (
                 <>
                   <button
-                    disabled={
-                      !isStageCompleted("primary") ||
-                      isStageLocked("secondary") ||
-                      initLoading ||
-                      candidateVerification?.stages?.secondary?.length > 0
-                    }
+                    disabled={initLoading}
                     onClick={() => handleInitiateStage("secondary")}
                     className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
                   >
@@ -2104,8 +2159,7 @@ export default function BGVInitiationPage() {
 
                   <button
                     disabled={
-                      !isStageCompleted("primary") ||
-                      isStageCompleted("secondary") ||
+                      !candidateVerification ||
                       runLoading
                     }
                     onClick={() => handleRunStage("secondary")}
@@ -2127,12 +2181,7 @@ export default function BGVInitiationPage() {
               {currentStep === 2 && (
                 <>
                   <button
-                    disabled={
-                      !isStageCompleted("secondary") ||
-                      isStageLocked("final") ||
-                      initLoading ||
-                      candidateVerification?.stages?.final?.length > 0
-                    }
+                    disabled={initLoading}
                     onClick={() => handleInitiateStage("final")}
                     className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
                   >
@@ -2148,8 +2197,7 @@ export default function BGVInitiationPage() {
 
                   <button
                     disabled={
-                      !isStageCompleted("secondary") ||
-                      isStageCompleted("final") ||
+                      !candidateVerification ||
                       runLoading
                     }
                     onClick={() => handleRunStage("final")}

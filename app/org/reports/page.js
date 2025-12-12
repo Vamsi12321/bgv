@@ -628,8 +628,8 @@ export default function OrgReportsPage() {
       )}
 
 
-{/* ORG LEVEL MERGED REPORT BUTTON */}
-{candidates.length > 0 && (
+
+{/* {candidates.length > 0 && (
   <button
     disabled={downloading}
     onClick={async () => {
@@ -687,7 +687,7 @@ export default function OrgReportsPage() {
     )}
     Download ALL Reports (Organization Level)
   </button>
-)}
+)} */}
 
       {/* CANDIDATE LIST */}
       {!loading &&
@@ -852,10 +852,7 @@ export default function OrgReportsPage() {
                   )}
 
                   {/* MERGED ALL REPORTS BUTTON */}
-                  {primary.every((x) => x.status === "COMPLETED") &&
-                    secondary.every((x) => x.status === "COMPLETED") &&
-                    final.every((x) => x.status === "COMPLETED") && (
-                      <button
+                  <button
                         disabled={downloading}
                      onClick={() => {
   const allIds = [
@@ -896,7 +893,6 @@ export default function OrgReportsPage() {
                         )}
                         Download ALL Reports (Merged)
                       </button>
-                    )}
                 </div>
               )}
             </div>
@@ -1205,9 +1201,17 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
           <p style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <strong>Status:</strong>
             <span
-              style={{ color: "#5cb85c", fontWeight: "bold", fontSize: "16px" }}
+              style={{ 
+                color: checks[0]?.status === "COMPLETED" ? "#5cb85c" : 
+                       checks[0]?.status === "FAILED" ? "#dc2626" : "#f59e0b", 
+                fontWeight: "bold", 
+                fontSize: "16px" 
+              }}
             >
-              ✓ Completed
+              {checks[0]?.status === "COMPLETED" ? "✓ Completed" :
+               checks[0]?.status === "FAILED" ? "✗ Failed" :
+               checks[0]?.status === "PENDING" ? "⏳ Pending" :
+               "⏳ In Progress"}
             </span>
           </p>
         </div>
@@ -1226,7 +1230,7 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
         />
 
         {/* =============================================== */}
-        {/* GREEN STATUS BAR                                 */}
+        {/* DYNAMIC STATUS BAR                               */}
         {/* =============================================== */}
         <div
           style={{
@@ -1239,7 +1243,8 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
             style={{
               width: "70px",
               height: "32px",
-              background: "#5cb85c",
+              background: checks[0]?.status === "COMPLETED" ? "#5cb85c" : 
+                         checks[0]?.status === "FAILED" ? "#dc2626" : "#f59e0b",
               borderRadius: "5px",
             }}
           />
@@ -1247,7 +1252,8 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
             style={{
               width: "25%",
               height: "2px",
-              background: "#5cb85c",
+              background: checks[0]?.status === "COMPLETED" ? "#5cb85c" : 
+                         checks[0]?.status === "FAILED" ? "#dc2626" : "#f59e0b",
               marginLeft: "10px",
             }}
           />

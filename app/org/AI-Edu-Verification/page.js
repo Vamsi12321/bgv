@@ -15,7 +15,6 @@ import {
   X,
   User,
   FileText,
-  Shield,
   GraduationCap,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -97,6 +96,7 @@ export default function OrgAIEducationValidationPage() {
   const router = useRouter();
   const { aiEduVerificationState = {}, setAiEduVerificationState = () => {} } = useOrgState();
 
+  const [currentOrg, setCurrentOrg] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [verificationId, setVerificationId] = useState("");
@@ -111,6 +111,7 @@ export default function OrgAIEducationValidationPage() {
   const [loadingResults, setLoadingResults] = useState(false);
   const [submittingFinal, setSubmittingFinal] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   const [expanded, setExpanded] = useState({});
 
@@ -135,6 +136,24 @@ export default function OrgAIEducationValidationPage() {
       });
     };
   }, [analysis, finalRemarks, setAiEduVerificationState]);
+
+  // Load Current Organization
+  useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const res = await fetch(`/api/proxy/secure/getOrganizations`, {
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (res.ok && data.organizations?.length) {
+          setCurrentOrg(data.organizations[0]);
+        }
+      } catch (err) {
+        console.error("Org fetch error:", err);
+      }
+    };
+    fetchOrg();
+  }, []);
 
   // Load Candidates
   useEffect(() => {
@@ -589,6 +608,33 @@ export default function OrgAIEducationValidationPage() {
                 </motion.div>
               )}
 
+              {/* Hidden Certificate for PDF Generation */}
+              {analysis && selectedCandidate && (
+                <div style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "794px",
+                  minHeight: "1123px",
+                  opacity: 0,
+                  pointerEvents: "none",
+                  zIndex: -9999,
+                }}>
+                  <div ref={pdfRef}>
+                    <EducationCertificateBase
+                      id="edu-cert"
+                      candidate={selectedCandidate}
+                      orgName={currentOrg?.organizationName || "Organization"}
+                      ai={
+                        analysis?.analysis ||
+                        analysis?.aiAnalysis ||
+                        analysis
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
               {analysis && (
                 <ResultsSection
                   analysis={analysis}
@@ -599,7 +645,7 @@ export default function OrgAIEducationValidationPage() {
                   submitDecision={submitDecision}
                   exportPDF={exportPDF}
                   submittingFinal={submittingFinal}
-                  pdfRef={pdfRef}
+                  generatingPDF={generatingPDF}
                   checkStatus={checkStatus}
                 />
               )}
@@ -621,7 +667,7 @@ function ResultsSection({
   submitDecision,
   exportPDF,
   submittingFinal,
-  pdfRef,
+  generatingPDF,
   checkStatus,
 }) {
   let ai;
@@ -677,7 +723,6 @@ function ResultsSection({
 
   return (
     <motion.div
-      ref={pdfRef}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white p-6 md:p-8 rounded-2xl shadow-lg border space-y-6"
@@ -697,39 +742,51 @@ function ResultsSection({
         {checkStatus === "COMPLETED" && (
           <button
             onClick={exportPDF}
-            className="flex items-center gap-2 bg-gradient-to-r from-[#ff004f] to-[#ff3366] text-white px-5 py-2.5 rounded-lg hover:shadow-lg transition-all font-semibold"
+            disabled={generatingPDF}
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#ff004f] to-[#ff3366] text-white px-4 py-2.5 rounded-lg hover:shadow-lg transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
           >
-            <FileDown size={18} /> Download Report
+            {generatingPDF ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <FileDown size={18} />
+                Download Report
+              </>
+            )}
           </button>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         <span
-          className={`px-4 py-2 rounded-lg font-semibold text-sm ${scoreColor}`}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm ${scoreColor} block text-center`}
         >
           Authenticity Score: {authenticityScore}/100
         </span>
         <span
-          className={`px-4 py-2 rounded-lg font-semibold text-sm ${statusColor}`}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm ${statusColor} block text-center`}
         >
           Status: {verificationStatus}
         </span>
-        <span className="px-4 py-2 bg-blue-50 text-black border border-blue-200 rounded-lg font-semibold text-sm">
+        <span className="px-4 py-2 bg-blue-50 text-black border border-blue-200 rounded-lg font-semibold text-sm block text-center">
           Text Quality: {extractedTextQuality}
         </span>
         {recommendation && (
-          <span className="px-4 py-2 bg-purple-50 text-black border border-purple-200 rounded-lg font-semibold text-sm">
+          <span className="px-4 py-2 bg-purple-50 text-black border border-purple-200 rounded-lg font-semibold text-sm block text-center">
             Recommendation: {recommendation}
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-gray-50 rounded-xl border border-gray-200">
-        <h3 className="col-span-full font-bold text-lg text-black mb-2 flex items-center gap-2">
+      <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+        <h3 className="font-bold text-lg text-black mb-4 flex items-center gap-2">
           <FileText size={18} className="text-[#ff004f]" />
           Education Details
         </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
         <div>
           <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
@@ -789,13 +846,14 @@ function ResultsSection({
           <p className="font-semibold text-black">{grade}</p>
         </div>
 
-        <div className="col-span-full">
+        <div className="sm:col-span-2">
           <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
             Document Type
           </p>
           <p className="font-semibold text-black">
             {documentType.replace(/_/g, " ")}
           </p>
+        </div>
         </div>
       </div>
 
@@ -943,6 +1001,228 @@ function CollapsibleSection({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// Education Certificate Component for PDF Generation
+function EducationCertificateBase({ id, candidate, orgName, ai }) {
+  const degree = ai.degree_type || "Not Specified";
+  const field = ai.field_of_study || "Not Specified";
+  const institution = ai.institution_name || "Not Specified";
+  const board = ai.board_university || "Not Specified";
+  const startDate = ai.start_date || "-";
+  const endDate = ai.end_date || "-";
+  const durationYears = ai.duration_years || "N/A";
+
+  const positives = ai.positive_findings || [];
+  const redflags = ai.red_flags || [];
+
+  return (
+    <div
+      id={id}
+      style={{
+        width: "794px",
+        minHeight: "1123px",
+        padding: "10px 50px 80px 50px", // ⬅ Increased bottom padding for footer visibility
+        background: "#fff",
+        fontFamily: "Arial, sans-serif",
+        color: "#000",
+        position: "relative",
+      }}
+    >
+      {/* WATERMARK */}
+      <img
+        src="/logos/maihooMain.png"
+        alt="watermark"
+        style={{
+          position: "absolute",
+          top: "320px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          opacity: 0.08,
+          width: "750px",
+          height: "750px",
+          objectFit: "contain",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      />
+
+      {/* MAIN CONTENT */}
+      <div style={{ position: "relative", zIndex: 2 }}>
+        {/* HEADER */}
+        <div
+          style={{
+            display: "flex",
+            gap: "35px",
+            alignItems: "flex-start",
+            marginBottom: "25px",
+          }}
+        >
+          <img
+            src="/logos/maihooMain.png"
+            alt="logo"
+            style={{
+              maxHeight: "180px",
+              maxWidth: "450px",
+              objectFit: "contain",
+              marginTop: "10px",
+            }}
+          />
+
+          <div style={{ marginTop: "55px" }}>
+            <h1
+              style={{
+                fontSize: "26px",
+                fontWeight: 900,
+                margin: 0,
+                fontFamily: "Arial Black",
+              }}
+            >
+              Education
+            </h1>
+            <h2
+              style={{
+                fontSize: "26px",
+                fontWeight: 900,
+                margin: 0,
+                fontFamily: "Arial Black",
+              }}
+            >
+              Verification Report
+            </h2>
+          </div>
+        </div>
+
+        {/* CANDIDATE DETAILS */}
+        <div style={{ fontSize: "15px", lineHeight: "28px", marginBottom: "40px" }}>
+          <p><b>Candidate Name:</b> {candidate.firstName} {candidate.lastName}</p>
+          <p><b>Candidate ID:</b> {candidate._id}</p>
+          <p><b>Organization:</b> {orgName}</p>
+
+          <p><b>Degree:</b> {degree}</p>
+          <p><b>Field of Study:</b> {field}</p>
+          <p><b>Institution:</b> {institution}</p>
+          <p><b>Board/University:</b> {board}</p>
+
+          <p><b>Start Date:</b> {startDate}</p>
+          <p><b>End Date:</b> {endDate}</p>
+          <p><b>Duration:</b> {durationYears} years</p>
+
+          <p style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <b>Status:</b>
+            <span style={{ color: "#5cb85c", fontWeight: "bold" }}>✓ Completed</span>
+          </p>
+        </div>
+
+       {/* SHORT GREEN BAR (Indicator Bar) */}
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "18px", // reduced gap
+  }}
+>
+  <div
+    style={{
+      width: "38px",
+      height: "18px", // increased thickness
+      background: "#5cb85c",
+      borderRadius: "5px",
+    }}
+  />
+  <div
+    style={{
+      height: "4px", // thicker line
+      background: "#5cb85c",
+      width: "22%",  // shorter length
+      marginLeft: "10px",
+      borderRadius: "2px",
+    }}
+  />
+</div>
+
+{/* POSITIVE FINDINGS (NO HEADING) */}
+{positives.length > 0 && (
+  <div style={{ marginBottom: "35px" }}>
+    {positives.map((item, i) => (
+      <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+        <span style={{ fontSize: "18px" }}>✓</span>
+        <span>{item}</span>
+      </div>
+    ))}
+  </div>
+)}
+
+{/* SHORT RED BAR (Indicator Bar) */}
+{redflags.length > 0 && (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      marginBottom: "18px",
+    }}
+  >
+    <div
+      style={{
+        width: "38px",
+        height: "18px", // thicker
+        background: "#d9534f",
+        borderRadius: "5px",
+      }}
+    />
+    <div
+      style={{
+        height: "4px",
+        background: "#d9534f",
+        width: "22%",   // shorter line
+        marginLeft: "10px",
+        borderRadius: "2px",
+      }}
+    />
+  </div>
+)}
+
+{/* RED FLAGS (NO HEADING) */}
+{redflags.length > 0 &&
+  redflags.map((rf, i) => (
+    <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+      <span style={{ color: "#d9534f", fontSize: "18px" }}>•</span>
+      <span>{rf.issue || rf.description}</span>
+    </div>
+  ))}
+
+      </div>
+
+      {/* FOOTER - ALWAYS VISIBLE */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "20px",
+          left: "50px",
+          right: "50px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            height: "2px",
+            background: "#dc3545",
+            marginBottom: "10px",
+          }}
+        />
+
+        <p
+          style={{
+            fontSize: "12px",
+            color: "#dc3545",
+            fontWeight: 600,
+          }}
+        >
+          Maihoo Technologies Pvt Ltd, Vaishnavi's Cynosure, Gachibowli - 500032
+        </p>
+      </div>
     </div>
   );
 }
