@@ -64,27 +64,20 @@ export default function OrgAdminDashboard() {
         const data = await res.json();
 
         if (res.ok && Array.isArray(data.logs)) {
-         const formatted = data.logs
-  .map((log) => {
-    // TRIM LARGE DATA
-    let desc = log.description || "";
+          const formatted = data.logs
+            .map((log) => {
+              return {
+                ...log,
+                user: log.userName ?? "Unknown User",
+                actionText: buildActivityMessage(log),
+                time: timeAgo(log.timestamp),
+                icon: getLogIcon(log.action).icon,
+                iconColor: getLogIcon(log.action).color,
+              };
+            })
+            .slice(0, 10);
 
-    // If description contains huge JSON, compress it
-    if (desc.length > 500) {
-      desc = desc.slice(0, 500) + " ...";
-    }
-
-    return {
-      ...log,
-      user: log.userName ?? "Unknown User",
-      actionText: buildActivityMessage({ ...log, description: desc }),
-      time: timeAgo(log.timestamp),
-      icon: getLogIcon(log.action).icon,
-      iconColor: getLogIcon(log.action).color,
-    };
-  })
-  .slice(0, 10);
-
+          setRecentActivities(formatted);
         }
       } catch (err) {
         console.error("Recent activity error:", err);
@@ -239,17 +232,149 @@ export default function OrgAdminDashboard() {
      ACTIVITY HELPERS
   --------------------------------------------------- */
   function buildActivityMessage(log) {
-    const user = log.userEmail?.split("@")[0] || "Someone";
-    const action = log.action || "did something";
+    const userName = log.userName || "Unknown User";
+    const orgName = log.organizationName || "organization";
+    const action = log.action || "performed action";
+    const description = log.description || "";
 
-    let desc = log.description || "";
-    desc = desc.replace(/'/g, "").replace(/\|/g, " — ").trim();
+    // Parse different types of activities
+    if (action === "Verification Check Executed") {
+      // Extract check name, stage, status, and candidate from description
+      const checkMatch = description.match(/Check: ([^|]+)/);
+      const stageMatch = description.match(/Stage: ([^|]+)/);
+      const statusMatch = description.match(/Status: ([^|]+)/);
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
 
-    if (action === "Add Candidate") {
-      return `${user} added candidate`;
+      const checkName = checkMatch ? checkMatch[1].trim().replace(/_/g, ' ') : 'verification';
+      const stage = stageMatch ? stageMatch[1].trim() : '';
+      const status = statusMatch ? statusMatch[1].trim() : '';
+      const candidate = candidateMatch ? candidateMatch[1].trim() : '';
+
+      // Format check name to be more readable
+      const formattedCheckName = formatCheckName(checkName);
+      
+      // Add status-specific context
+      let statusContext = '';
+      if (status === 'FAILED') {
+        statusContext = ' - requires attention';
+      } else if (status === 'PENDING') {
+        statusContext = ' - awaiting manual review';
+      } else if (status === 'COMPLETED') {
+        statusContext = ' - successfully verified';
+      }
+
+      return `${userName} executed ${formattedCheckName} for ${candidate} in ${stage} stage (${status})${statusContext}`;
     }
 
-    return `${user} — ${action} — ${desc}`;
+    if (action === "Add Candidate") {
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
+      const orgMatch = description.match(/organization: ([^|]+)/);
+      const candidate = candidateMatch ? candidateMatch[1].trim() : 'new candidate';
+      const organization = orgMatch ? orgMatch[1].trim() : orgName;
+      return `${userName} added candidate ${candidate} to ${organization}`;
+    }
+
+    if (action === "Edit Candidate") {
+      const candidateMatch = description.match(/Updated candidate: ([^|]+)/);
+      const candidate = candidateMatch ? candidateMatch[1].trim() : 'candidate';
+      return `${userName} updated candidate ${candidate}'s information in ${orgName}`;
+    }
+
+    if (action === "New Verification Initiated") {
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
+      const candidate = candidateMatch ? candidateMatch[1].trim() : '';
+      return `${userName} initiated background verification process for ${candidate} at ${orgName}`;
+    }
+
+    if (action === "Stage Initialized") {
+      const stageMatch = description.match(/Stage: ([^|]+)/);
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
+      const stage = stageMatch ? stageMatch[1].trim() : '';
+      const candidate = candidateMatch ? candidateMatch[1].trim() : '';
+      return `${userName} started ${stage} verification stage for ${candidate} at ${orgName}`;
+    }
+
+    if (action === "Self Verification Email Sent") {
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
+      const candidate = candidateMatch ? candidateMatch[1].trim() : '';
+      return `${userName} sent self-verification email to ${candidate} for ${orgName} verification process`;
+    }
+
+    if (action === "Login") {
+      return `${userName} logged into ${orgName} dashboard`;
+    }
+
+    if (action === "Logout") {
+      return `${userName} logged out from ${orgName} dashboard`;
+    }
+
+    if (action === "Add User") {
+      return `${userName} added a new team member to ${orgName}`;
+    }
+
+    if (action === "Delete Candidate") {
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
+      const candidate = candidateMatch ? candidateMatch[1].trim() : '';
+      return `${userName} removed candidate ${candidate} from ${orgName}`;
+    }
+
+    if (action === "Retry Check") {
+      const checkMatch = description.match(/Check: ([^|]+)/);
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
+      const checkName = checkMatch ? checkMatch[1].trim().replace(/_/g, ' ') : 'check';
+      const candidate = candidateMatch ? candidateMatch[1].trim() : '';
+      const formattedCheckName = formatCheckName(checkName);
+      return `${userName} retried ${formattedCheckName} verification for ${candidate} at ${orgName}`;
+    }
+
+    if (action === "Run Stage Failed") {
+      const candidateMatch = description.match(/candidate: ([^|]+)/);
+      const stageMatch = description.match(/Stage: ([^|]+)/);
+      const candidate = candidateMatch ? candidateMatch[1].trim() : '';
+      const stage = stageMatch ? stageMatch[1].trim() : '';
+      return `${userName} encountered issues running ${stage} stage for ${candidate} at ${orgName}`;
+    }
+
+    if (action === "Password Reset Failed") {
+      return `${userName} attempted password reset for ${orgName} account - failed`;
+    }
+
+    if (action === "Updated Organization") {
+      return `${userName} updated ${orgName} organization settings`;
+    }
+
+    if (action === "Added Helper User") {
+      return `${userName} added a helper user to ${orgName} team`;
+    }
+
+    if (action === "Updated User") {
+      return `${userName} updated user information in ${orgName}`;
+    }
+
+    // Generic fallback for other actions
+    return `${userName} performed ${action.toLowerCase()} at ${orgName}`;
+  }
+
+  // Helper function to format check names
+  function formatCheckName(checkName) {
+    const checkNameMap = {
+      'pan_verification': 'PAN Card verification',
+      'pan_aadhaar_seeding': 'PAN-Aadhaar linking verification',
+      'verify_pan_to_uan': 'PAN to UAN verification',
+      'employment_history': 'Employment history verification',
+      'credit_report': 'Credit report verification',
+      'court_record': 'Court record verification',
+      'address_verification': 'Address verification',
+      'supervisory_check_1': 'Supervisory reference check #1',
+      'supervisory_check_2': 'Supervisory reference check #2',
+      'education_check_manual': 'Education verification',
+      'employment_history_manual': 'Employment history verification',
+      'employment_history_manual_2': 'Employment history verification #2',
+      'ai_education_validation': 'AI-powered education validation',
+      'ai_cv_validation': 'AI-powered CV validation'
+    };
+
+    return checkNameMap[checkName] || checkName.replace(/_/g, ' ');
   }
 
   function timeAgo(input) {
@@ -272,15 +397,56 @@ export default function OrgAdminDashboard() {
   function getLogIcon(action) {
     const lower = action.toLowerCase();
 
+    // Verification Check Executed - use status-based colors
+    if (lower.includes("verification check executed")) {
+      return { icon: "🔍", color: "text-blue-600" };
+    }
+
+    // Failed actions
     if (lower.includes("fail") || lower.includes("error")) {
       return { icon: "🔴", color: "text-red-600" };
     }
 
-    if (lower.includes("add") || lower.includes("update")) {
-      return { icon: "🟠", color: "text-orange-600" };
+    // Add/Create actions
+    if (lower.includes("add") || lower.includes("create") || lower.includes("new")) {
+      return { icon: "➕", color: "text-green-600" };
     }
 
-    return { icon: "🟢", color: "text-green-600" };
+    // Update/Edit actions
+    if (lower.includes("update") || lower.includes("edit")) {
+      return { icon: "✏️", color: "text-orange-600" };
+    }
+
+    // Delete actions
+    if (lower.includes("delete")) {
+      return { icon: "🗑️", color: "text-red-600" };
+    }
+
+    // Login/Logout
+    if (lower.includes("login")) {
+      return { icon: "🔑", color: "text-green-600" };
+    }
+    if (lower.includes("logout")) {
+      return { icon: "🚪", color: "text-gray-600" };
+    }
+
+    // Email/Communication
+    if (lower.includes("email") || lower.includes("sent")) {
+      return { icon: "📧", color: "text-blue-600" };
+    }
+
+    // Stage/Process actions
+    if (lower.includes("stage") || lower.includes("initiat")) {
+      return { icon: "🚀", color: "text-purple-600" };
+    }
+
+    // Retry actions
+    if (lower.includes("retry")) {
+      return { icon: "🔄", color: "text-yellow-600" };
+    }
+
+    // Default
+    return { icon: "📋", color: "text-gray-600" };
   }
 
   function groupByDate(logs) {

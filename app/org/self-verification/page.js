@@ -464,8 +464,12 @@ export default function OrgCandidateSelfVerification() {
       return;
     }
 
-    setLoadingCandidate(true);
-    setLoading(true);
+    // Only show loading for refresh button clicks, not for candidate selection
+    const isRefreshClick = arguments[1]; // Second parameter to indicate manual refresh
+    if (isRefreshClick) {
+      setLoadingCandidate(true);
+    }
+    
     try {
       const res = await fetch(
         `/api/proxy/secure/getVerifications?candidateId=${candidateId}`,
@@ -475,6 +479,7 @@ export default function OrgCandidateSelfVerification() {
       const data = await res.json();
 
       if (!res.ok || !data.verifications?.length) {
+        // No verification data is normal - don't treat as error
         setCandidateVerification(null);
         setStages({ primary: [], secondary: [], final: [] });
         setCurrentStep(0);
@@ -485,7 +490,7 @@ export default function OrgCandidateSelfVerification() {
       setCandidateVerification(v);
 
       const stageIndex = steps.indexOf(v.currentStage);
-      setCurrentStep(stageIndex);
+      setCurrentStep(stageIndex >= 0 ? stageIndex : 0);
 
       const restored = { primary: [], secondary: [], final: [] };
 
@@ -496,9 +501,16 @@ export default function OrgCandidateSelfVerification() {
       });
 
       setStages(restored);
+    } catch (error) {
+      console.error("Error fetching verification:", error);
+      // Reset to clean state on error
+      setCandidateVerification(null);
+      setStages({ primary: [], secondary: [], final: [] });
+      setCurrentStep(0);
     } finally {
-      setLoading(false);
-      setLoadingCandidate(false);
+      if (isRefreshClick) {
+        setLoadingCandidate(false);
+      }
     }
   };
 
@@ -532,16 +544,16 @@ export default function OrgCandidateSelfVerification() {
     const stageKey = steps[currentStep];
 
     if (isStageInitiated(stageKey)) {
-      return availableChecks.filter((c) => stages[stageKey].includes(c.key));
+      return availableChecks.filter((c) => stages[stageKey]?.includes(c.key));
     }
 
     const usedBefore = new Set();
     for (let i = 0; i < currentStep; i++) {
-      stages[steps[i]].forEach((ck) => usedBefore.add(ck));
+      stages[steps[i]]?.forEach((ck) => usedBefore.add(ck));
     }
 
     return availableChecks.filter(
-      (c) => !usedBefore.has(c.key) && !stages[stageKey].includes(c.key)
+      (c) => !usedBefore.has(c.key) && !stages[stageKey]?.includes(c.key)
     );
   };
 
@@ -658,7 +670,7 @@ export default function OrgCandidateSelfVerification() {
         type: "success",
       });
 
-      await refreshVerification(selectedCandidate);
+      await refreshVerification(selectedCandidate, false);
     } finally {
       setSubmitting(false);
     }
@@ -1118,16 +1130,26 @@ export default function OrgCandidateSelfVerification() {
   /* ---------------------------------------------- */
   /* PAGE UI                                         */
   /* ---------------------------------------------- */
+  // Safety check to prevent undefined errors
+  if (!steps || steps.length === 0 || currentStep < 0 || currentStep >= steps.length) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 px-3 sm:px-4 md:px-6 py-4 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="animate-spin text-[#ff004f] mx-auto mb-4" size={48} />
+          <p className="text-gray-600">Initializing verification stages...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 px-3 sm:px-4 md:px-6 py-4">
-      {/* Loading Overlay */}
+      {/* Loading Overlay - Only for manual refresh */}
       {loadingCandidate && (
-        <>
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <Loader2 className="animate-spin text-[#ff004f]" size={48} />
-          </div>
-        </>
+        <div className="fixed top-4 right-4 z-50 bg-white rounded-lg shadow-lg border-2 border-gray-200 p-4 flex items-center gap-3">
+          <Loader2 className="animate-spin text-[#ff004f]" size={20} />
+          <span className="text-sm font-medium text-gray-700">Refreshing verification data...</span>
+        </div>
       )}
 
       {/* Global Modals */}
@@ -1266,7 +1288,7 @@ export default function OrgCandidateSelfVerification() {
           <div className="flex gap-3 flex-wrap">
             <button
               disabled={!selectedCandidate}
-              onClick={() => refreshVerification(selectedCandidate)}
+              onClick={() => refreshVerification(selectedCandidate, true)}
               className={`flex items-center gap-2 px-4 py-2 rounded-md ${
                 selectedCandidate
                   ? "bg-gray-200 hover:bg-gray-300 text-gray-700"
@@ -1397,7 +1419,7 @@ export default function OrgCandidateSelfVerification() {
                   onChange={(cid) => {
                     setSelectedCandidate(cid);
 
-                    if (cid) refreshVerification(cid);
+                    if (cid) refreshVerification(cid, false);
                     else {
                       setCandidateVerification(null);
                       setStages({ primary: [], secondary: [], final: [] });
@@ -1546,7 +1568,7 @@ export default function OrgCandidateSelfVerification() {
                 </div>
                 <div className="max-h-[200px] overflow-y-auto">
 
-                {stages[steps[currentStep]].length ? (
+                {stages[steps[currentStep]]?.length ? (
                   <div className="space-y-2">
                     {stages[steps[currentStep]].map((checkKey) => {
                       const check = availableChecks.find(
@@ -1590,7 +1612,7 @@ export default function OrgCandidateSelfVerification() {
                   submitting ||
                   isStageInitiated(steps[currentStep]) ||
                   !isPrevStageCompleted(steps[currentStep]) ||
-                  !stages[steps[currentStep]].length
+                  !stages[steps[currentStep]]?.length
                 }
                 className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium mt-4
                   ${
@@ -1614,7 +1636,7 @@ export default function OrgCandidateSelfVerification() {
             <div className="lg:col-span-3 order-1 lg:order-2">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-800">
-                  {steps[currentStep].toUpperCase()} Stage - Available Checks
+                  {steps[currentStep]?.toUpperCase() || 'Current'} Stage - Available Checks
                 </h3>
                 <div className="text-sm text-gray-500">
                   {visibleCheckCards().length} checks available
@@ -1625,7 +1647,7 @@ export default function OrgCandidateSelfVerification() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 w-full">
                 {visibleCheckCards().map((c) => {
                   const stageKey = steps[currentStep];
-                  const selected = stages[stageKey].includes(c.key);
+                  const selected = stages[stageKey]?.includes(c.key);
                   const locked = isStageInitiated(stageKey);
                   const allowed = isPrevStageCompleted(stageKey);
 
@@ -1707,7 +1729,7 @@ export default function OrgCandidateSelfVerification() {
             <div className="space-y-6">
               {/* Show current stage table */}
               <StageTable 
-                title={`${steps[currentStep].toUpperCase()} Stage`} 
+                title={`${steps[currentStep]?.toUpperCase() || 'Current'} Stage`} 
                 stageKey={steps[currentStep]} 
               />
 

@@ -69,6 +69,7 @@ export default function OrgBGVRequestsPage() {
   });
 
   const stepNames = ["Primary", "Secondary", "Final"];
+  const steps = ["primary", "secondary", "final"]; // Lowercase stage names
   const [currentStep, setCurrentStep] = useState(bgvState.currentStep || 0);
   const [visibleStage, setVisibleStage] = useState(
     bgvState.visibleStage || "primary"
@@ -479,6 +480,29 @@ export default function OrgBGVRequestsPage() {
     }
     return false;
   }, [candidateVerification]);
+
+  // NEW: Check if specific stage has failed checks
+  const stageHasFailedChecks = (stage) => {
+    const arr = candidateVerification?.stages?.[stage];
+    if (!Array.isArray(arr) || arr.length === 0) return false;
+    return arr.some((c) => c.status === "FAILED");
+  };
+
+  // NEW: Get stage initiation status for display
+  const getStageInitiationStatus = (stage) => {
+    const arr = candidateVerification?.stages?.[stage];
+    if (!Array.isArray(arr) || arr.length === 0) return "not_initiated";
+    
+    const hasCompleted = arr.some((c) => c.status === "COMPLETED");
+    const hasFailed = arr.some((c) => c.status === "FAILED");
+    const hasInProgress = arr.some((c) => c.status === "IN_PROGRESS");
+    
+    if (hasCompleted && !hasFailed && !hasInProgress) return "completed";
+    if (hasFailed) return "has_failures";
+    if (hasInProgress) return "in_progress";
+    if (arr.length > 0) return "initiated";
+    return "not_initiated";
+  };
 
   const isStageLocked = (stage) => {
     const arr = candidateVerification?.stages?.[stage];
@@ -939,6 +963,15 @@ export default function OrgBGVRequestsPage() {
       ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
       : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
 
+    // NEW: Check which stages this check has been initiated in
+    const initiatedStages = [];
+    ["primary", "secondary", "final"].forEach(stage => {
+      const arr = candidateVerification?.stages?.[stage];
+      if (Array.isArray(arr) && arr.some(c => c.check === key)) {
+        initiatedStages.push(stage);
+      }
+    });
+
     return (
       <motion.div
         key={key}
@@ -947,8 +980,46 @@ export default function OrgBGVRequestsPage() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         transition={{ duration: 0.2 }}
-        className={`rounded-2xl p-6 shadow-md border-2 ${cardGradient} transition-all duration-200 transform hover:scale-105`}
+        className={`rounded-2xl p-6 shadow-md border-2 ${cardGradient} transition-all duration-200 transform hover:scale-105 relative group`}
       >
+        {/* NEW: Stage Initiation Indicator */}
+        {initiatedStages.length > 0 && (
+          <div className="absolute top-3 right-3 z-10">
+            <div className="relative">
+              <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform">
+                <Info size={16} className="text-white" />
+              </div>
+              
+              {/* Enhanced Tooltip on hover */}
+              <div className="absolute top-9 right-0 bg-gray-900 text-white text-xs rounded-xl px-4 py-3 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-20 shadow-2xl min-w-[200px]">
+                <div className="font-bold mb-2 text-green-400">✨ Initiated Stages</div>
+                <div className="space-y-1">
+                  {initiatedStages.map(stage => {
+                    const stageStatus = getStageInitiationStatus(stage);
+                    const statusIcon = stageStatus === "completed" ? "✅" : 
+                                     stageStatus === "has_failures" ? "❌" : 
+                                     stageStatus === "in_progress" ? "⏳" : "🔄";
+                    const statusText = stageStatus === "completed" ? "Completed" : 
+                                      stageStatus === "has_failures" ? "Has Failures" : 
+                                      stageStatus === "in_progress" ? "In Progress" : "Initiated";
+                    return (
+                      <div key={stage} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span>{statusIcon}</span>
+                          <span className="capitalize font-medium">{stage}</span>
+                        </div>
+                        <span className="text-xs text-gray-300">{statusText}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Enhanced Tooltip arrow */}
+                <div className="absolute -top-2 right-4 w-3 h-3 bg-gray-900 rotate-45"></div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TOP ROW — ICON + TITLE */}
         <div className="flex justify-between items-start mb-3">
           <div className="flex gap-3 items-start flex-1">
@@ -1010,7 +1081,51 @@ export default function OrgBGVRequestsPage() {
           )}
         </div>
 
+        {/* NEW: Stage Status Info Bar */}
+        {initiatedStages.length > 0 && (
+          <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-blue-900">🎯 Active in:</span>
+              <div className="flex gap-1 flex-wrap">
+                {initiatedStages.map(stage => {
+                  const stageStatus = getStageInitiationStatus(stage);
+                  const statusColor = stageStatus === "completed" ? "bg-green-500 text-white" : 
+                                     stageStatus === "has_failures" ? "bg-red-500 text-white" : 
+                                     stageStatus === "in_progress" ? "bg-yellow-500 text-white" : "bg-blue-500 text-white";
+                  const statusIcon = stageStatus === "completed" ? "✓" : 
+                                    stageStatus === "has_failures" ? "✗" : 
+                                    stageStatus === "in_progress" ? "⏳" : "●";
+                  return (
+                    <span key={stage} className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor} shadow-sm`}>
+                      {statusIcon} {stage.charAt(0).toUpperCase() + stage.slice(1)}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="border-t border-gray-200 my-3" />
+
+        {/* MANUAL VERIFICATION INFO */}
+        {status === "PENDING" && (
+          <div className="mb-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                <AlertCircle size={14} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800">
+                  ⏳ Maihoo needs to approve this check
+                </p>
+                <p className="text-xs text-amber-700 mt-1">
+                  This verification requires manual review and approval
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CHECKBOX */}
         <div className="flex items-center gap-3 mb-3">
@@ -1276,6 +1391,12 @@ export default function OrgBGVRequestsPage() {
                         ? "In Progress"
                         : "Pending"}
                     </div>
+                    {/* NEW: Stage details on hover */}
+                    {candidateVerification?.stages?.[name.toLowerCase()]?.length > 0 && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        {candidateVerification.stages[name.toLowerCase()].length} checks
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -1582,22 +1703,43 @@ export default function OrgBGVRequestsPage() {
                 </>
               )}
 
-              {/* RETRY FAILED CHECKS */}
-              {failedChecksExist && (
+              {/* STAGE-SPECIFIC RETRY FAILED CHECKS */}
+              {stageHasFailedChecks(steps[currentStep]) && (
                 <button
                   disabled={reinitLoading}
                   onClick={handleRetryFailed}
-                  className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white rounded-lg flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   {reinitLoading ? (
                     <>
                       <Loader2 className="animate-spin" size={16} />
-                      Retrying...
+                      Retrying Failed Checks...
                     </>
                   ) : (
                     <>
                       <RotateCcw size={16} />
-                      Retry Failed Checks
+                      Retry {steps[currentStep].charAt(0).toUpperCase() + steps[currentStep].slice(1)} Failed Checks
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* GLOBAL RETRY FOR ALL STAGES (if other stages have failures) */}
+              {failedChecksExist && !stageHasFailedChecks(steps[currentStep]) && (
+                <button
+                  disabled={reinitLoading}
+                  onClick={handleRetryFailed}
+                  className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md flex items-center justify-center gap-2 text-sm opacity-75"
+                >
+                  {reinitLoading ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw size={14} />
+                      Retry All Failed Checks
                     </>
                   )}
                 </button>
@@ -1617,6 +1759,47 @@ export default function OrgBGVRequestsPage() {
                   All background verification checks have been successfully
                   completed.
                 </p>
+              </div>
+            )}
+
+            {/* STAGE LOCKING INFO BANNER */}
+            {isStageLocked(visibleStage) && (
+              <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-2xl shadow-lg">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <Info size={24} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
+                      🔒 Stage Locked - Important Information
+                    </h3>
+                    <div className="space-y-2 text-sm text-blue-800">
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-600 font-bold">•</span>
+                        <span>
+                          <strong>Locked checks</strong> in this stage cannot be modified or moved to other stages
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-600 font-bold">•</span>
+                        <span>
+                          <strong>Remaining checks</strong> can still be used in other stages (Primary, Secondary, Final)
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-orange-600 font-bold">•</span>
+                        <span>
+                          You can <strong>retry failed checks</strong> or <strong>execute verifications</strong> for this stage
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 p-3 bg-white/70 rounded-lg border border-blue-200">
+                      <p className="text-xs text-blue-700 font-medium">
+                        💡 <strong>Tip:</strong> Use the stage navigation buttons to switch between Primary, Secondary, and Final stages to manage your remaining checks.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
