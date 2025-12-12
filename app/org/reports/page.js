@@ -1053,15 +1053,65 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
   const verification = candidate.verification;
   const serviceName = formatServiceName(checks[0]?.check || "");
 
-  // Prepare remarks
+  // Prepare remarks with enhanced employment history handling
   let bulletItems = [];
   const remarks = checks[0]?.remarks;
 
-  if (!remarks) bulletItems = ["No remarks available"];
-  else if (typeof remarks === "string") bulletItems = [remarks];
-  else if (Array.isArray(remarks)) bulletItems = remarks.map((r) => String(r));
-  else if (typeof remarks === "object") {
-    bulletItems = Object.entries(remarks).map(([k, v]) => `${k}: ${String(v)}`);
+  if (!remarks) {
+    bulletItems = ["No remarks available"];
+  } else if (typeof remarks === "string") {
+    bulletItems = [remarks];
+  } else if (Array.isArray(remarks)) {
+    bulletItems = remarks.map((r) => String(r));
+  } else if (typeof remarks === "object") {
+    // Enhanced handling for employment history and other complex structures
+    if (remarks.message && remarks.message_code) {
+      // Handle employment history verification format
+      bulletItems.push(`Status: ${remarks.message}`);
+      bulletItems.push(`Code: ${remarks.message_code}`);
+      
+      if (remarks.data) {
+        bulletItems.push(`Client ID: ${remarks.data.client_id || 'N/A'}`);
+        
+        if (remarks.data.uan) {
+          bulletItems.push(`UAN: ${remarks.data.uan}`);
+        }
+        
+        if (remarks.data.employment_history) {
+          if (Array.isArray(remarks.data.employment_history) && remarks.data.employment_history.length === 0) {
+            bulletItems.push(`Employment History: No employment records found`);
+          } else if (Array.isArray(remarks.data.employment_history)) {
+            bulletItems.push(`Employment History: ${remarks.data.employment_history.length} records found`);
+            remarks.data.employment_history.forEach((emp, index) => {
+              bulletItems.push(`  Record ${index + 1}: ${JSON.stringify(emp)}`);
+            });
+          }
+        }
+        
+        // Handle other data fields
+        Object.entries(remarks.data).forEach(([key, value]) => {
+          if (key !== 'client_id' && key !== 'uan' && key !== 'employment_history') {
+            bulletItems.push(`${key}: ${String(value)}`);
+          }
+        });
+      }
+      
+      if (remarks.status_code) {
+        bulletItems.push(`Status Code: ${remarks.status_code}`);
+      }
+      
+      if (remarks.success !== undefined) {
+        bulletItems.push(`Success: ${remarks.success ? 'Yes' : 'No'}`);
+      }
+    } else {
+      // Fallback to generic object handling
+      bulletItems = Object.entries(remarks).map(([k, v]) => {
+        if (typeof v === 'object' && v !== null) {
+          return `${k}: ${JSON.stringify(v)}`;
+        }
+        return `${k}: ${String(v)}`;
+      });
+    }
   } else {
     bulletItems = [String(remarks)];
   }

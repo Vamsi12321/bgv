@@ -1705,17 +1705,25 @@ export default function OrgCandidateSelfVerification() {
             </h2>
 
             <div className="space-y-6">
-              {isStageInitiated("primary") && (
-                <StageTable title="Primary Stage" stageKey="primary" />
-              )}
+              {/* Show current stage table */}
+              <StageTable 
+                title={`${steps[currentStep].toUpperCase()} Stage`} 
+                stageKey={steps[currentStep]} 
+              />
 
-              {isStageInitiated("secondary") && (
-                <StageTable title="Secondary Stage" stageKey="secondary" />
-              )}
-
-              {isStageInitiated("final") && (
-                <StageTable title="Final Stage" stageKey="final" />
-              )}
+              {/* Show other initiated stages */}
+              {steps.map((stageKey, index) => {
+                // Don't show current stage again, and only show initiated stages
+                if (index === currentStep || !isStageInitiated(stageKey)) return null;
+                
+                return (
+                  <StageTable 
+                    key={stageKey}
+                    title={`${stageKey.toUpperCase()} Stage`} 
+                    stageKey={stageKey} 
+                  />
+                );
+              })}
             </div>
           </div>
         )}
