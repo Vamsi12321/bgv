@@ -1522,12 +1522,15 @@ export default function BGVInitiationPage() {
       }
     });
 
-    const cardGradient = selected
+    // Consistent color coding based on individual check verification status
+    const cardGradient = status === "COMPLETED"
+      ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg"
+      : status === "FAILED"
+      ? "border-red-400 bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
+      : status === "IN_PROGRESS" || isCheckLocked
+      ? "border-orange-400 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg"
+      : selected
       ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
-      : completed
-      ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
-      : isCheckLocked
-      ? "border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 opacity-60"
       : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
 
     return (
@@ -1706,7 +1709,7 @@ export default function BGVInitiationPage() {
                   const stageStatus = getStageInitiationStatus(stage);
                   const statusColor = stageStatus === "completed" ? "bg-green-500 text-white" : 
                                      stageStatus === "has_failures" ? "bg-red-500 text-white" : 
-                                     stageStatus === "in_progress" ? "bg-yellow-500 text-white" : "bg-blue-500 text-white";
+                                     stageStatus === "in_progress" ? "bg-orange-500 text-white" : "bg-blue-500 text-white";
                   const statusIcon = stageStatus === "completed" ? "✓" : 
                                     stageStatus === "has_failures" ? "✗" : 
                                     stageStatus === "in_progress" ? "⏳" : "●";
@@ -2396,7 +2399,7 @@ export default function BGVInitiationPage() {
                       isStageCompleted(stepNames[currentStep].toLowerCase()) 
                         ? 'bg-green-500' 
                         : candidateVerification?.stages?.[stepNames[currentStep].toLowerCase()]?.length > 0
-                        ? 'bg-yellow-500'
+                        ? 'bg-orange-500'
                         : 'bg-gray-400'
                     }`}></div>
                     <span className="text-xs font-medium text-gray-600">

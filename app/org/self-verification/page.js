@@ -237,6 +237,12 @@ export default function OrgCandidateSelfVerification() {
     checkKeyToRemove: null,
   });
 
+  const [stageTransition, setStageTransition] = useState({
+    isTransitioning: false,
+    fromStage: "",
+    toStage: "",
+  });
+
   const showModal = ({ title, message, type }) =>
     setModal({
       open: true,
@@ -253,6 +259,38 @@ export default function OrgCandidateSelfVerification() {
       type: "info",
       checkKeyToRemove: null,
     });
+
+  /* ---------------------------------------------- */
+  /* STAGE TRANSITION WITH ANIMATION                 */
+  /* ---------------------------------------------- */
+  const handleStageTransition = (targetStep) => {
+    if (targetStep === currentStep) return;
+
+    const stepNames = ["Primary", "Secondary", "Final"];
+    const fromStage = stepNames[currentStep];
+    const toStage = stepNames[targetStep];
+
+    // Start stage transition animation
+    setStageTransition({
+      isTransitioning: true,
+      fromStage: fromStage,
+      toStage: toStage,
+    });
+
+    // Change step after brief delay
+    setTimeout(() => {
+      setCurrentStep(targetStep);
+      
+      // End transition after stage change
+      setTimeout(() => {
+        setStageTransition({
+          isTransitioning: false,
+          fromStage: "",
+          toStage: "",
+        });
+      }, 500);
+    }, 800);
+  };
 
   /* ---------------------------------------------- */
   /* VALIDATION HELPERS                              */
@@ -517,6 +555,16 @@ export default function OrgCandidateSelfVerification() {
   /* ---------------------------------------------- */
   /* STAGE STATUS HELPERS                            */
   /* ---------------------------------------------- */
+  const getCheckStatus = (check) => {
+    if (!candidateVerification?.stages) return null;
+    for (const arr of Object.values(candidateVerification.stages)) {
+      if (!Array.isArray(arr)) continue;
+      const found = arr.find((c) => c.check === check);
+      if (found) return found.status;
+    }
+    return null;
+  };
+
   const getStageStatus = (stageKey) => {
     const data = candidateVerification?.stages?.[stageKey];
     if (!Array.isArray(data) || data.length === 0) return "PENDING";
@@ -563,8 +611,30 @@ export default function OrgCandidateSelfVerification() {
   const handleToggle = (checkKey) => {
     const stageKey = steps[currentStep];
 
-    if (!isPrevStageCompleted(stageKey)) return;
     if (isStageInitiated(stageKey)) return;
+
+    // Show confirmation if previous stage is not completed
+    if (!isPrevStageCompleted(stageKey)) {
+      setModal({
+        open: true,
+        title: "Stage Transition Confirmation",
+        message: `The previous stage is not yet completed. Are you sure you want to continue to the ${stageKey.toUpperCase()} stage?`,
+        type: "confirm",
+        onConfirm: () => {
+          setStages((prev) => {
+            const selected = prev[stageKey].includes(checkKey);
+            return {
+              ...prev,
+              [stageKey]: selected
+                ? prev[stageKey].filter((c) => c !== checkKey)
+                : [...prev[stageKey], checkKey],
+            };
+          });
+          closeModal();
+        }
+      });
+      return;
+    }
 
     setStages((prev) => {
       const selected = prev[stageKey].includes(checkKey);
@@ -621,17 +691,8 @@ export default function OrgCandidateSelfVerification() {
       });
     }
 
-    if (!isPrevStageCompleted(stageKey)) {
-      return showModal({
-        title: "Previous Stage Incomplete",
-        message: "Complete previous stage first.",
-        type: "error",
-      });
-    }
-
     const selectedChecks = stages[stageKey];
-
-    if (!selectedChecks.length) {
+    if (!selectedChecks?.length) {
       return showModal({
         title: "No Checks Selected",
         message: "Select at least one verification check.",
@@ -639,6 +700,25 @@ export default function OrgCandidateSelfVerification() {
       });
     }
 
+    // Show confirmation if previous stage is not completed
+    if (!isPrevStageCompleted(stageKey)) {
+      setModal({
+        open: true,
+        title: "Stage Transition Confirmation",
+        message: `The previous stage is not yet completed. Are you sure you want to initiate the ${stageKey.toUpperCase()} stage?`,
+        type: "confirm",
+        onConfirm: () => {
+          closeModal();
+          executeStageInitiation(stageKey, selectedChecks);
+        }
+      });
+      return;
+    }
+
+    executeStageInitiation(stageKey, selectedChecks);
+  };
+
+  const executeStageInitiation = async (stageKey, selectedChecks) => {
     setSubmitting(true);
 
     try {
@@ -1184,10 +1264,10 @@ export default function OrgCandidateSelfVerification() {
                   Cancel
                 </button>
                 <button
-                  onClick={confirmRemoveCheck}
+                  onClick={modal.onConfirm || confirmRemoveCheck}
                   className="w-1/2 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-lg font-bold transition-all"
                 >
-                  Yes, Remove
+                  {modal.checkKeyToRemove ? "Yes, Remove" : "Yes, Continue"}
                 </button>
               </div>
             ) : (
@@ -1522,7 +1602,7 @@ export default function OrgCandidateSelfVerification() {
                         ? "bg-gray-50 border-2 border-gray-200 hover:bg-gray-100"
                         : "bg-gray-100 border-2 border-gray-300 opacity-50 cursor-not-allowed"
                     }`}
-                    onClick={() => canNavigate && setCurrentStep(index)}
+                    onClick={() => canNavigate && handleStageTransition(index)}
                   >
                     <div
                       className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold ${
@@ -1577,11 +1657,11 @@ export default function OrgCandidateSelfVerification() {
                       return (
                         <div
                           key={checkKey}
-                          className="flex items-center justify-between text-sm bg-white border-2 border-blue-200 rounded-lg px-3 py-2 shadow-sm"
+                          className="flex items-center justify-between text-sm bg-white border-2 border-blue-200 rounded-lg px-3 py-2 shadow-sm min-h-[44px]"
                         >
-                          <span className="font-medium text-gray-900 flex items-center gap-2">
-                            <span>{check?.icon}</span>
-                            <span className="truncate">
+                          <span className="font-medium text-gray-900 flex items-center gap-2 flex-1 min-w-0">
+                            <span className="flex-shrink-0">{check?.icon}</span>
+                            <span className="truncate text-xs">
                               {check?.title || checkKey}
                             </span>
                           </span>
@@ -1589,9 +1669,9 @@ export default function OrgCandidateSelfVerification() {
                           <button
                             disabled={isStageInitiated(steps[currentStep])}
                             onClick={() => removeCheckFromLeft(checkKey)}
-                            className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                            className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-2 p-1"
                           >
-                            <X size={16} />
+                            <X size={14} />
                           </button>
                         </div>
                       );
@@ -1605,35 +1685,93 @@ export default function OrgCandidateSelfVerification() {
                 </div>
               </div>
 
-              {/* INITIATE BUTTON */}
-              <button
-                onClick={() => initiateStage(steps[currentStep])}
-                disabled={
-                  submitting ||
-                  isStageInitiated(steps[currentStep]) ||
-                  !isPrevStageCompleted(steps[currentStep]) ||
-                  !stages[steps[currentStep]]?.length
-                }
-                className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium mt-4
-                  ${
+              {/* ENHANCED INITIATE BUTTON */}
+              <div className="relative group mt-6">
+                <div className={`absolute inset-0 rounded-2xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity duration-300 ${
+                  isStageInitiated(steps[currentStep])
+                    ? "bg-gray-400"
+                    : "bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600"
+                }`}></div>
+                <button
+                  onClick={() => initiateStage(steps[currentStep])}
+                  disabled={
+                    submitting ||
+                    isStageInitiated(steps[currentStep]) ||
+                    !stages[steps[currentStep]]?.length
+                  }
+                  className={`relative w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold text-base shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 ${
                     isStageInitiated(steps[currentStep])
-                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700 text-white"
+                      ? "bg-gradient-to-r from-gray-300 to-gray-400 text-gray-600 cursor-not-allowed"
+                      : submitting
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                      : "bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 text-white hover:from-green-600 hover:via-emerald-600 hover:to-teal-700"
                   }`}
-              >
-                {submitting ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <Send size={16} />
-                )}
-                {isStageInitiated(steps[currentStep])
-                  ? "Stage Initiated"
-                  : `Initiate ${steps[currentStep]} Stage`}
-              </button>
+                >
+                  <div className="flex items-center gap-2">
+                    {submitting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Initiating...</span>
+                      </>
+                    ) : isStageInitiated(steps[currentStep]) ? (
+                      <>
+                        <CheckCircle size={20} />
+                        <span>✅ Stage Initiated</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={20} />
+                        <span>🚀 Initiate {steps[currentStep]?.toUpperCase() || 'Current'} Stage</span>
+                      </>
+                    )}
+                  </div>
+                  
+                  {!submitting && !isStageInitiated(steps[currentStep]) && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* RIGHT — CHECK CARDS */}
             <div className="lg:col-span-3 order-1 lg:order-2">
+              {/* Stage Status Info Bar */}
+              {candidateVerification && (
+                <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Info size={16} className="text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-blue-900 text-sm">Stage Information</h4>
+                        <p className="text-blue-700 text-xs">
+                          Current: {steps[currentStep]?.toUpperCase() || 'Current'} • 
+                          Status: {getStageStatus(steps[currentStep])} • 
+                          Checks: {stages[steps[currentStep]]?.length || 0} selected
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {steps.map((stage, idx) => (
+                        <div
+                          key={stage}
+                          className={`w-3 h-3 rounded-full ${
+                            idx === currentStep
+                              ? "bg-blue-500"
+                              : getStageStatus(stage) === "COMPLETED"
+                              ? "bg-green-500"
+                              : getStageStatus(stage) === "IN_PROGRESS"
+                              ? "bg-orange-500"
+                              : "bg-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-800">
                   {steps[currentStep]?.toUpperCase() || 'Current'} Stage - Available Checks
@@ -1651,8 +1789,16 @@ export default function OrgCandidateSelfVerification() {
                   const locked = isStageInitiated(stageKey);
                   const allowed = isPrevStageCompleted(stageKey);
 
-                  const cardGradient = locked
-                    ? "border-blue-400 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg"
+                  // Get individual check status for consistent color coding
+                  const checkStatus = getCheckStatus(c.key);
+                  
+                  // Consistent color coding based on individual check verification status
+                  const cardGradient = checkStatus === "COMPLETED"
+                    ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg"
+                    : checkStatus === "FAILED"
+                    ? "border-red-400 bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
+                    : checkStatus === "IN_PROGRESS" || locked
+                    ? "border-orange-400 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg"
                     : selected
                     ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
                     : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
@@ -1663,19 +1809,36 @@ export default function OrgCandidateSelfVerification() {
                       className={`border-2 rounded-2xl p-4 md:p-5 transition-all duration-200 min-h-[160px] md:min-h-[180px] transform hover:scale-105 ${cardGradient}`}
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <div className={`p-2 rounded-lg shadow-sm ${
+                          checkStatus === "COMPLETED" ? "bg-gradient-to-br from-green-100 to-emerald-100" :
+                          checkStatus === "FAILED" ? "bg-gradient-to-br from-red-100 to-pink-100" :
+                          checkStatus === "IN_PROGRESS" || locked ? "bg-gradient-to-br from-orange-100 to-amber-100" :
+                          "bg-white"
+                        }`}>
                           <span className="text-3xl">{c.icon}</span>
                         </div>
 
-                        {selected && !locked && (
-                          <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] text-white rounded-full font-bold shadow-md">
-                            Selected
+                        {checkStatus === "COMPLETED" && (
+                          <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-full font-bold shadow-md">
+                            ✓ Completed
                           </span>
                         )}
 
-                        {locked && (
-                          <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-bold shadow-md">
-                            Initiated
+                        {checkStatus === "FAILED" && (
+                          <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-full font-bold shadow-md">
+                            ✗ Failed
+                          </span>
+                        )}
+
+                        {(checkStatus === "IN_PROGRESS" || locked) && checkStatus !== "COMPLETED" && checkStatus !== "FAILED" && (
+                          <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full font-bold shadow-md">
+                            ⏳ In Progress
+                          </span>
+                        )}
+
+                        {selected && !locked && !checkStatus && (
+                          <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-[#ff004f] to-[#ff6f6f] text-white rounded-full font-bold shadow-md">
+                            Selected
                           </span>
                         )}
                       </div>
@@ -1692,22 +1855,22 @@ export default function OrgCandidateSelfVerification() {
                           {getStageStatus(stageKey)}
                         </div>
                       ) : (
-                        <label className="inline-flex items-center gap-3 mt-3 cursor-pointer">
+                        <label className={`inline-flex items-center gap-3 mt-3 p-2 rounded-lg transition-all duration-200 ${
+                          locked ? "cursor-not-allowed opacity-50" : "cursor-pointer group/checkbox hover:bg-gray-50"
+                        }`}>
                           <input
                             type="checkbox"
                             checked={selected}
-                            disabled={!allowed}
-                            onChange={() => handleToggle(c.key)}
-                            className="accent-[#ff004f] w-5 h-5"
+                            disabled={locked}
+                            onChange={() => !locked && handleToggle(c.key)}
+                            className="accent-[#ff004f] w-5 h-5 transition-transform duration-200 group-hover/checkbox:scale-110 disabled:opacity-50"
                           />
-                          <span
-                            className={`text-sm font-medium ${
-                              !allowed ? "text-gray-400" : "text-gray-700"
-                            }`}
-                          >
-                            {!allowed
-                              ? "Complete previous stage"
-                              : "Add to Current Stage"}
+                          <span className={`text-sm font-medium transition-colors duration-200 ${
+                            locked ? "text-gray-400" : 
+                            "text-gray-700 group-hover/checkbox:text-[#ff004f]"
+                          }`}>
+                            {locked ? "🔒 Stage Initiated" :
+                             !allowed ? "⚠️ Add to Current Stage" : "✅ Add to Current Stage"}
                           </span>
                         </label>
                       )}
@@ -1845,6 +2008,41 @@ export default function OrgCandidateSelfVerification() {
             </div>
           </div>
         )}
+
+      {/* Stage Transition Animation Overlay */}
+      {stageTransition.isTransitioning && (
+        <>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" />
+          <div className="fixed inset-0 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 shadow-2xl border-2 border-gray-200 max-w-md w-full mx-4">
+              <div className="flex items-center justify-center mb-6">
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-gray-200 rounded-full"></div>
+                  <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-[#ff004f] rounded-full animate-spin"></div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Stage Transition
+                </h3>
+                <div className="flex items-center gap-3 text-sm text-gray-600 justify-center">
+                  <span className="px-3 py-1 bg-gray-100 rounded-full font-medium">
+                    {stageTransition.fromStage}
+                  </span>
+                  <ChevronRight size={16} className="text-[#ff004f]" />
+                  <span className="px-3 py-1 bg-[#ff004f] text-white rounded-full font-medium">
+                    {stageTransition.toStage}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Moving to {stageTransition.toStage} verification stage...
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       </div>
     </div>
   );
