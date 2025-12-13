@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import {
   ChevronDown,
-  ChevronRight,
   Loader2,
   Download,
   FileText,
@@ -486,10 +485,6 @@ export default function SuperAdminReportsPage() {
   const [orgSearch, setOrgSearch] = useState("");
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
 
-  const [primaryOpen, setPrimaryOpen] = useState(false);
-  const [secondaryOpen, setSecondaryOpen] = useState(false);
-  const [finalOpen, setFinalOpen] = useState(false);
-
   /* Fetch Orgs */
   useEffect(() => {
     (async () => {
@@ -561,536 +556,490 @@ export default function SuperAdminReportsPage() {
   /* RENDER UI */
   /* ----------------------------------------------- */
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen text-gray-900">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText size={24} className="text-[#ff004f]" />
-            Reports
-          </h1>
-          <p className="text-gray-600 text-sm mt-1">Download verification reports</p>
-        </div>
-
-        <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
-          <Building2 size={18} className="text-[#ff004f]" />
-          <span className="font-semibold text-gray-700 text-sm">All Organizations</span>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-[#ff004f]/10 to-[#ff004f]/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-[#ff004f]/8 to-[#ff004f]/3 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-[#ff004f]/5 to-[#ff004f]/2 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 
-      {/* AI VALIDATION NOTICE */}
-      <div className="bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-300 rounded-xl p-4 mb-6 shadow-md">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-purple-200 rounded-lg flex-shrink-0">
-            <Brain size={20} className="text-purple-700" />
+      <div className="relative z-10 p-6">
+        {/* ENHANCED HEADER */}
+        <div className="mb-8">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex items-center gap-4">
+              <FileText size={24} className="text-black" />
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
+                  SuperAdmin Reports
+                </h1>
+                <p className="text-gray-600 text-sm md:text-base">
+                  Comprehensive verification reports & analytics across all organizations
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/50 shadow-lg">
+              <Building2 size={20} className="text-black" />
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Access Level</p>
+                <p className="font-bold text-slate-800">All Organizations</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-purple-900 mb-1">AI Validation Reports</h3>
-            <p className="text-sm text-purple-800">
-              Reports for <strong>AI CV Validation</strong> and <strong>AI Education Validation</strong> can be downloaded from their respective verification pages:
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className="text-xs bg-purple-200 text-purple-900 px-3 py-1 rounded-full font-semibold">
-                📄 AI-CV-Verification Page
-              </span>
-              <span className="text-xs bg-purple-200 text-purple-900 px-3 py-1 rounded-full font-semibold">
-                🎓 AI-Edu-Verification Page
-              </span>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+                  <FileText size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800">{candidates.length}</p>
+                  <p className="text-xs text-slate-600 font-medium">Total Candidates</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+                  <CheckCircle size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800">
+                    {candidates.filter(c => c.verification?.overallStatus === "COMPLETED").length}
+                  </p>
+                  <p className="text-xs text-slate-600 font-medium">Completed</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg">
+                  <Loader2 size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800">
+                    {candidates.filter(c => c.verification?.overallStatus === "IN_PROGRESS").length}
+                  </p>
+                  <p className="text-xs text-slate-600 font-medium">In Progress</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-[#ff004f] to-red-500 rounded-lg">
+                  <XCircle size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800">
+                    {candidates.filter(c => {
+                      const v = c.verification || {};
+                      const allChecks = [
+                        ...(v.stages?.primary || []),
+                        ...(v.stages?.secondary || []),
+                        ...(v.stages?.final || [])
+                      ];
+                      return allChecks.some(chk => chk.status === "FAILED");
+                    }).length}
+                  </p>
+                  <p className="text-xs text-slate-600 font-medium">With Issues</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* AI VALIDATION NOTICE - Enhanced */}
+        <div className="relative mb-8 group">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#ff004f] via-red-400 to-red-500 rounded-3xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
+          <div className="relative bg-white/80 backdrop-blur-sm border border-white/50 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-gradient-to-br from-[#ff004f] to-red-500 rounded-2xl shadow-lg flex-shrink-0 animate-pulse">
+                <Brain size={24} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-[#ff004f] to-red-600 bg-clip-text text-transparent mb-2">
+                  🤖 AI-Powered Validation Reports
+                </h3>
+                <p className="text-slate-700 mb-4 leading-relaxed">
+                  Advanced AI validation reports for <strong className="text-purple-600">CV Analysis</strong> and{" "}
+                  <strong className="text-pink-600">Education Verification</strong> are available on their dedicated pages with enhanced analytics and insights.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 px-4 py-2 rounded-full text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105">
+                    <span>📄</span>
+                    <span>AI-CV-Verification</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-pink-100 to-pink-200 text-pink-800 px-4 py-2 rounded-full text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105">
+                    <span>🎓</span>
+                    <span>AI-Edu-Verification</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* SUPERB ORG SELECTOR */}
-      <div className="bg-gradient-to-br from-white via-gray-50 to-white rounded-2xl p-6 mb-8 shadow-xl border-2 border-gray-100">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="p-2 bg-gradient-to-br from-[#ff004f]/10 to-[#ff3366]/10 rounded-lg">
-            <Building2 size={20} className="text-[#ff004f]" />
-          </div>
-          <label className="text-base font-bold text-gray-800">
-            Select Organization
-          </label>
-        </div>
-        
-        <div className="relative">
-
-          <div
-            onClick={() => setShowOrgDropdown((p) => !p)}
-            className="border-2 border-gray-200 rounded-xl p-4 w-full bg-white text-gray-700 cursor-pointer flex justify-between items-center shadow-sm hover:border-[#ff004f]/50 transition-all"
-          >
-            <span className="font-medium">
-              {selectedOrg
-                ? "🏢 " + organizations.find((o) => o._id === selectedOrg)
-                    ?.organizationName
-                : "🌐 Select Organization"}
-            </span>
-
-            <ChevronDown size={20} className="text-gray-400" />
-          </div>
-
-          {showOrgDropdown && (
-            <div className="absolute bg-white border-2 border-[#ff004f]/20 rounded-xl w-full mt-2 z-30 shadow-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200">
-              <div className="p-3 border-b-2 border-gray-100 bg-gradient-to-r from-[#ff004f]/5 to-[#ff3366]/5">
-                <input
-                  value={orgSearch}
-                  onChange={(e) => setOrgSearch(e.target.value)}
-                  placeholder="🔍 Search organization..."
-                  className="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition-all"
-                />
-              </div>
-
-              <div className="max-h-64 overflow-y-auto">
-                {organizations
-                  .filter((o) =>
-                    o.organizationName
-                      .toLowerCase()
-                      .includes(orgSearch.toLowerCase())
-                  )
-                  .map((o) => (
-                    <div
-                      key={o._id}
-                      onClick={() => {
-                        setSelectedOrg(o._id);
-                        setShowOrgDropdown(false);
-                        setOrgSearch("");
-                        setCandidates([]);
-                        fetchCandidates(o._id);
-                      }}
-                      className="p-3 hover:bg-gradient-to-r hover:from-[#ff004f]/10 hover:to-[#ff3366]/10 cursor-pointer text-sm font-medium transition-all border-b border-gray-50 last:border-0"
-                    >
-                      🏢 {o.organizationName}
-                    </div>
-                  ))}
-              </div>
+        {/* ENHANCED ORG SELECTOR */}
+        <div className="relative mb-8 group">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#ff004f]/10 via-[#ff004f]/5 to-[#ff004f]/10 rounded-3xl blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-300"></div>
+          <div className="relative bg-white/80 backdrop-blur-sm border border-white/50 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-4">
+              <Building2 size={20} className="text-black" />
+              <label className="text-lg font-bold bg-gradient-to-r from-[#ff004f] to-red-600 bg-clip-text text-transparent">
+                Select Organization
+              </label>
             </div>
-          )}
-        </div>
-      </div>
+            
+            <div className="relative">
+              <div
+                onClick={() => setShowOrgDropdown((p) => !p)}
+                className="border-2 border-white/50 rounded-2xl p-4 w-full bg-white/60 backdrop-blur-sm text-slate-700 cursor-pointer flex justify-between items-center shadow-lg hover:shadow-xl hover:border-[#ff004f]/50 transition-all duration-300 hover:scale-[1.02]"
+              >
+                <span className="font-semibold">
+                  {selectedOrg
+                    ? "🏢 " + organizations.find((o) => o._id === selectedOrg)
+                        ?.organizationName
+                    : "🌐 Select Organization"}
+                </span>
 
-      {/* LOADING */}
-      {loading && (
-        <div className="flex justify-center py-20 text-[#ff004f]">
-          <Loader2 className="animate-spin mr-2" />
-          Fetching Reports…
+                <div className={`transition-transform duration-300 ${showOrgDropdown ? "rotate-180" : ""}`}>
+                  <ChevronDown size={20} className="text-slate-500" />
+                </div>
+              </div>
+
+              {showOrgDropdown && (
+                <div className="absolute bg-white border-2 border-gray-200 rounded-2xl w-full mt-2 z-[9999] shadow-2xl overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                  <div className="p-4 border-b border-gray-200 bg-gray-50">
+                    <input
+                      value={orgSearch}
+                      onChange={(e) => setOrgSearch(e.target.value)}
+                      placeholder="🔍 Search organization..."
+                      className="w-full p-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#ff004f] focus:border-[#ff004f] transition-all bg-white text-black placeholder-gray-500"
+                    />
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto">
+                    {organizations
+                      .filter((o) =>
+                        o.organizationName
+                          .toLowerCase()
+                          .includes(orgSearch.toLowerCase())
+                      )
+                      .map((o) => (
+                        <div
+                          key={o._id}
+                          onClick={() => {
+                            setSelectedOrg(o._id);
+                            setShowOrgDropdown(false);
+                            setOrgSearch("");
+                            setCandidates([]);
+                            fetchCandidates(o._id);
+                          }}
+                          className="p-4 hover:bg-[#ff004f]/10 cursor-pointer text-sm font-semibold transition-all border-b border-gray-100 last:border-0 text-black bg-white"
+                        >
+                          🏢 {o.organizationName}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* ENHANCED LOADING */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-slate-200 rounded-full"></div>
+              <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-[#ff004f] rounded-full animate-spin"></div>
+            </div>
+            <div className="mt-6 text-center">
+              <p className="text-xl font-semibold bg-gradient-to-r from-[#ff004f] to-red-600 bg-clip-text text-transparent">
+                Fetching Reports
+              </p>
+              <p className="text-slate-600 mt-1">Please wait while we gather your data...</p>
+            </div>
+          </div>
+        )}
 
 
       
 
-      {/* --------------------------- CANDIDATES --------------------------- */}
-      {!loading &&
-        candidates.map((c) => {
-          const v = c.verification;
+        {/* ENHANCED CANDIDATES */}
+        {!loading && candidates.map((c, index) => {
+          const v = c.verification || {};
           const primaryChecks = v?.stages?.primary || [];
           const secondaryChecks = v?.stages?.secondary || [];
           const finalChecks = v?.stages?.final || [];
           
           const totalChecks = primaryChecks.length + secondaryChecks.length + finalChecks.length;
           const completedChecks = [...primaryChecks, ...secondaryChecks, ...finalChecks].filter(chk => chk.status === "COMPLETED").length;
+          const failedChecks = [...primaryChecks, ...secondaryChecks, ...finalChecks].filter(chk => chk.status === "FAILED").length;
 
           return (
             <div
               key={c._id}
-              className="bg-gradient-to-br from-white to-gray-50 shadow-lg border-2 border-gray-200 rounded-2xl overflow-hidden mb-6 transition-all hover:shadow-xl hover:border-[#ff004f]/30"
+              className="group relative mb-8"
+              style={{ animationDelay: `${index * 100}ms` }}
             >
-              {/* Candidate Header */}
-              <div
-                className="bg-gradient-to-r from-[#ff004f]/5 to-purple-500/5 p-6 cursor-pointer hover:from-[#ff004f]/10 hover:to-purple-500/10 transition-all"
-                onClick={() => toggle(c._id)}
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    {/* Avatar Circle */}
-                    <div className="w-14 h-14 bg-gradient-to-br from-[#ff004f] to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                      {c.firstName?.charAt(0)}{c.lastName?.charAt(0)}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#ff004f]/10 via-[#ff004f]/5 to-[#ff004f]/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              <div className="relative bg-white/80 backdrop-blur-sm border border-white/50 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.02]">
+                <div
+                  className="p-4 cursor-pointer bg-gradient-to-r from-transparent via-white/20 to-transparent hover:from-[#ff004f]/5 hover:via-[#ff004f]/3 hover:to-[#ff004f]/5 transition-all duration-300"
+                  onClick={() => toggle(c._id)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-12 h-12 bg-gradient-to-br from-[#ff004f] via-red-500 to-red-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg transform transition-transform duration-300 group-hover:scale-110">
+                          {c.firstName?.charAt(0)}
+                          {c.lastName?.charAt(0)}
+                        </div>
+                        {v?.overallStatus === "COMPLETED" && (
+                          <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                            <CheckCircle size={14} className="text-white" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-bold text-slate-800">
+                            {c.firstName} {c.lastName}
+                          </h3>
+                          {failedChecks > 0 && (
+                            <div className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-lg text-xs font-semibold">
+                              <XCircle size={12} />
+                              {failedChecks} Issues
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span className="font-medium">ID:</span>
+                            <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">
+                              {c._id.slice(-8)}
+                            </code>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span className="font-medium">Org:</span>
+                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                              {c.organizationName || 'N/A'}
+                            </span>
+                          </div>
+                          
+                          {totalChecks > 0 && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-[#ff004f] to-green-500 transition-all duration-500"
+                                  style={{ width: `${(completedChecks / totalChecks) * 100}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-semibold text-slate-600">
+                                {completedChecks}/{totalChecks}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Candidate Info */}
-                    <div>
-                      <p className="font-bold text-xl text-gray-900 flex items-center gap-2">
-                        {c.firstName} {c.lastName}
-                        {v?.overallStatus === "COMPLETED" && (
-                          <CheckCircle size={20} className="text-green-600" />
-                        )}
-                      </p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <p className="text-sm text-gray-600">
-                          <span className="font-semibold">ID:</span> {c._id}
-                        </p>
-                        {totalChecks > 0 && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
-                            {completedChecks}/{totalChecks} Completed
-                          </span>
-                        )}
+                    <div className="flex items-center gap-4">
+                      {v?.overallStatus && (
+                        <div className={`px-4 py-2 rounded-2xl font-bold text-sm shadow-lg transition-all duration-300 ${
+                          v.overallStatus === "COMPLETED"
+                            ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200"
+                            : v.overallStatus === "IN_PROGRESS"
+                            ? "bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800 border border-yellow-200"
+                            : "bg-gradient-to-r from-slate-100 to-gray-100 text-slate-800 border border-slate-200"
+                        }`}>
+                          {v.overallStatus === "COMPLETED" && "✅ "}
+                          {v.overallStatus === "IN_PROGRESS" && "⏳ "}
+                          {v.overallStatus.replace("_", " ")}
+                        </div>
+                      )}
+                      
+                      <div className={`p-3 rounded-2xl transition-all duration-300 shadow-lg ${
+                        expanded === c._id
+                          ? "bg-gradient-to-br from-[#ff004f] to-red-600 text-white shadow-lg"
+                          : "bg-white/80 text-slate-600 hover:bg-slate-100"
+                      }`}>
+                        <div className={`transition-transform duration-300 ${expanded === c._id ? "rotate-180" : ""}`}>
+                          <ChevronDown size={20} />
+                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Expand Icon */}
-                  <div className="flex items-center gap-3">
-                    {v?.overallStatus && (
-                      <span className={`px-4 py-2 rounded-lg font-bold text-sm ${
-                        v.overallStatus === "COMPLETED" ? "bg-green-100 text-green-800" :
-                        v.overallStatus === "IN_PROGRESS" ? "bg-yellow-100 text-yellow-800" :
-                        "bg-gray-100 text-gray-800"
-                      }`}>
-                        {v.overallStatus.replace("_", " ")}
-                      </span>
-                    )}
-                    <div className={`p-2 rounded-lg transition-all ${expanded === c._id ? "bg-[#ff004f] text-white" : "bg-gray-200 text-gray-600"}`}>
-                      {expanded === c._id ? (
-                        <ChevronDown size={24} />
-                      ) : (
-                        <ChevronRight size={24} />
+                {expanded === c._id && (
+                  <div className="border-t border-slate-200/50 bg-gradient-to-b from-transparent to-slate-50/30">
+                    <div className="p-4 space-y-6">
+                      {/* HIDDEN CERTIFICATES - invisible DOM for PDF (excluding AI checks) */}
+                      <div className="absolute -left-[9999px] -top-[9999px]">
+                        {primaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) => (
+                          <ServiceCertificate
+                            key={getServiceCertId("primary", chk.check, c._id)}
+                            id={getServiceCertId("primary", chk.check, c._id)}
+                            candidate={c}
+                            orgName={c.organizationName}
+                            check={chk}
+                            stage="primary"
+                          />
+                        ))}
+                        {secondaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) => (
+                          <ServiceCertificate
+                            key={getServiceCertId("secondary", chk.check, c._id)}
+                            id={getServiceCertId("secondary", chk.check, c._id)}
+                            candidate={c}
+                            orgName={c.organizationName}
+                            check={chk}
+                            stage="secondary"
+                          />
+                        ))}
+                        {finalChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) => (
+                          <ServiceCertificate
+                            key={getServiceCertId("final", chk.check, c._id)}
+                            id={getServiceCertId("final", chk.check, c._id)}
+                            candidate={c}
+                            orgName={c.organizationName}
+                            check={chk}
+                            stage="final"
+                          />
+                        ))}
+                      </div>
+
+                      {/* ENHANCED STAGE SECTIONS */}
+                      {primaryChecks.length > 0 && (
+                        <StageSection
+                          title="Primary Services"
+                          checks={primaryChecks}
+                          candidate={c}
+                          stage="primary"
+                          downloading={downloading}
+                          setDownloading={setDownloading}
+                        />
                       )}
+
+                      {secondaryChecks.length > 0 && (
+                        <StageSection
+                          title="Secondary Services"
+                          checks={secondaryChecks}
+                          candidate={c}
+                          stage="secondary"
+                          downloading={downloading}
+                          setDownloading={setDownloading}
+                        />
+                      )}
+
+                      {finalChecks.length > 0 && (
+                        <StageSection
+                          title="Final Services"
+                          checks={finalChecks}
+                          candidate={c}
+                          stage="final"
+                          downloading={downloading}
+                          setDownloading={setDownloading}
+                        />
+                      )}
+
+                      {/* ENHANCED DOWNLOAD ALL BUTTON */}
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#ff004f] via-red-500 to-red-600 rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity duration-300"></div>
+                        <button
+                          disabled={downloading}
+                          onClick={() => {
+                            const allIds = [
+                              ...primaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) =>
+                                getServiceCertId("primary", chk.check, c._id)
+                              ),
+                              ...secondaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) =>
+                                getServiceCertId("secondary", chk.check, c._id)
+                              ),
+                              ...finalChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) =>
+                                getServiceCertId("final", chk.check, c._id)
+                              ),
+                            ];
+
+                            mergeAllCertificates(
+                              allIds,
+                              `${c.firstName}-${c.lastName}-verification-report.pdf`,
+                              setDownloading,
+                              c,
+                              v
+                            );
+                          }}
+                          className={`relative w-full bg-gradient-to-r from-[#ff004f] via-red-500 to-red-600 text-white rounded-2xl shadow-lg py-3 px-6 font-semibold text-base flex justify-center items-center gap-3 transition-all duration-300 hover:shadow-xl hover:scale-105 ${
+                            downloading ? "opacity-50 cursor-not-allowed" : "hover:from-[#e60047] hover:via-red-600 hover:to-red-700"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {downloading ? (
+                              <>
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                <span>Generating Report...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Download size={18} />
+                                <span>Download Complete Report Package</span>
+                              </>
+                            )}
+                          </div>
+                          
+                          {!downloading && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl"></div>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-
-              {/* EXPANDED */}
-              {expanded === c._id && (
-                <div className="mt-6 border-t pt-6 space-y-10">
-                  {/* HIDDEN CERTIFICATES - invisible DOM for PDF (excluding AI checks) */}
-                  <div className="absolute -left-[9999px] -top-[9999px]">
-                    {primaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) => (
-                      <ServiceCertificate
-                        key={getServiceCertId("primary", chk.check, c._id)}
-                        id={getServiceCertId("primary", chk.check, c._id)}
-                        candidate={c}
-                        orgName={c.organizationName}
-                        check={chk}
-                        stage="primary"
-                      />
-                    ))}
-                    {secondaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) => (
-                      <ServiceCertificate
-                        key={getServiceCertId("secondary", chk.check, c._id)}
-                        id={getServiceCertId("secondary", chk.check, c._id)}
-                        candidate={c}
-                        orgName={c.organizationName}
-                        check={chk}
-                        stage="secondary"
-                      />
-                    ))}
-                    {finalChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) => (
-                      <ServiceCertificate
-                        key={getServiceCertId("final", chk.check, c._id)}
-                        id={getServiceCertId("final", chk.check, c._id)}
-                        candidate={c}
-                        orgName={c.organizationName}
-                        check={chk}
-                        stage="final"
-                      />
-                    ))}
-                  </div>
-
-                  {/* PRIMARY */}
-                  {primaryChecks.length > 0 && (
-                    <div>
-                      <button
-                        onClick={() => setPrimaryOpen((p) => !p)}
-                        className="w-full flex justify-between items-center bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 px-6 py-4 rounded-xl font-bold text-[#ff004f] hover:from-red-100 hover:to-pink-100 transition-all shadow-sm hover:shadow-md"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#ff004f] rounded-lg flex items-center justify-center text-white font-bold shadow-md">
-                            1
-                          </div>
-                          <span className="text-lg">Primary Services ({primaryChecks.length})</span>
-                        </div>
-                        <div className={`transition-transform ${primaryOpen ? "rotate-180" : ""}`}>
-                          <ChevronDown size={24} />
-                        </div>
-                      </button>
-
-                      {primaryOpen && (
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {primaryChecks.map((chk) => {
-                            const done = chk.status === "COMPLETED";
-                            const certId = getServiceCertId(
-                              "primary",
-                              chk.check,
-                              c._id
-                            );
-                            const isAI = isAIValidationCheck(chk.check);
-
-                            return (
-                              <div
-                                key={certId}
-                                className={`bg-white border rounded-xl p-4 shadow flex flex-col ${isAI ? "border-purple-300 bg-purple-50" : ""}`}
-                              >
-                                <p className="font-medium text-gray-900 flex items-center gap-2">
-                                  <span className="text-lg">
-                                    {isAI ? "🤖" : (SERVICE_ICONS[chk.check] || "📝")}
-                                  </span>
-                                  {formatServiceName(chk.check)}
-                                </p>
-
-                                {isAI ? (
-                                  <div className="mt-4 p-3 bg-purple-100 border border-purple-300 rounded-lg">
-                                    <p className="text-xs text-purple-900 font-semibold flex items-center gap-1">
-                                      <Brain size={14} />
-                                      Download from AI Verification Page
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <button
-                                    disabled={!done || downloading}
-                                    onClick={() =>
-                                      downloadSingleCert(
-                                        certId,
-                                        `${c._id}-primary-${chk.check}.pdf`,
-                                        setDownloading,
-                                        chk.attachments || []
-                                      )
-                                    }
-                                    className={`mt-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
-                                      done
-                                        ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
-                                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                    } ${
-                                      downloading
-                                        ? "opacity-50 cursor-not-allowed"
-                                        : ""
-                                    }`}
-                                  >
-                                    {downloading ? (
-                                      <Loader2
-                                        className="animate-spin"
-                                        size={16}
-                                      />
-                                    ) : (
-                                      <Download size={16} />
-                                    )}
-                                    Download
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* SECONDARY */}
-                  {secondaryChecks.length > 0 && (
-                    <div>
-                      <button
-                        onClick={() => setSecondaryOpen((p) => !p)}
-                        className="w-full flex justify-between items-center bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 px-6 py-4 rounded-xl font-bold text-orange-600 hover:from-orange-100 hover:to-amber-100 transition-all shadow-sm hover:shadow-md"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md">
-                            2
-                          </div>
-                          <span className="text-lg">Secondary Services ({secondaryChecks.length})</span>
-                        </div>
-                        <div className={`transition-transform ${secondaryOpen ? "rotate-180" : ""}`}>
-                          <ChevronDown size={24} />
-                        </div>
-                      </button>
-
-                      {secondaryOpen && (
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {secondaryChecks.map((chk) => {
-                            const done = chk.status === "COMPLETED";
-                            const certId = getServiceCertId(
-                              "secondary",
-                              chk.check,
-                              c._id
-                            );
-                            const isAI = isAIValidationCheck(chk.check);
-
-                            return (
-                              <div
-                                key={certId}
-                                className={`bg-white border rounded-xl p-4 shadow flex flex-col ${isAI ? "border-purple-300 bg-purple-50" : ""}`}
-                              >
-                                <p className="font-medium text-gray-900 flex items-center gap-2">
-                                  <span className="text-lg">
-                                    {isAI ? "🤖" : (SERVICE_ICONS[chk.check] || "📝")}
-                                  </span>
-                                  {formatServiceName(chk.check)}
-                                </p>
-
-                                {isAI ? (
-                                  <div className="mt-4 p-3 bg-purple-100 border border-purple-300 rounded-lg">
-                                    <p className="text-xs text-purple-900 font-semibold flex items-center gap-1">
-                                      <Brain size={14} />
-                                      Download from AI Verification Page
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <button
-                                    disabled={!done || downloading}
-                                    onClick={() =>
-                                      downloadSingleCert(
-                                        certId,
-                                        `${c._id}-secondary-${chk.check}.pdf`,
-                                        setDownloading,
-                                        chk.attachments || []
-                                      )
-                                    }
-                                    className={`mt-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
-                                      done
-                                        ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
-                                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                    } ${
-                                      downloading
-                                        ? "opacity-50 cursor-not-allowed"
-                                        : ""
-                                    }`}
-                                  >
-                                    {downloading ? (
-                                      <Loader2
-                                        className="animate-spin"
-                                        size={16}
-                                      />
-                                    ) : (
-                                      <Download size={16} />
-                                    )}
-                                    Download
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* FINAL */}
-                  {finalChecks.length > 0 && (
-                    <div>
-                      <button
-                        onClick={() => setFinalOpen((p) => !p)}
-                        className="w-full flex justify-between items-center bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 px-6 py-4 rounded-xl font-bold text-green-600 hover:from-green-100 hover:to-emerald-100 transition-all shadow-sm hover:shadow-md"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md">
-                            3
-                          </div>
-                          <span className="text-lg">Final Services ({finalChecks.length})</span>
-                        </div>
-                        <div className={`transition-transform ${finalOpen ? "rotate-180" : ""}`}>
-                          <ChevronDown size={24} />
-                        </div>
-                      </button>
-
-                      {finalOpen && (
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {finalChecks.map((chk) => {
-                            const done = chk.status === "COMPLETED";
-                            const certId = getServiceCertId(
-                              "final",
-                              chk.check,
-                              c._id
-                            );
-                            const isAI = isAIValidationCheck(chk.check);
-
-                            return (
-                              <div
-                                key={certId}
-                                className={`bg-white border rounded-xl p-4 shadow flex flex-col ${isAI ? "border-purple-300 bg-purple-50" : ""}`}
-                              >
-                                <p className="font-medium text-gray-900 flex items-center gap-2">
-                                  <span className="text-lg">
-                                    {isAI ? "🤖" : (SERVICE_ICONS[chk.check] || "📝")}
-                                  </span>
-                                  {formatServiceName(chk.check)}
-                                </p>
-
-                                {isAI ? (
-                                  <div className="mt-4 p-3 bg-purple-100 border border-purple-300 rounded-lg">
-                                    <p className="text-xs text-purple-900 font-semibold flex items-center gap-1">
-                                      <Brain size={14} />
-                                      Download from AI Verification Page
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <button
-                                    disabled={!done || downloading}
-                                    onClick={() =>
-                                      downloadSingleCert(
-                                        certId,
-                                        `${c._id}-final-${chk.check}.pdf`,
-                                        setDownloading,
-                                        chk.attachments || []
-                                      )
-                                    }
-                                    className={`mt-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
-                                      done
-                                        ? "bg-[#ff004f] text-white hover:bg-[#e60047]"
-                                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                    } ${
-                                      downloading
-                                        ? "opacity-50 cursor-not-allowed"
-                                        : ""
-                                    }`}
-                                  >
-                                    {downloading ? (
-                                      <Loader2
-                                        className="animate-spin"
-                                        size={16}
-                                      />
-                                    ) : (
-                                      <Download size={16} />
-                                    )}
-                                    Download
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* MERGED ALL REPORTS */}
-                  <button
-                        disabled={downloading}
-                        onClick={() => {
-                          // Filter out AI validation checks
-                          const allIds = [
-                            ...primaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) =>
-                              getServiceCertId("primary", chk.check, c._id)
-                            ),
-                            ...secondaryChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) =>
-                              getServiceCertId("secondary", chk.check, c._id)
-                            ),
-                            ...finalChecks.filter(chk => !isAIValidationCheck(chk.check)).map((chk) =>
-                              getServiceCertId("final", chk.check, c._id)
-                            ),
-                          ];
-
-                          mergeAllCertificates(
-                            allIds,
-                            `${c._id}-all-verification-reports.pdf`,
-                            setDownloading,
-                            c,
-                            v
-                          );
-                        }}
-                        className={`w-full bg-[#ff004f] text-white hover:bg-[#e60047] rounded-xl shadow py-4 px-6 font-bold text-lg flex justify-center items-center gap-3 mt-10 ${
-                          downloading ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      >
-                        {downloading ? (
-                          <Loader2 size={22} className="animate-spin" />
-                        ) : (
-                          <Download size={22} />
-                        )}
-                        Download ALL Reports (Merged)
-                      </button>
-                </div>
-              )}
             </div>
           );
         })}
+
+        {/* ENHANCED EMPTY STATE */}
+        {!loading && candidates.length === 0 && (
+          <div className="text-center py-20">
+            <div className="relative">
+              <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center shadow-xl">
+                <FileText size={48} className="text-slate-400" />
+              </div>
+              <div className="absolute top-8 left-1/2 transform -translate-x-1/2 w-40 h-40 bg-gradient-to-br from-[#ff004f]/10 to-[#ff004f]/5 rounded-full blur-2xl animate-pulse"></div>
+            </div>
+            <h3 className="text-3xl font-bold bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent mb-4">
+              No Reports Available
+            </h3>
+            <p className="text-slate-600 max-w-lg mx-auto text-lg leading-relaxed">
+              {selectedOrg 
+                ? "There are no verification reports for the selected organization. Reports will appear here once candidates complete their verification process."
+                : "Please select an organization to view verification reports and analytics."
+              }
+            </p>
+            <div className="mt-8 flex justify-center">
+              <div className="bg-gradient-to-r from-[#ff004f]/10 to-[#ff004f]/5 px-6 py-3 rounded-2xl border border-slate-200">
+                <p className="text-sm text-slate-500 font-medium">
+                  🔄 Reports will automatically refresh when available
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1117,28 +1066,214 @@ function ServiceCertificate({ id, candidate, orgName, check, stage }) {
 }
 
 /* -------------------------------------------------------------
-   FINAL SUPERADMIN CERTIFICATE TEMPLATE (FIXED & IMPROVED)
+   STAGE SECTION COMPONENT
+------------------------------------------------------------- */
+function StageSection({ title, checks, candidate, stage, downloading, setDownloading }) {
+  const [open, setOpen] = useState(false);
+
+  const stageConfig = {
+    "Primary Services": {
+      num: 1,
+      icon: "🚀",
+      gradient: "from-red-400 via-pink-500 to-purple-600",
+      bgGradient: "from-red-50 via-pink-50 to-purple-50",
+      textGradient: "from-red-600 to-purple-700",
+    },
+    "Secondary Services": {
+      num: 2,
+      icon: "⚡",
+      gradient: "from-orange-400 via-amber-500 to-yellow-600",
+      bgGradient: "from-orange-50 via-amber-50 to-yellow-50",
+      textGradient: "from-orange-600 to-yellow-700",
+    },
+    "Final Services": {
+      num: 3,
+      icon: "🎯",
+      gradient: "from-green-400 via-emerald-500 to-teal-600",
+      bgGradient: "from-green-50 via-emerald-50 to-teal-50",
+      textGradient: "from-green-600 to-teal-700",
+    },
+  };
+
+  const config = stageConfig[title] || stageConfig["Primary Services"];
+  const completedCount = checks.filter(chk => chk.status === "COMPLETED").length;
+  const failedCount = checks.filter(chk => chk.status === "FAILED").length;
+
+  return (
+    <div className="relative group">
+      <div className={`absolute inset-0 bg-gradient-to-r ${config.gradient} rounded-3xl blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500`}></div>
+      
+      <div className="relative">
+        <button
+          onClick={() => setOpen((p) => !p)}
+          className={`w-full flex justify-between items-center bg-gradient-to-r ${config.bgGradient} border-2 border-transparent bg-clip-padding px-6 py-5 rounded-3xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] group`}
+        >
+          <div className="flex items-center gap-4">
+            <div className={`relative w-14 h-14 bg-gradient-to-br ${config.gradient} rounded-2xl flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+              <span className="text-xl">{config.icon}</span>
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold text-slate-700 shadow-md">
+                {config.num}
+              </div>
+            </div>
+            
+            <div className="text-left">
+              <h3 className={`text-xl font-bold bg-gradient-to-r ${config.textGradient} bg-clip-text text-transparent`}>
+                {title}
+              </h3>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-sm text-slate-600 font-medium">
+                  {checks.length} services
+                </span>
+                {completedCount > 0 && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">
+                    ✅ {completedCount} completed
+                  </span>
+                )}
+                {failedCount > 0 && (
+                  <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
+                    ❌ {failedCount} failed
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className={`p-3 bg-white/50 rounded-2xl transition-all duration-300 ${open ? "rotate-180 bg-white/80" : "group-hover:bg-white/70"}`}>
+            <ChevronDown size={20} className="text-slate-700" />
+          </div>
+        </button>
+
+        {open && (
+          <div className="mt-6 animate-in slide-in-from-top-2 duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {checks.map((chk, index) => {
+                const done = chk.status === "COMPLETED";
+                const failed = chk.status === "FAILED";
+                const pending = chk.status === "PENDING";
+                const certId = getServiceCertId(stage, chk.check, candidate._id);
+                const isAI = isAIValidationCheck(chk.check);
+
+                return (
+                  <div
+                    key={certId}
+                    className={`relative group/card bg-white/80 backdrop-blur-sm border border-white/50 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 ${
+                      isAI ? "border-purple-300/50 bg-gradient-to-br from-purple-50/80 to-pink-50/80" : ""
+                    }`}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="absolute top-3 right-3">
+                      {done && <div className="w-3 h-3 bg-green-500 rounded-full shadow-lg"></div>}
+                      {failed && <div className="w-3 h-3 bg-red-500 rounded-full shadow-lg"></div>}
+                      {pending && <div className="w-3 h-3 bg-yellow-500 rounded-full shadow-lg animate-pulse"></div>}
+                    </div>
+
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className={`p-2 rounded-xl shadow-md ${
+                        isAI ? "bg-gradient-to-br from-[#ff004f] to-red-500" : 
+                        done ? "bg-gradient-to-br from-green-500 to-emerald-500" :
+                        failed ? "bg-gradient-to-br from-red-500 to-pink-500" :
+                        "bg-gradient-to-br from-slate-400 to-slate-500"
+                      }`}>
+                        <span className="text-lg">
+                          {isAI ? "🤖" : SERVICE_ICONS[chk.check] || "📝"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <h4 className="font-bold text-slate-800 text-sm leading-tight">
+                          {formatServiceName(chk.check)}
+                        </h4>
+                        <p className={`text-xs font-semibold mt-1 ${
+                          done ? "text-green-600" :
+                          failed ? "text-red-600" :
+                          "text-yellow-600"
+                        }`}>
+                          {done ? "✅ Completed" :
+                           failed ? "❌ Failed" :
+                           "⏳ Pending"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isAI ? (
+                      <div className="p-3 bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-200 rounded-xl">
+                        <p className="text-xs text-purple-900 font-semibold flex items-center gap-2">
+                          <Brain size={14} />
+                          <span>Available on AI Verification Page</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        disabled={!done || downloading}
+                        onClick={() =>
+                          downloadSingleCert(
+                            certId,
+                            `${candidate._id}-${stage}-${chk.check}.pdf`,
+                            setDownloading,
+                            chk.attachments || []
+                          )
+                        }
+                        className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-300 ${
+                          done
+                            ? "bg-gradient-to-r from-[#ff004f] to-red-600 text-white hover:from-[#e60047] hover:to-red-700 shadow-lg hover:shadow-xl hover:scale-105"
+                            : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                        } ${downloading ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        {downloading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <span>Downloading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download size={16} />
+                            <span>Download Report</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------
+   ENHANCED CERTIFICATE TEMPLATE WITH CONTENT TRUNCATION
 ------------------------------------------------------------- */
 
 function CertificateBase({ id, title, candidate, orgName, checks }) {
   const verification = candidate.verification;
   const serviceName = formatServiceName(checks[0]?.check || "");
 
-  // Prepare remarks with enhanced employment history handling
+  // Helper function to truncate long text
+  const truncateText = (text, maxLength = 500) => {
+    if (!text) return text;
+    const str = String(text);
+    if (str.length <= maxLength) return str;
+    return str.substring(0, maxLength) + "...";
+  };
+
+  // Prepare remarks with enhanced employment history handling and content truncation
   let bulletItems = [];
   const remarks = checks[0]?.remarks;
 
   if (!remarks) {
     bulletItems = ["No remarks available"];
   } else if (typeof remarks === "string") {
-    bulletItems = [remarks];
+    bulletItems = [truncateText(remarks)];
   } else if (Array.isArray(remarks)) {
-    bulletItems = remarks.map((r) => String(r));
+    bulletItems = remarks.map((r) => truncateText(String(r)));
   } else if (typeof remarks === "object") {
     // Enhanced handling for employment history and other complex structures
     if (remarks.message && remarks.message_code) {
       // Handle employment history verification format
-      bulletItems.push(`Status: ${remarks.message}`);
+      bulletItems.push(`Status: ${truncateText(remarks.message)}`);
       bulletItems.push(`Code: ${remarks.message_code}`);
       
       if (remarks.data) {
@@ -1153,16 +1288,22 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
             bulletItems.push(`Employment History: No employment records found`);
           } else if (Array.isArray(remarks.data.employment_history)) {
             bulletItems.push(`Employment History: ${remarks.data.employment_history.length} records found`);
-            remarks.data.employment_history.forEach((emp, index) => {
-              bulletItems.push(`  Record ${index + 1}: ${JSON.stringify(emp)}`);
+            // Limit employment history records to prevent overflow
+            const maxRecords = 3;
+            remarks.data.employment_history.slice(0, maxRecords).forEach((emp, index) => {
+              bulletItems.push(`  Record ${index + 1}: ${truncateText(JSON.stringify(emp), 200)}`);
             });
+            if (remarks.data.employment_history.length > maxRecords) {
+              bulletItems.push(`  ... and ${remarks.data.employment_history.length - maxRecords} more records`);
+            }
           }
         }
         
-        // Handle other data fields
+        // Handle other data fields with truncation
         Object.entries(remarks.data).forEach(([key, value]) => {
           if (key !== 'client_id' && key !== 'uan' && key !== 'employment_history') {
-            bulletItems.push(`${key}: ${String(value)}`);
+            const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            bulletItems.push(`${key}: ${truncateText(valueStr, 300)}`);
           }
         });
       }
@@ -1175,16 +1316,24 @@ function CertificateBase({ id, title, candidate, orgName, checks }) {
         bulletItems.push(`Success: ${remarks.success ? 'Yes' : 'No'}`);
       }
     } else {
-      // Fallback to generic object handling
-      bulletItems = Object.entries(remarks).map(([k, v]) => {
+      // Handle other object types (like court records, credit reports) with truncation
+      const entries = Object.entries(remarks);
+      const maxEntries = 10; // Limit number of entries to prevent overflow
+      
+      entries.slice(0, maxEntries).forEach(([k, v]) => {
         if (typeof v === 'object' && v !== null) {
-          return `${k}: ${JSON.stringify(v)}`;
+          bulletItems.push(`${k}: ${truncateText(JSON.stringify(v), 300)}`);
+        } else {
+          bulletItems.push(`${k}: ${truncateText(String(v), 300)}`);
         }
-        return `${k}: ${String(v)}`;
       });
+      
+      if (entries.length > maxEntries) {
+        bulletItems.push(`... and ${entries.length - maxEntries} more fields`);
+      }
     }
   } else {
-    bulletItems = [String(remarks)];
+    bulletItems = [truncateText(String(remarks))];
   }
 
   // Get attachments

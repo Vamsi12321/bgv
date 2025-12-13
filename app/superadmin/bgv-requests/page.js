@@ -58,6 +58,11 @@ export default function BGVInitiationPage() {
   const [startLoading, setStartLoading] = useState({});
   const [orgDetails, setOrgDetails] = useState(null);
   const [navigating, setNavigating] = useState(false);
+  const [stageTransition, setStageTransition] = useState({
+    isTransitioning: false,
+    fromStage: "",
+    toStage: "",
+  });
 
   const [visibleStage, setVisibleStage] = useState(
     bgvState.visibleStage || "primary"
@@ -81,9 +86,9 @@ export default function BGVInitiationPage() {
     status: "COMPLETED",
     loading: false,
   });
-  const [showNextStageConfirm, setShowNextStageConfirm] = useState(false);
 
-  const API_CHECKS = [
+
+  const API_SERVICES = [
     "pan_aadhaar_seeding",
     "pan_verification",
     "employment_history",
@@ -92,16 +97,18 @@ export default function BGVInitiationPage() {
     "court_record",
   ];
 
-  const MANUAL_CHECKS = [
-    "address_verification",
-    "education_check_manual",
-    "employment_history_manual",
-    "employment_history_manual_2",
-    "supervisory_check_1",
-    "supervisory_check_2",
+  const MANUAL_SERVICES = [
+    { id: "address_verification", name: "Address Verification" },
+    { id: "education_check_manual", name: "Education Manual Check" },
+    { id: "employment_history_manual", name: "Employment History Manual" },
+    { id: "employment_history_manual_2", name: "Employment History Manual 2" },
+    { id: "supervisory_check_1", name: "Supervisory Check 1" },
+    { id: "supervisory_check_2", name: "Supervisory Check 2" },
   ];
 
-  const AI_CHECKS = ["ai_education_validation"];
+  const AI_SERVICES = [
+    { id: "ai_education_validation", name: "Education AI Check" },
+  ];
 
   // FULL candidate schema
   const emptyCandidate = {
@@ -323,9 +330,9 @@ export default function BGVInitiationPage() {
     return null;
   };
   function getCheckType(checkId) {
-    if (API_CHECKS.includes(checkId)) return "API";
-    if (MANUAL_CHECKS.includes(checkId)) return "MANUAL";
-    if (AI_CHECKS.includes(checkId)) return "AI";
+    if (API_SERVICES.includes(checkId)) return "API";
+    if (MANUAL_SERVICES.some(s => s.id === checkId)) return "MANUAL";
+    if (AI_SERVICES.some(s => s.id === checkId)) return "AI";
     return "OTHER";
   }
 
@@ -354,6 +361,64 @@ export default function BGVInitiationPage() {
     return false;
   }, [candidateVerification]);
 
+  // NEW: Check if specific stage has failed checks
+  const stageHasFailedChecks = (stage) => {
+    const arr = candidateVerification?.stages?.[stage];
+    if (!Array.isArray(arr) || arr.length === 0) return false;
+    return arr.some((c) => c.status === "FAILED");
+  };
+
+  // NEW: Get stage initiation status for display
+  const getStageInitiationStatus = (stage) => {
+    const arr = candidateVerification?.stages?.[stage];
+    if (!Array.isArray(arr) || arr.length === 0) return "not_initiated";
+    
+    const hasCompleted = arr.some((c) => c.status === "COMPLETED");
+    const hasFailed = arr.some((c) => c.status === "FAILED");
+    const hasInProgress = arr.some((c) => c.status === "IN_PROGRESS");
+    
+    if (hasCompleted && !hasFailed && !hasInProgress) return "completed";
+    if (hasFailed) return "has_failures";
+    if (hasInProgress) return "in_progress";
+    if (arr.length > 0) return "initiated";
+    return "not_initiated";
+  };
+
+  // NEW: Get count of new checks that will be processed
+  const getNewChecksCount = (stageKey) => {
+    const selectedChecks = stages[stageKey] || [];
+    const newChecks = selectedChecks.filter(checkKey => {
+      const status = getCheckStatus(checkKey);
+      return !status || status === "NOT_STARTED";
+    });
+    return {
+      total: selectedChecks.length,
+      new: newChecks.length,
+      processed: selectedChecks.length - newChecks.length
+    };
+  };
+
+  // NEW: Get locked checks information
+  const getLockedChecksInfo = () => {
+    const lockedStages = [];
+    const lockedChecks = [];
+    
+    ["primary", "secondary", "final"].forEach(stage => {
+      if (isStageLocked(stage)) {
+        lockedStages.push(stage);
+        const stageChecks = finalizedChecks[stage] || [];
+        lockedChecks.push(...stageChecks);
+      }
+    });
+    
+    return {
+      hasLockedStages: lockedStages.length > 0,
+      lockedStages,
+      lockedChecks: [...new Set(lockedChecks)], // Remove duplicates
+      totalLocked: [...new Set(lockedChecks)].length
+    };
+  };
+
   const isStageLocked = (stage) => {
     if (!candidateVerification?.stages) return false;
     const arr = candidateVerification.stages[stage];
@@ -363,6 +428,16 @@ export default function BGVInitiationPage() {
 
   const candidateHasConsented =
     candidateVerification?.consentStatus === "CONSENT_GIVEN";
+
+  const finalizedChecks = useMemo(() => {
+    if (!candidateVerification?.stages) return { primary: [], secondary: [], final: [] };
+
+    return {
+      primary: candidateVerification.stages.primary?.map((c) => c.check) || [],
+      secondary: candidateVerification.stages.secondary?.map((c) => c.check) || [],
+      final: candidateVerification.stages.final?.map((c) => c.check) || [],
+    };
+  }, [candidateVerification]);
 
   useEffect(() => {
     (async () => {
@@ -841,20 +916,37 @@ export default function BGVInitiationPage() {
   };
 
   const handleStageToggle = (checkKey, stageKey) => {
-    if (isStageLocked(stageKey)) return;
+    // Check if this check is already completed or failed and should not be toggled
+    const status = getCheckStatus(checkKey);
+    const isCompleted = isCheckCompletedAnywhere(checkKey);
+    
+    // Don't allow toggling completed checks or checks that are in progress
+    if (isCompleted || (status && status !== "FAILED" && status !== "NOT_STARTED")) {
+      return;
+    }
+    
+    // Don't allow toggling if stage is locked (except for failed checks which can be retried)
+    if (isStageLocked(stageKey) && status !== "FAILED") {
+      return;
+    }
 
     setStages((prev) => {
       const updated = { ...prev };
 
+      // If check is already in this stage, remove it
       if (updated[stageKey].includes(checkKey)) {
         updated[stageKey] = updated[stageKey].filter((x) => x !== checkKey);
         return updated;
       }
 
+      // Remove from other stages first (but only if not locked)
       Object.keys(updated).forEach((st) => {
-        updated[st] = updated[st].filter((v) => v !== checkKey);
+        if (st !== stageKey && !isStageLocked(st)) {
+          updated[st] = updated[st].filter((v) => v !== checkKey);
+        }
       });
 
+      // Add to current stage
       updated[stageKey] = [...updated[stageKey], checkKey];
       return updated;
     });
@@ -925,48 +1017,80 @@ export default function BGVInitiationPage() {
   };
 
   const goNext = () => {
-    // Check if current stage has any pending or failed verifications
-    const currentStageName = stepNames[currentStep].toLowerCase();
-    const currentStageChecks = candidateVerification?.stages?.[currentStageName] || [];
+    const next = Math.min(currentStep + 1, 2);
+    const nextStage = stepNames[next].toLowerCase();
+    const currentStageName = stepNames[currentStep];
     
-    // Filter out AI checks
-    const nonAIChecks = currentStageChecks.filter(chk => !AI_CHECKS.includes(chk.check));
-    
-    // Check if stage has been initiated (has checks)
-    const stageNotInitiated = nonAIChecks.length === 0;
-    
-    // Check if there are any non-completed checks
-    const hasPendingOrFailed = nonAIChecks.some(chk => chk.status !== "COMPLETED");
-    
-    // Show confirmation if stage not initiated OR has pending/failed checks
-    if (stageNotInitiated || hasPendingOrFailed) {
-      setShowNextStageConfirm(true);
-    } else {
-      // Directly move to next stage if all completed
-      confirmNextStage();
-    }
-  };
+    // Start stage transition animation directly (no popup confirmation)
+    setStageTransition({
+      isTransitioning: true,
+      fromStage: currentStageName,
+      toStage: stepNames[next],
+    });
 
-  const confirmNextStage = () => {
-    setCurrentStep((s) => Math.min(s + 1, 2));
-    setVisibleStage(stepNames[Math.min(currentStep + 1, 2)].toLowerCase());
-    setShowNextStageConfirm(false);
+    // Show animation for 2 seconds, then change stage
+    setTimeout(() => {
+      setCurrentStep(next);
+      setVisibleStage(nextStage);
+      
+      // End transition after stage change
+      setTimeout(() => {
+        setStageTransition({
+          isTransitioning: false,
+          fromStage: "",
+          toStage: "",
+        });
+      }, 500);
+    }, 2000); // 2 seconds animation display
   };
 
   const goBack = () => {
-    setCurrentStep((s) => Math.max(s - 1, 0));
-    setVisibleStage(stepNames[Math.max(currentStep - 1, 0)].toLowerCase());
+    const prev = Math.max(currentStep - 1, 0);
+    const prevStage = stepNames[prev].toLowerCase();
+    const currentStageName = stepNames[currentStep];
+    
+    // Start stage transition animation for backward navigation
+    setStageTransition({
+      isTransitioning: true,
+      fromStage: currentStageName,
+      toStage: stepNames[prev],
+    });
+
+    // Show animation for 2 seconds, then change stage
+    setTimeout(() => {
+      setCurrentStep(prev);
+      setVisibleStage(prevStage);
+      
+      // End transition after stage change
+      setTimeout(() => {
+        setStageTransition({
+          isTransitioning: false,
+          fromStage: "",
+          toStage: "",
+        });
+      }, 500);
+    }, 2000); // 2 seconds animation display
   };
 
   const handleInitiateStage = async (stageKey) => {
     try {
       setInitLoading(true);
 
-      // Filter out failed checks from the current stage selection
+      // Filter out already processed checks (completed, failed, in progress)
       const filteredChecks = stages[stageKey].filter(checkKey => {
         const status = getCheckStatus(checkKey);
-        return status !== "FAILED";
+        // Only include checks that haven't been processed yet
+        return !status || status === "NOT_STARTED";
       });
+
+      // Show info about filtered checks
+      const totalSelected = stages[stageKey].length;
+      const filteredCount = filteredChecks.length;
+      const skippedCount = totalSelected - filteredCount;
+
+      if (skippedCount > 0) {
+        console.log(`Skipping ${skippedCount} already processed checks, finalizing ${filteredCount} new checks for ${stageKey} stage`);
+      }
 
       const res = await fetch(`/api/proxy/secure/initiateStageVerification`, {
         method: "POST",
@@ -998,7 +1122,9 @@ export default function BGVInitiationPage() {
 
       showModal({
         title: "Success",
-        message: `${stageKey} initiated.`,
+        message: skippedCount > 0 
+          ? `${stageKey} stage initiated with ${filteredCount} new checks.\n${skippedCount} already processed checks were skipped.`
+          : `${stageKey} stage initiated with ${filteredCount} checks.`,
         type: "success",
       });
 
@@ -1347,58 +1473,179 @@ export default function BGVInitiationPage() {
       </div>
     );
   }
-  function renderCheckCard(v) {
+  function renderServiceCard(key, label, type) {
     const stageKey = visibleStage;
-    const status = getCheckStatus(v);
-    const selected = stages[stageKey]?.includes(v);
-    const completed = isCheckCompletedAnywhere(v);
+    const status = getCheckStatus(key);
+    const selected = stages[stageKey]?.includes(key);
+    const completed = isCheckCompletedAnywhere(key);
     const locked = isStageLocked(stageKey);
 
-    const type = getCheckType(v);
-
     const icon =
-      type === "API" ? (
+      type === "api" ? (
         <Cpu size={24} className="text-blue-600" />
-      ) : type === "MANUAL" ? (
+      ) : type === "manual" ? (
         <FileSearch size={24} className="text-orange-600" />
       ) : (
         <Brain size={24} className="text-purple-600" />
       );
 
     const typeBadge =
-      type === "API"
+      type === "api"
         ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300"
-        : type === "MANUAL"
+        : type === "manual"
         ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300"
         : "bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300";
+
+    // NEW: Enhanced check locking logic for better UX
+    const lockedInfo = getLockedChecksInfo();
+    
+    // Check if this check was part of the original stage selection (finalized checks)
+    const wasOriginallySelectedInStage = finalizedChecks[stageKey]?.includes(key);
+    
+    // Check if current stage has been initiated (has any processed checks)
+    const currentStageInitiated = candidateVerification?.stages?.[stageKey]?.length > 0;
+    
+    // A check is locked if:
+    // 1. Current stage is initiated AND check is not failed (failed checks can be retried)
+    // 2. OR it's been processed in any other stage (except failed ones which can be retried)
+    const isLockedInCurrentStage = currentStageInitiated && status !== "FAILED";
+    const isProcessedInOtherStage = lockedInfo.lockedChecks.includes(key) && !finalizedChecks[stageKey]?.includes(key);
+    
+    const isCheckLocked = isLockedInCurrentStage || (isProcessedInOtherStage && status !== "FAILED");
+
+    // NEW: Check which stages this check has been initiated in
+    const initiatedStages = [];
+    ["primary", "secondary", "final"].forEach(stage => {
+      const arr = candidateVerification?.stages?.[stage];
+      if (Array.isArray(arr) && arr.some(c => c.check === key)) {
+        initiatedStages.push(stage);
+      }
+    });
 
     const cardGradient = selected
       ? "border-[#ff004f] bg-gradient-to-br from-red-50 to-pink-50 shadow-lg"
       : completed
       ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
+      : isCheckLocked
+      ? "border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 opacity-60"
       : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-lg";
 
     return (
       <motion.div
-        key={v}
+        key={key}
         layout
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         transition={{ duration: 0.2 }}
-        className={`rounded-2xl p-6 shadow-md border-2 ${cardGradient} transition-all duration-200 transform hover:scale-105`}
+        className={`rounded-2xl p-4 sm:p-6 shadow-md border-2 ${cardGradient} transition-all duration-200 transform hover:scale-105 relative group`}
       >
+        {/* NEW: Card Info Icons */}
+        <div className="absolute top-3 right-3 z-10 flex gap-2">
+          {/* Locked Check Indicator */}
+          {isCheckLocked && (
+            <div className="relative">
+              <div className="w-6 h-6 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
+                <span className="text-white text-sm">🔒</span>
+              </div>
+              
+              {/* Locked Check Tooltip */}
+              <div className="absolute top-8 right-0 bg-gray-900 text-white text-xs rounded-xl px-3 py-2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 delay-700 pointer-events-none z-30 shadow-2xl min-w-[200px] max-w-[280px]">
+                <div className="font-bold mb-1 text-gray-300 text-xs">🔒 Locked</div>
+                <div className="space-y-1 text-gray-200 text-xs">
+                  <div>
+                    {currentStageInitiated 
+                      ? `${stageKey.charAt(0).toUpperCase() + stageKey.slice(1)} stage initiated`
+                      : isProcessedInOtherStage 
+                      ? "Processed in other stage"
+                      : "Already processed"
+                    }
+                  </div>
+                  <div className="border-t border-gray-700 pt-1 mt-1">
+                    <div>• Cannot select in this stage</div>
+                    <div>• {status === "FAILED" ? "Can retry" : "Use next stage"}</div>
+                  </div>
+                </div>
+                {/* Tooltip arrow */}
+                <div className="absolute -top-1 right-3 w-2 h-2 bg-gray-900 rotate-45"></div>
+              </div>
+            </div>
+          )}
+
+          {/* General Info Icon for all cards */}
+          {!isCheckLocked && (
+            <div className="relative">
+              <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
+                <Info size={12} className="text-white" />
+              </div>
+              
+              {/* General Info Tooltip */}
+              <div className="absolute top-8 right-0 bg-gray-900 text-white text-xs rounded-xl px-3 py-2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 delay-700 pointer-events-none z-30 shadow-2xl min-w-[180px] max-w-[250px]">
+                <div className="font-bold mb-1 text-blue-400 text-xs">ℹ️ Info</div>
+                <div className="space-y-1 text-gray-200 text-xs">
+                  <div>Status: {status || "Not Started"}</div>
+                  <div>Type: {type.toUpperCase()}</div>
+                  <div className="border-t border-gray-700 pt-1 mt-1">
+                    <div>• {completed ? "Completed" : selected ? "Selected" : "Available"}</div>
+                    <div>• {status === "FAILED" ? "Can retry" : "Execute after finalize"}</div>
+                  </div>
+                </div>
+                {/* Tooltip arrow */}
+                <div className="absolute -top-1 right-3 w-2 h-2 bg-gray-900 rotate-45"></div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* NEW: Stage Initiation Indicator */}
+        {initiatedStages.length > 0 && !isCheckLocked && (
+          <div className="absolute top-3 right-3 z-10">
+            <div className="relative">
+              <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform">
+                <Info size={16} className="text-white" />
+              </div>
+              
+              {/* Enhanced Tooltip on hover */}
+              <div className="absolute top-9 right-0 bg-gray-900 text-white text-xs rounded-xl px-4 py-3 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-20 shadow-2xl min-w-[200px]">
+                <div className="font-bold mb-2 text-green-400">✨ Initiated Stages</div>
+                <div className="space-y-1">
+                  {initiatedStages.map(stage => {
+                    const stageStatus = getStageInitiationStatus(stage);
+                    const statusIcon = stageStatus === "completed" ? "✅" : 
+                                     stageStatus === "has_failures" ? "❌" : 
+                                     stageStatus === "in_progress" ? "⏳" : "🔄";
+                    const statusText = stageStatus === "completed" ? "Completed" : 
+                                      stageStatus === "has_failures" ? "Has Failures" : 
+                                      stageStatus === "in_progress" ? "In Progress" : "Initiated";
+                    return (
+                      <div key={stage} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span>{statusIcon}</span>
+                          <span className="capitalize font-medium">{stage}</span>
+                        </div>
+                        <span className="text-xs text-gray-300">{statusText}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Enhanced Tooltip arrow */}
+                <div className="absolute -top-2 right-4 w-3 h-3 bg-gray-900 rotate-45"></div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TOP ROW — ICON + TITLE */}
         <div className="flex justify-between items-start mb-3">
           <div className="flex gap-3 items-start flex-1">
             <div className="p-2 bg-white rounded-lg shadow-sm">{icon}</div>
             <div className="flex-1">
               <div className="text-base font-bold capitalize text-gray-900 leading-tight">
-                {v.replace(/_/g, " ")}
+                {label}
               </div>
-              {type === "MANUAL" && (
+              {type === "manual" && (
                 <p className="text-xs text-gray-600 mt-1">
-                  Requires manual verification on this page
+                  Manual verification check
                 </p>
               )}
             </div>
@@ -1429,10 +1676,10 @@ export default function BGVInitiationPage() {
           <span
             className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-bold ${typeBadge}`}
           >
-            {type === "API" && "⚡"}
-            {type === "MANUAL" && "✍️"}
-            {type === "AI" && "🤖"}
-            {type} Check
+            {type === "api" && "⚡"}
+            {type === "manual" && "✍️"}
+            {type === "ai" && "🤖"}
+            {type.toUpperCase()} Check
           </span>
           {status && (
             <span
@@ -1449,30 +1696,110 @@ export default function BGVInitiationPage() {
           )}
         </div>
 
+        {/* NEW: Stage Status Info Bar */}
+        {initiatedStages.length > 0 && (
+          <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-blue-900">🎯 Active in:</span>
+              <div className="flex gap-1 flex-wrap">
+                {initiatedStages.map(stage => {
+                  const stageStatus = getStageInitiationStatus(stage);
+                  const statusColor = stageStatus === "completed" ? "bg-green-500 text-white" : 
+                                     stageStatus === "has_failures" ? "bg-red-500 text-white" : 
+                                     stageStatus === "in_progress" ? "bg-yellow-500 text-white" : "bg-blue-500 text-white";
+                  const statusIcon = stageStatus === "completed" ? "✓" : 
+                                    stageStatus === "has_failures" ? "✗" : 
+                                    stageStatus === "in_progress" ? "⏳" : "●";
+                  return (
+                    <span key={stage} className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor} shadow-sm`}>
+                      {statusIcon} {stage.charAt(0).toUpperCase() + stage.slice(1)}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="border-t border-gray-200 my-3" />
 
-        {/* CHECKBOX */}
+        {/* MANUAL VERIFICATION INFO */}
+        {status === "PENDING" && (
+          <div className="mb-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                <AlertCircle size={14} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800">
+                  ⏳ Maihoo needs to approve this check
+                </p>
+                <p className="text-xs text-amber-700 mt-1">
+                  This verification requires manual review and approval
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ENHANCED CHECKBOX */}
         <div className="flex items-center gap-3 mb-3">
-          <input
-            type="checkbox"
-            checked={selected}
-            disabled={completed || locked}
-            onChange={() => handleStageToggle(v, stageKey)}
-            className="w-5 h-5 accent-[#ff004f] cursor-pointer"
-          />
-          <span className="text-sm font-medium text-gray-700">
-            {completed
-              ? "✓ Already Verified"
-              : locked
-              ? "🔒 Locked"
-              : "Add to Current Stage"}
-          </span>
+          {(() => {
+            const isInProgress = status === "IN_PROGRESS";
+            const isFailed = status === "FAILED";
+            const isDisabled = isCheckLocked && !isFailed;
+            
+            return (
+              <>
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  disabled={isDisabled}
+                  onChange={() => handleStageToggle(key, stageKey)}
+                  className={`w-5 h-5 accent-[#ff004f] ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                />
+                <span className={`text-sm font-medium ${isDisabled ? 'text-gray-500' : 'text-gray-700'}`}>
+                  {completed
+                    ? "✓ Already Verified"
+                    : isInProgress
+                    ? "⏳ In Progress"
+                    : isFailed
+                    ? "🔄 Can Retry (Failed)"
+                    : isCheckLocked
+                    ? "🔒 Check Locked"
+                    : "Add to Current Stage"}
+                </span>
+              </>
+            );
+          })()}
         </div>
 
+        {/* LOCKED CHECK INFO */}
+        {isCheckLocked && status !== "FAILED" && (
+          <div className="mb-3 p-3 bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-300 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-gray-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">🔒</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-gray-700">
+                  {currentStageInitiated ? `${stageKey.charAt(0).toUpperCase() + stageKey.slice(1)} Stage Locked` : 'Check Locked in Other Stage'}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  {currentStageInitiated 
+                    ? `${stageKey.charAt(0).toUpperCase() + stageKey.slice(1)} stage is initiated. All checks are locked in this stage. Use next stages for remaining checks.`
+                    : "This check is processed in another stage. Select from remaining available checks for this stage."
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* MANUAL VERIFY BUTTON */}
-        {type === "MANUAL" && isStageLocked(stageKey) && !completed && (
+        {type === "manual" && wasOriginallySelectedInStage && currentStageInitiated && !completed && (
           <button
-            onClick={() => openManualVerify(v, stageKey)}
+            onClick={() => openManualVerify(key, stageKey)}
             className="mt-2 w-full px-4 py-3 text-sm bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
           >
             <FileCheck size={16} />
@@ -1481,14 +1808,14 @@ export default function BGVInitiationPage() {
         )}
 
         {/* AI CHECK REDIRECT BUTTON - Only show after finalization */}
-        {type === "AI" && !completed && isStageLocked(stageKey) && (
+        {type === "ai" && wasOriginallySelectedInStage && currentStageInitiated && !completed && (
           <button
             onClick={() => {
               setNavigating(true);
               setTimeout(() => {
-                if (v === "ai_cv_validation") {
+                if (key === "ai_cv_validation") {
                   router.push("/superadmin/AI-CV-Verification");
-                } else if (v === "ai_education_validation") {
+                } else if (key === "ai_education_validation") {
                   router.push("/superadmin/AI-Edu-Verification");
                 }
               }, 100);
@@ -1504,7 +1831,7 @@ export default function BGVInitiationPage() {
             ) : (
               <>
                 <ExternalLink size={16} />
-                {v === "ai_cv_validation"
+                {key === "ai_cv_validation"
                   ? "Go to CV Verification"
                   : "Go to Education Verification"}
               </>
@@ -1606,6 +1933,50 @@ export default function BGVInitiationPage() {
         </>
       )}
 
+      {/* Stage Transition Animation Overlay */}
+      {stageTransition.isTransitioning && (
+        <>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-6 max-w-md mx-4"
+            >
+              <div className="relative">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-16 h-16 border-4 border-[#ff004f]/20 border-t-[#ff004f] rounded-full"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <ChevronRight className="text-[#ff004f]" size={24} />
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Stage Transition
+                </h3>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <span className="px-3 py-1 bg-gray-100 rounded-full font-medium">
+                    {stageTransition.fromStage}
+                  </span>
+                  <ChevronRight size={16} className="text-[#ff004f]" />
+                  <span className="px-3 py-1 bg-[#ff004f] text-white rounded-full font-medium">
+                    {stageTransition.toStage}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Moving to {stageTransition.toStage} verification stage...
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6">
         {/* ENTERPRISE HEADER WITH ACTIONS */}
         <div className="relative overflow-hidden bg-white rounded-2xl shadow-xl border border-gray-200">
@@ -1659,7 +2030,7 @@ export default function BGVInitiationPage() {
         </div>
 
         {/* VERIFICATION GUIDELINES - ENTERPRISE CARDS */}
-        <div className="grid md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
             <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3 shadow-md">
               <FileText size={20} className="text-white" />
@@ -1808,7 +2179,7 @@ export default function BGVInitiationPage() {
           </div>
 
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 relative">
               {/* ORG */}
               <div>
                 <SearchableDropdown
@@ -2007,83 +2378,116 @@ export default function BGVInitiationPage() {
         </div>
 
         {/* MAIN GRID */}
-        <div className="bg-white border p-6 rounded-xl shadow grid md:grid-cols-3 gap-6">
+        <div className="bg-white border p-4 sm:p-6 rounded-xl shadow grid xl:grid-cols-3 gap-4 xl:gap-6">
           {/* LEFT PANEL */}
           <div className="space-y-6">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border-2 border-gray-200 shadow-sm">
-              <h3 className="font-bold text-gray-900 text-base mb-2">
-                {stepNames[currentStep]} Stage
-              </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
+            {/* Enhanced Stage Info */}
+            <div className="bg-gradient-to-br from-[#ff004f]/5 via-purple-50 to-indigo-50 p-4 sm:p-6 rounded-2xl border-2 border-[#ff004f]/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#ff004f] to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-white font-bold text-lg">{currentStep + 1}</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    {stepNames[currentStep]} Stage
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      isStageCompleted(stepNames[currentStep].toLowerCase()) 
+                        ? 'bg-green-500' 
+                        : candidateVerification?.stages?.[stepNames[currentStep].toLowerCase()]?.length > 0
+                        ? 'bg-yellow-500'
+                        : 'bg-gray-400'
+                    }`}></div>
+                    <span className="text-xs font-medium text-gray-600">
+                      {isStageCompleted(stepNames[currentStep].toLowerCase()) 
+                        ? 'Completed' 
+                        : candidateVerification?.stages?.[stepNames[currentStep].toLowerCase()]?.length > 0
+                        ? 'In Progress'
+                        : 'Not Started'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed bg-white/60 p-3 rounded-lg">
                 {currentStep === 0 &&
-                  "Choose initial verification checks for primary stage."}
+                  "🎯 Choose initial verification checks for primary stage validation."}
                 {currentStep === 1 &&
-                  "Select from remaining checks not used in Primary."}
-                {currentStep === 2 && "Final stage with all remaining checks."}
+                  "🔄 Select from remaining checks not used in Primary stage."}
+                {currentStep === 2 && "🏁 Final stage with all remaining verification checks."}
               </p>
             </div>
 
-            {/* SELECTED CHECKS */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
-              <div className="text-xs font-bold text-blue-900 mb-2">
-                Selected Checks
+            {/* Enhanced Selected Checks - Current Stage Only */}
+            <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 sm:p-6 rounded-2xl border-2 border-blue-300 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                  <CheckCircle size={16} className="text-white" />
+                </div>
+                <div className="text-sm font-bold text-blue-900">
+                  {stepNames[currentStep]} Stage Checks
+                </div>
+                <div className="ml-auto">
+                  <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-xs font-bold">
+                    {(() => {
+                      const currentStageKey = stepNames[currentStep].toLowerCase();
+                      const finalizedInCurrentStage = finalizedChecks[currentStageKey] || [];
+                      return finalizedInCurrentStage.length;
+                    })()} Finalized
+                  </span>
+                </div>
               </div>
-              <div className="text-sm font-medium text-gray-900 break-words">
-                {[
-                  ...new Set([
-                    ...stages.primary,
-                    ...stages.secondary,
-                    ...stages.final,
-                  ]),
-                ].length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {[
-                      ...new Set([
-                        ...stages.primary,
-                        ...stages.secondary,
-                        ...stages.final,
-                      ]),
-                    ].map((check, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 bg-blue-200 text-blue-900 rounded-md text-xs font-semibold"
-                      >
-                        {check.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-gray-500 text-xs">None selected</span>
-                )}
+              <div className="text-sm font-medium text-gray-900">
+                {(() => {
+                  const currentStageKey = stepNames[currentStep].toLowerCase();
+                  const finalizedInCurrentStage = finalizedChecks[currentStageKey] || [];
+                  
+                  return finalizedInCurrentStage.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {finalizedInCurrentStage.map((check, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-2 bg-gradient-to-r from-blue-200 to-indigo-200 text-blue-900 rounded-lg text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 border border-blue-300"
+                        >
+                          ✓ {check.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <Circle size={20} className="text-gray-400" />
+                      </div>
+                      <span className="text-gray-500 text-sm font-medium">No checks finalized in {stepNames[currentStep].toLowerCase()} stage yet</span>
+                      <p className="text-xs text-gray-400 mt-1">Select and finalize verification checks for this stage</p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
-            {/* NAV BUTTONS */}
-            <div className="flex gap-2">
+            {/* Enhanced Navigation */}
+            <div className="flex gap-3">
               <button
                 disabled={currentStep === 0}
                 onClick={goBack}
-                className="group relative flex-1 bg-gradient-to-r from-gray-600 to-gray-700 hover:shadow-xl text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                className="flex-1 bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 disabled:from-gray-100 disabled:to-gray-200 text-gray-700 disabled:text-gray-400 px-5 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg disabled:shadow-sm transition-all duration-200 disabled:cursor-not-allowed"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-gray-700 to-gray-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <ChevronLeft size={18} className="relative z-10" />
-                <span className="relative z-10">Previous Stage</span>
+                <ChevronLeft size={18} /> Back
               </button>
 
               <button
                 disabled={currentStep === 2}
                 onClick={goNext}
-                className="group relative flex-1 bg-gradient-to-r from-[#ff004f] to-[#ff3366] hover:shadow-xl text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                className="flex-1 bg-gradient-to-r from-[#ff004f] to-purple-600 hover:from-purple-600 hover:to-[#ff004f] disabled:from-gray-400 disabled:to-gray-500 text-white px-5 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg disabled:shadow-sm transition-all duration-200 disabled:cursor-not-allowed transform hover:scale-105 disabled:hover:scale-100"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-[#e60047] to-[#ff004f] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="relative z-10">Next Stage</span>
-                <ChevronRight size={18} className="relative z-10" />
+                Next <ChevronRight size={18} />
               </button>
             </div>
 
-            {/* ACTION BUTTONS */}
+            {/* Stage Action Buttons */}
             <div className="space-y-3">
-              {/* PRIMARY */}
+              {/* ENHANCED PRIMARY BUTTONS */}
               {currentStep === 0 && (
                 <>
                   <button
@@ -2095,20 +2499,34 @@ export default function BGVInitiationPage() {
                         handleInitiateStage("primary");
                       }
                     }}
-                    className="group relative w-full py-4 bg-gradient-to-r from-green-500 to-green-600 hover:shadow-xl text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                    className="group relative w-full py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 hover:from-green-700 hover:via-emerald-700 hover:to-green-800 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 text-white rounded-2xl flex items-center justify-center gap-3 font-bold shadow-xl hover:shadow-2xl disabled:shadow-md transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 overflow-hidden"
                   >
-                    {!initLoading && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     {initLoading ? (
                       <>
                         <Loader2 className="animate-spin relative z-10" size={20} />
-                        <span className="relative z-10">Initiating Primary...</span>
+                        <span className="relative z-10 text-lg">Finalizing Checks...</span>
                       </>
                     ) : (
                       <>
-                        <CheckCircle size={20} className="relative z-10" />
-                        <span className="relative z-10">Finalize Checks</span>
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                          <CheckCircle size={20} />
+                        </div>
+                        <div className="text-center relative z-10">
+                          <div className="text-base font-semibold">🎯 Finalize Primary Checks</div>
+                          {(() => {
+                            const counts = getNewChecksCount("primary");
+                            return counts.processed > 0 ? (
+                              <div className="text-sm text-green-200 font-medium">
+                                {counts.new} new • {counts.processed} processed
+                              </div>
+                            ) : (
+                              <div className="text-sm text-green-200 font-medium">
+                                {counts.new} checks selected for validation
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </>
                     )}
                   </button>
@@ -2116,120 +2534,184 @@ export default function BGVInitiationPage() {
                   <button
                     disabled={
                       !candidateVerification ||
+                      isStageCompleted("primary") ||
                       runLoading
                     }
                     onClick={() => handleRunStage("primary")}
-                    className="group relative w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-xl text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                    className="group relative w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:via-indigo-700 hover:to-blue-800 disabled:from-gray-300 disabled:via-gray-400 disabled:to-gray-500 text-white rounded-2xl flex items-center justify-center gap-3 font-bold shadow-xl hover:shadow-2xl disabled:shadow-md transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 overflow-hidden"
                   >
-                    {!runLoading && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     {runLoading ? (
                       <>
                         <Loader2 className="animate-spin relative z-10" size={20} />
-                        <span className="relative z-10">Running...</span>
+                        <span className="relative z-10 text-lg">Executing Verification...</span>
                       </>
                     ) : (
                       <>
-                        <Cpu size={20} className="relative z-10" />
-                        <span className="relative z-10">Execute Verifications</span>
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                          <Shield size={20} />
+                        </div>
+                        <span className="relative z-10 text-base">⚡ Execute Primary Verification</span>
                       </>
                     )}
                   </button>
                 </>
               )}
 
-              {/* SECONDARY */}
+              {/* ENHANCED SECONDARY BUTTONS */}
               {currentStep === 1 && (
                 <>
                   <button
                     disabled={initLoading}
                     onClick={() => handleInitiateStage("secondary")}
-                    className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
+                    className="group relative w-full py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 hover:from-green-700 hover:via-emerald-700 hover:to-green-800 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 text-white rounded-2xl flex items-center justify-center gap-3 font-bold shadow-xl hover:shadow-2xl disabled:shadow-md transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 overflow-hidden"
                   >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     {initLoading ? (
                       <>
-                        <Loader2 className="animate-spin" size={16} />
-                        Initiating...
+                        <Loader2 className="animate-spin relative z-10" size={20} />
+                        <span className="relative z-10 text-lg">Finalizing Checks...</span>
                       </>
                     ) : (
-                      "Finalize Checks"
+                      <>
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                          <CheckCircle size={20} />
+                        </div>
+                        <div className="text-center relative z-10">
+                          <div className="text-base font-semibold">🔄 Finalize Secondary Checks</div>
+                          {(() => {
+                            const counts = getNewChecksCount("secondary");
+                            return counts.processed > 0 ? (
+                              <div className="text-sm text-green-200 font-medium">
+                                {counts.new} new • {counts.processed} processed
+                              </div>
+                            ) : (
+                              <div className="text-sm text-green-200 font-medium">
+                                {counts.new} checks selected for validation
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </>
                     )}
                   </button>
 
                   <button
                     disabled={
-                      !candidateVerification ||
-                      runLoading
+                      isStageCompleted("secondary") ||
+                      runLoading ||
+                      !candidateVerification
                     }
                     onClick={() => handleRunStage("secondary")}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-blue-300"
+                    className="group relative w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:via-indigo-700 hover:to-blue-800 disabled:from-gray-300 disabled:via-gray-400 disabled:to-gray-500 text-white rounded-2xl flex items-center justify-center gap-3 font-bold shadow-xl hover:shadow-2xl disabled:shadow-md transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 overflow-hidden"
                   >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     {runLoading ? (
                       <>
-                        <Loader2 className="animate-spin" size={16} />
-                        Running...
+                        <Loader2 className="animate-spin relative z-10" size={20} />
+                        <span className="relative z-10 text-lg">Executing Verification...</span>
                       </>
                     ) : (
-                      "Execute Verification"
+                      <>
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                          <Shield size={20} />
+                        </div>
+                        <span className="relative z-10 text-base">⚡ Execute Secondary Verification</span>
+                      </>
                     )}
                   </button>
                 </>
               )}
 
-              {/* FINAL */}
+              {/* ENHANCED FINAL BUTTONS */}
               {currentStep === 2 && (
                 <>
                   <button
                     disabled={initLoading}
                     onClick={() => handleInitiateStage("final")}
-                    className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400"
+                    className="group relative w-full py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 hover:from-green-700 hover:via-emerald-700 hover:to-green-800 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 text-white rounded-2xl flex items-center justify-center gap-3 font-bold shadow-xl hover:shadow-2xl disabled:shadow-md transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 overflow-hidden"
                   >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     {initLoading ? (
                       <>
-                        <Loader2 className="animate-spin" size={16} />
-                        Initiating...
+                        <Loader2 className="animate-spin relative z-10" size={20} />
+                        <span className="relative z-10 text-lg">Finalizing Checks...</span>
                       </>
                     ) : (
-                      "Finalize Checks"
+                      <>
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                          <CheckCircle size={20} />
+                        </div>
+                        <div className="text-center relative z-10">
+                          <div className="text-base font-semibold">🏁 Finalize Final Checks</div>
+                          {(() => {
+                            const counts = getNewChecksCount("final");
+                            return counts.processed > 0 ? (
+                              <div className="text-sm text-green-200 font-medium">
+                                {counts.new} new • {counts.processed} processed
+                              </div>
+                            ) : (
+                              <div className="text-sm text-green-200 font-medium">
+                                {counts.new} checks selected for validation
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </>
                     )}
                   </button>
 
                   <button
                     disabled={
-                      !candidateVerification ||
-                      runLoading
+                      isStageCompleted("final") ||
+                      runLoading ||
+                      !candidateVerification
                     }
                     onClick={() => handleRunStage("final")}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center justify-center gap-2 disabled:bg-blue-300"
+                    className="group relative w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:via-indigo-700 hover:to-blue-800 disabled:from-gray-300 disabled:via-gray-400 disabled:to-gray-500 text-white rounded-2xl flex items-center justify-center gap-3 font-bold shadow-xl hover:shadow-2xl disabled:shadow-md transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 overflow-hidden"
                   >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     {runLoading ? (
                       <>
-                        <Loader2 className="animate-spin" size={16} />
-                        Running...
+                        <Loader2 className="animate-spin relative z-10" size={20} />
+                        <span className="relative z-10 text-lg">Executing Verification...</span>
                       </>
                     ) : (
-                      "Run Final"
+                      <>
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                          <Shield size={20} />
+                        </div>
+                        <span className="relative z-10 text-base">⚡ Execute Final Verification</span>
+                      </>
                     )}
                   </button>
                 </>
               )}
 
-              {failedChecksExist && (
+              {/* ENHANCED STAGE-SPECIFIC RETRY FAILED CHECKS */}
+              {stageHasFailedChecks(stepNames[currentStep].toLowerCase()) && (
                 <button
                   disabled={reinitLoading}
                   onClick={handleRetryFailed}
-                  className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md flex items-center justify-center gap-2"
+                  className="group relative w-full py-4 bg-gradient-to-r from-orange-600 via-red-600 to-orange-700 hover:from-orange-700 hover:via-red-700 hover:to-orange-800 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 text-white rounded-2xl flex items-center justify-center gap-3 font-bold shadow-xl hover:shadow-2xl disabled:shadow-md transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 overflow-hidden"
                 >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {reinitLoading ? (
                     <>
-                      <Loader2 className="animate-spin" size={16} />
-                      Retrying...
+                      <Loader2 className="animate-spin relative z-10" size={20} />
+                      <span className="relative z-10 text-base">Retrying Failed Checks...</span>
                     </>
                   ) : (
                     <>
-                      <RotateCcw size={16} />
-                      Retry Failed Checks
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                        <RotateCcw size={20} />
+                      </div>
+                      <div className="text-center relative z-10">
+                        <div className="text-base font-semibold">🔄 Retry {stepNames[currentStep]} Failed Checks</div>
+                        <div className="text-sm text-orange-200 font-medium">
+                          Re-execute failed verifications in this stage
+                        </div>
+                      </div>
                     </>
                   )}
                 </button>
@@ -2238,19 +2720,150 @@ export default function BGVInitiationPage() {
           </div>
 
           {/* RIGHT PANEL — CARDS */}
-          <div className="md:col-span-2">
-            {/* ALL COMPLETED MESSAGE */}
+          <div className="xl:col-span-2">
+            {/* ALL COMPLETED BANNER */}
             {allCompleted && (
               <div className="p-6 bg-green-50 border border-green-300 rounded-xl text-center mb-6">
                 <h3 className="text-xl font-bold text-green-700">
                   🎉 All Verifications Completed!
                 </h3>
                 <p className="text-green-700 mt-2">
-                  All background verification checks for this candidate have
-                  been successfully completed.
+                  All background verification checks have been successfully
+                  completed.
                 </p>
               </div>
             )}
+
+            {/* STAGE INITIATED INFO BANNER */}
+            {(() => {
+              const currentStageInitiated = candidateVerification?.stages?.[visibleStage]?.length > 0;
+              const stageName = visibleStage.charAt(0).toUpperCase() + visibleStage.slice(1);
+              
+              return currentStageInitiated && (
+                <div className="mb-6 p-5 bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 border-2 border-amber-200 rounded-2xl shadow-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                      <span className="text-2xl text-white">🔒</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-amber-900 mb-2 flex items-center gap-2">
+                        🎯 {stageName} Stage Already Initiated
+                      </h3>
+                      <div className="space-y-2 text-sm text-amber-800">
+                        <div className="flex items-start gap-2">
+                          <span className="text-amber-600 font-bold">•</span>
+                          <span>
+                            <strong>{stageName} stage checks</strong> are now locked and cannot be modified in this stage
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-green-600 font-bold">•</span>
+                          <span>
+                            <strong>Remaining available checks</strong> can be used in next stages if available
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-600 font-bold">•</span>
+                          <span>
+                            You can <strong>retry failed checks</strong> or <strong>execute remaining verifications</strong>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 p-3 bg-white/70 rounded-lg border border-amber-200">
+                        <p className="text-xs text-amber-700 font-medium">
+                          💡 <strong>Tip:</strong> Navigate to Secondary or Final stages to use the remaining available checks for verification.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* FINAL STAGE INFO MESSAGE */}
+            {currentStep === 2 && !isStageCompleted("final") && (
+              <div className="mb-6 p-5 bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 border-2 border-amber-200 rounded-2xl shadow-lg">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span className="text-2xl text-white">⚠️</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-amber-900 mb-2 flex items-center gap-2">
+                      🎯 Final Stage - Important Guidelines
+                    </h3>
+                    <div className="space-y-2 text-sm text-amber-800">
+                      <div className="flex items-start gap-2">
+                        <span className="text-amber-600 font-bold">•</span>
+                        <span>
+                          <strong>Select all remaining checks</strong> that haven't been processed in previous stages
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-red-600 font-bold">•</span>
+                        <span>
+                          <strong>Once finalized</strong>, this stage will be locked and no further changes can be made
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-600 font-bold">•</span>
+                        <span>
+                          <strong>Failed checks</strong> can still be retried even after stage is locked
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 p-3 bg-white/70 rounded-lg border border-amber-200">
+                      <p className="text-xs text-amber-700 font-medium">
+                        💡 <strong>Tip:</strong> Review all your check selections carefully before finalizing, as this is your last opportunity to make changes to the verification workflow.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* LOCKED CHECKS INFO BANNER */}
+            {(() => {
+              const lockedInfo = getLockedChecksInfo();
+              return lockedInfo.hasLockedStages && !isStageCompleted(visibleStage) && (
+                <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-2xl shadow-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                      <span className="text-2xl text-white">🔒</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
+                        📋 Locked Checks Information
+                      </h3>
+                      <div className="space-y-2 text-sm text-blue-800">
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-600 font-bold">•</span>
+                          <span>
+                            <strong>{lockedInfo.totalLocked} checks</strong> are already locked in previous stages: <strong>{lockedInfo.lockedStages.join(", ")}</strong>
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-green-600 font-bold">•</span>
+                          <span>
+                            <strong>Remaining checks</strong> are still available for selection in this and future stages
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-orange-600 font-bold">•</span>
+                          <span>
+                            <strong>Locked checks cannot be modified</strong> but failed ones can still be retried
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 p-3 bg-white/70 rounded-lg border border-blue-200">
+                        <p className="text-xs text-blue-700 font-medium">
+                          💡 <strong>Tip:</strong> You can only select from the remaining unlocked checks. Locked checks will appear dimmed and cannot be modified.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* AI CV VALIDATION SECTION */}
             {candidateVerification?.aiCvValidation && (
@@ -2339,27 +2952,33 @@ export default function BGVInitiationPage() {
               </div>
             )}
 
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-800">
-                  {stepNames[currentStep]} Verification
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Select checks and run verification for this stage.
-                </p>
+            {/* Enhanced Stage Title */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 p-4 sm:p-6 bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-2xl border-2 border-gray-200 shadow-lg gap-4 sm:gap-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-[#ff004f] to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  {currentStep === 0 && <FileCheck size={24} className="text-white" />}
+                  {currentStep === 1 && <FileSearch size={24} className="text-white" />}
+                  {currentStep === 2 && <Shield size={24} className="text-white" />}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    {stepNames[currentStep]} Verification
+                  </h2>
+                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-[#ff004f] rounded-full animate-pulse"></span>
+                    Select verification checks and execute validation process
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <label className="text-sm mr-2">View:</label>
-                <select
-                  value={visibleStage}
-                  disabled
-                  className="border rounded-md p-2 bg-gray-200 text-gray-600 cursor-not-allowed"
-                >
-                  <option value="primary">Primary</option>
-                  <option value="secondary">Secondary</option>
-                  <option value="final">Final</option>
-                </select>
+              <div className="text-right">
+                <div className="text-xs font-semibold text-gray-500 mb-1">Current Stage</div>
+                <div className="px-4 py-2 bg-gradient-to-r from-[#ff004f] to-purple-600 text-white rounded-xl font-bold text-sm shadow-md">
+                  {stepNames[currentStep]}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Step {currentStep + 1} of 3
+                </div>
               </div>
             </div>
             {/* Stage Completed Message */}
@@ -2394,11 +3013,13 @@ export default function BGVInitiationPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
                     <AnimatePresence mode="popLayout">
-                      {getAvailableChecksForStage(visibleStage)
-                        .filter((c) => getCheckType(c) === "API")
-                        .map(renderCheckCard)}
+                      {API_SERVICES.filter(
+                        (s) => servicesOffered.includes(s)
+                      ).map((s) =>
+                        renderServiceCard(s, s.replace(/_/g, " "), "api")
+                      )}
                     </AnimatePresence>
                   </div>
                 </div>
@@ -2419,11 +3040,11 @@ export default function BGVInitiationPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
                     <AnimatePresence mode="popLayout">
-                      {getAvailableChecksForStage(visibleStage)
-                        .filter((c) => getCheckType(c) === "MANUAL")
-                        .map(renderCheckCard)}
+                      {MANUAL_SERVICES.filter(
+                        (s) => servicesOffered.includes(s.id)
+                      ).map((s) => renderServiceCard(s.id, s.name, "manual"))}
                     </AnimatePresence>
                   </div>
                 </div>
@@ -2443,11 +3064,11 @@ export default function BGVInitiationPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
                     <AnimatePresence mode="popLayout">
-                      {getAvailableChecksForStage(visibleStage)
-                        .filter((c) => getCheckType(c) === "AI")
-                        .map(renderCheckCard)}
+                      {AI_SERVICES.filter(
+                        (s) => servicesOffered.includes(s.id)
+                      ).map((s) => renderServiceCard(s.id, s.name, "ai"))}
                     </AnimatePresence>
                   </div>
                 </div>
@@ -3796,63 +4417,7 @@ export default function BGVInitiationPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Next Stage Confirmation Modal */}
-      <AnimatePresence>
-        {showNextStageConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden"
-            >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-[#ff004f] to-[#ff3366] p-6 text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <AlertCircle size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">Proceed to Next Stage?</h3>
-                    <p className="text-sm text-white/90">Confirmation Required</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Content */}
-              <div className="p-6">
-                <p className="text-gray-700 text-base leading-relaxed">
-                  The current <span className="font-bold text-[#ff004f]">{stepNames[currentStep]}</span> stage is <span className="font-bold text-orange-600">not fully completed</span>. Are you sure you want to move to the <span className="font-bold text-[#ff004f]">{stepNames[currentStep + 1]}</span> stage?
-                </p>
-                <p className="text-sm text-gray-500 mt-3">
-                  It's recommended to initiate and complete all verifications in the current stage before proceeding.
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 p-6 bg-gray-50 border-t">
-                <button
-                  onClick={() => setShowNextStageConfirm(false)}
-                  className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmNextStage}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#ff004f] to-[#ff3366] text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-                >
-                  Yes, Proceed
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {showConsentWarning.open && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
